@@ -23,6 +23,7 @@ from enum import Enum, auto
 from pathlib import Path
 import ast
 from .event_queue import EventQueue
+from jarvis.nlp.processor import NLUProcessor
 
 # --- Конфигурация логгирования ---
 logging.basicConfig(
@@ -231,113 +232,6 @@ class Brain:
         else:
             logger.warning(f"Не удалось сохранить мысль по проблеме '{problem[:50]}...'.")
 
-
-# --- NLUProcessor, MemoryManager, etc. (остальной код без изменений из предыдущей версии) ---
-# ... (здесь должен быть остальной код jarvis.py, как в предыдущем ответе) ...
-# --- Улучшенный NLU-процессор ---
-class NLUProcessor:
-    def __init__(self):
-        self.command_patterns: List[Dict[str, Any]] = self._initialize_command_patterns()
-        self.context: Dict[str, Any] = {}
-        self.history: List[Dict[str, Any]] = []
-        self.max_history_size = 100
-        self.entity_patterns = {
-            "path_entity": r"(?:[a-zA-Z]:)?(?:[/\\][^/\\]*)+/?",
-            "module_name_entity": r"[a-zA-Z_][a-zA-Z0-9_]*",
-            "function_name_entity": r"[a-zA-Z_][a-zA-Z0-9_]*",
-            "class_name_entity": r"[A-Z_][a-zA-Z0-9_]*",
-            "python_var_entity": r"[a-zA-Z_][a-zA-Z0-9_]*",
-            "number_entity": r"\d+",
-            "string_entity": r"\"[^\"]*\"|\'[^\']*\'",
-            "filename_entity": r"[\w\.-]+",
-            "problem_description_entity": r".+" 
-        }
-        
-    def _initialize_command_patterns(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "intent": "create_python_function",
-                "triggers": ["new function", "create function", "создай функцию", "новая функция", "make function", "сделай функцию", "функция python", "сгенерируй функцию"],
-                "entity_extraction_mode": "all_after_trigger_preserving_case", 
-                "entity_names": ["function_signature_raw"], 
-                "category": CommandCategory.DEVELOPMENT,
-                "description": "Создает шаблон Python функции с использованием AST."
-            },
-            {
-                "intent": "analyze_python_file",
-                "triggers": ["analyze py", "analyze python", "анализируй python", "проанализируй файл"],
-                "entity_extraction_mode": "single_arg_after_trigger",
-                "entity_names": ["filepath_entity"],
-                "category": CommandCategory.DEVELOPMENT,
-                "description": "Анализирует Python файл и выводит информацию о его структуре."
-            },
-            { 
-                "intent": "reason_about_problem",
-                "triggers": ["think about", "reason about", "подумай над", "реши проблему", "обдумай"],
-                "entity_extraction_mode": "all_after_trigger", 
-                "entity_names": ["problem_description_entity"],
-                "category": CommandCategory.REASONING,
-                "description": "Запускает процесс мышления Мозга над заданной проблемой."
-            },
-            {
-                "intent": "load_module", "triggers": ["load module", "load_module", "загрузи модуль"], "entity_extraction_mode": "single_arg_after_trigger", "entity_names": ["module_name_entity"], "category": CommandCategory.SYSTEM, "description": "Загружает указанный модуль"
-            },
-            {
-                "intent": "help", "triggers": ["help", "помощь", "справка"], "entity_extraction_mode": "optional_arg_after_trigger", "entity_names": ["command_filter_entity"], "category": CommandCategory.CORE, "description": "Показывает справку по командам"
-            },
-            {
-                "intent": "exit", "triggers": ["exit", "quit", "выйти", "выход"], "entity_extraction_mode": "no_args", "entity_names": [], "category": CommandCategory.CORE, "description": "Завершает работу Jarvis"
-            }
-        ]
-    
-    async def process(self, text: str) -> Dict[str, Any]:
-        processed_text_original_case = text.strip() 
-        lower_text = processed_text_original_case.lower()
-        
-        if lower_text == "повтори":
-            if self.history:
-                last_nlu_result = self.history[-1]
-                if last_nlu_result.get("intent") != "repeat_last_command_special": 
-                    logger.info("Повторение предыдущей команды на основе истории NLU.")
-                    return {**last_nlu_result, "is_repeated": True, "confidence": 1.0}
-            logger.info("История пуста или последняя команда была 'повтори', нечего повторять.")
-            return {"intent": "unknown", "confidence": 0.0, "raw_text": text, "entities": {}}
-        
-        for pattern in self.command_patterns:
-            intent_data = await self._match_pattern(pattern, processed_text_original_case, lower_text)
-            if intent_data:
-                self._update_history(intent_data) 
-                return intent_data
-        
-        fallback_result = self._fallback_processing(processed_text_original_case)
-        self._update_history(fallback_result) 
-        return fallback_result
-    
-    async def _match_pattern(self, pattern: Dict[str, Any], text_original_case: str, lower_text: str) -> Optional[Dict[str, Any]]:
-        for trigger in pattern.get("triggers", []):
-            if lower_text.startswith(trigger.lower()):
-                if len(lower_text) == len(trigger) or lower_text[len(trigger)].isspace() or not trigger.isalnum():
-                    return await self._extract_entities(pattern, text_original_case, trigger)
-        return None
-    
-    async def _extract_entities(self, pattern: Dict[str, Any], text_original_case: str, trigger: str) -> Dict[str, Any]:
-        args_part = text_original_case[len(trigger):].strip()
-        entities = {"raw_args": args_part} 
-        mode = pattern.get("entity_extraction_mode"); entity_names = pattern.get("entity_names", [])
-        if mode == "single_arg_after_trigger" and entity_names:
-            if args_part: entities[entity_names[0]] = args_part.split(" ", 1)[0]
-        elif mode == "all_after_trigger" and entity_names: entities[entity_names[0]] = args_part
-        elif mode == "all_after_trigger_preserving_case" and entity_names: entities[entity_names[0]] = args_part 
-        elif mode == "optional_arg_after_trigger" and entity_names: entities[entity_names[0]] = args_part.split(" ", 1)[0] if args_part else None
-        return {"intent": pattern["intent"], "entities": entities, "confidence": 0.95, "raw_text": text_original_case, "category": pattern.get("category", CommandCategory.UTILITY)}
-    
-    def _update_history(self, nlu_result: Dict[str, Any]):
-        if len(self.history) >= self.max_history_size: self.history.pop(0)
-        self.history.append(nlu_result) 
-    
-    def _fallback_processing(self, text_original_case: str) -> Dict[str, Any]:
-        parts = text_original_case.strip().split(maxsplit=1)
-        return {"intent": parts[0].lower() if parts else "unknown_command", "entities": {"raw_args": parts[1] if len(parts) > 1 else ""}, "confidence": 0.3, "raw_text": text_original_case, "category": CommandCategory.UTILITY}
 
 class MemoryManager:
     def __init__(self, memory_file: str = "jarvis_memory.json"):

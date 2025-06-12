@@ -2,7 +2,7 @@
 # tests/test_nlu.py
 # -----------------------------
 import pytest
-from jarvis.nlu.processor import NLUProcessor, TaskSemantics
+from jarvis.nlp.processor import NLUProcessor, TaskSemantics
 from jarvis.memory.manager import MemoryManager
 
 
