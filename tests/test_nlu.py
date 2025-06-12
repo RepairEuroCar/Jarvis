@@ -1,0 +1,46 @@
+# -----------------------------
+# tests/test_nlu.py
+# -----------------------------
+import pytest
+from jarvis.nlu.processor import NLUProcessor
+from jarvis.memory.manager import MemoryManager
+
+@pytest.fixture
+def nlu():
+    return NLUProcessor()
+
+@pytest.mark.asyncio
+async def test_reason_intent(nlu):
+    text = "подумай над задачей по логике"
+    result = await nlu.process(text)
+    assert result["intent"] == "reason_about_problem"
+    assert result["confidence"] >= 0.9
+    assert "problem_description_entity" in result["entities"]
+
+@pytest.mark.asyncio
+async def test_exit_intent(nlu):
+    for variant in ["выйти", "exit", "quit"]:
+        result = await nlu.process(variant)
+        assert result["intent"] == "exit"
+        assert result["entities"] == {"raw_args": ""}
+
+@pytest.mark.asyncio
+async def test_unknown_command(nlu):
+    result = await nlu.process("какая-то неизвестная команда")
+    assert result["intent"] == "какая-то"
+    assert result["confidence"] < 0.5
+
+
+@pytest.mark.asyncio
+async def test_custom_pattern_persistence(tmp_path):
+    mem_file = tmp_path / "mem.json"
+    mem = MemoryManager(str(mem_file))
+    nlu = NLUProcessor(memory_manager=mem)
+    nlu.add_pattern("greet", "hi", persist=True)
+    mem.save()
+
+    mem2 = MemoryManager(str(mem_file))
+    nlu2 = NLUProcessor(memory_manager=mem2)
+    result = await nlu2.process("hi")
+    assert result["intent"] == "greet"
+
