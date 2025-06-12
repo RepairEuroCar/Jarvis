@@ -15,7 +15,7 @@ _module_map = {
     'commands': 'commands',
     'commands.registry': 'commands.registry',
     # NLU is used inside core
-    'nlu': 'nlp',
+    'nlu': 'jarvis.nlp',
     # Core itself
     'core': 'jarvis.core',
     # Expose Jarvis class directly

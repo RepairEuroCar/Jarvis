@@ -10,7 +10,7 @@ from jarvis.voice.interface import VoiceInterface
 from jarvis.memory.manager import MemoryManager
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.brain import Brain
-from jarvis.nlu.processor import NLUProcessor
+from jarvis.nlp.processor import NLUProcessor
 
 logger = logging.getLogger("Jarvis.Core")
 
