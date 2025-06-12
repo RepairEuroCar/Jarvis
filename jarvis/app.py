@@ -433,6 +433,8 @@ class Jarvis:
             CommandInfo(name="query_memory", description="Запрашивает информацию из памяти.", category=CommandCategory.MEMORY, usage="query_memory <ключ>", aliases=["спроси_память", "что_в_памяти"]),
             CommandInfo(name="forget", description="Удаляет информацию из памяти.", category=CommandCategory.MEMORY, usage="forget <ключ>", aliases=["забудь"]),
             CommandInfo(name="teach_pattern", description="Добавляет пользовательский NLU шаблон.", category=CommandCategory.DEVELOPMENT, usage="teach_pattern <intent> <trigger_phrase> [entity_type]", aliases=[]),
+            CommandInfo(name="python_dsl", description="Преобразует фразу в код Python.", category=CommandCategory.DEVELOPMENT, usage="python_dsl <фраза>", aliases=["dsl_python"]),
+            CommandInfo(name="parse_doc", description="Извлекает требования из описания.", category=CommandCategory.DEVELOPMENT, usage="parse_doc <текст>", aliases=["разбери_док"]),
         ]
         for cmd_info in core_command_infos:
             handler = getattr(self, cmd_info.handler_name or f"{cmd_info.name}_command")
@@ -556,6 +558,21 @@ class Jarvis:
         entity_type = parts[2].strip() if len(parts) > 2 else None
         self.nlu.add_pattern(intent, trigger, entity_type=entity_type, persist=True)
         return f"Паттерн для '{intent}' добавлен."
+
+    async def python_dsl_command(self, args_str: str) -> str:
+        phrase = args_str.strip()
+        if not phrase:
+            return "Использование: python_dsl <фраза>"
+        from utils.python_dsl import phrase_to_python
+        return phrase_to_python(phrase)
+
+    async def parse_doc_command(self, args_str: str) -> str:
+        text = args_str.strip()
+        if not text:
+            return "Использование: parse_doc <текст>"
+        from utils.python_dsl import parse_technical_description
+        parsed = parse_technical_description(text)
+        return json.dumps(parsed, ensure_ascii=False, indent=2)
 
     def _parse_arg_string_to_ast(self, arg_str: str, arg_name: str) -> Optional[ast.expr]:
         try:
