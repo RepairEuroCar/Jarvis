@@ -13,6 +13,9 @@
 
 # jarvis/brain.py
 from collections import deque
+import difflib
+import ast
+from pathlib import Path
 from .processors import (
     LogicalThoughtProcessor,
     CreativeThoughtProcessor,
@@ -27,6 +30,7 @@ import time
 import uuid
 
 logger = logging.getLogger("Jarvis.Brain")
+
 
 class Brain:
     def __init__(self, jarvis):
@@ -44,12 +48,20 @@ class Brain:
 
     async def think(self, problem, context):
         problem_type = await self._classify_problem(problem, context)
-        processor = self.thought_processors.get(problem_type, self.thought_processors["logical"])
-        self.working_memory.update({"current_problem": problem, "current_context": context})
+        processor = self.thought_processors.get(
+            problem_type, self.thought_processors["logical"]
+        )
+        self.working_memory.update(
+            {"current_problem": problem, "current_context": context}
+        )
         try:
             solution = await processor.process(problem, context)
         except Exception as e:
-            solution = {"error": str(e), "status": "processing_failed", "processed_by": processor.__class__.__name__}
+            solution = {
+                "error": str(e),
+                "status": "processing_failed",
+                "processed_by": processor.__class__.__name__,
+            }
         solution["problem_classification_used"] = problem_type
 
         plan = self._make_plan(problem, solution)
@@ -90,7 +102,9 @@ class Brain:
         history.append(record)
         if len(history) > 50:
             history = history[-50:]
-        self.jarvis.memory.remember("brain.reasoning_history", history, category="reasoning")
+        self.jarvis.memory.remember(
+            "brain.reasoning_history", history, category="reasoning"
+        )
         self.reasoning_history.append(record)
 
     def _make_plan(self, problem: str, solution: Dict[str, Any]) -> Dict[str, Any]:
@@ -110,3 +124,42 @@ class Brain:
     def get_chain_of_thought(self, limit: int = 10) -> list[Dict[str, Any]]:
         """Return recent reasoning records."""
         return list(self.reasoning_history)[-limit:]
+
+    async def self_evolve(self, directory: str = ".") -> Dict[str, Any]:
+        """Analyze and refactor Python files within a directory."""
+        root = Path(directory)
+        py_files = [p for p in root.rglob("*.py") if ".venv" not in str(p)]
+        results: Dict[str, Any] = {}
+        processor = self.thought_processors.get("refactor")
+        for file_path in py_files:
+            try:
+                source = file_path.read_text(encoding="utf-8")
+            except Exception as e:
+                results[str(file_path)] = {"error": f"read_failed: {e}"}
+                continue
+
+            analysis = {"lines": len(source.splitlines()), "functions": 0, "classes": 0}
+            try:
+                tree = ast.parse(source)
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.FunctionDef):
+                        analysis["functions"] += 1
+                    elif isinstance(node, ast.ClassDef):
+                        analysis["classes"] += 1
+            except Exception as e:
+                analysis["parse_error"] = str(e)
+
+            ref_result = await processor.process("refactor", {"source_code": source})
+            new_code = ref_result.get("refactored_code", "")
+
+            diff = "\n".join(
+                difflib.unified_diff(
+                    source.splitlines(),
+                    new_code.splitlines(),
+                    fromfile=str(file_path),
+                    tofile=f"{file_path} (refactored)",
+                )
+            )
+            results[str(file_path)] = {"analysis": analysis, "diff": diff}
+
+        return results
