@@ -17,9 +17,9 @@ _module_map = {
     # NLU is used inside core
     'nlu': 'nlp',
     # Core itself
-    'core': 'core',
+    'core': 'jarvis.core',
     # Expose Jarvis class directly
-    'core.main': 'core.main',
+    'core.main': 'jarvis.core.main',
 }
 
 for alias, target in _module_map.items():
