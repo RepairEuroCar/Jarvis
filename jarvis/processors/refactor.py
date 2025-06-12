@@ -1,15 +1,24 @@
 import ast
-import asyncio
 import logging
+import re
 from typing import Dict, Any
+
 from .base import BaseThoughtProcessor
 
+try:
+    import black
+except Exception:  # pragma: no cover - black might be missing in tests
+    black = None
+
 logger = logging.getLogger("Jarvis.Processor.Refactor")
+
 
 class RefactorProcessor(BaseThoughtProcessor):
     """Simplified refactoring processor that renames variables to snake_case."""
 
-    async def _process_logic(self, problem: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def _process_logic(
+        self, problem: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         source = context.get("source_code", "")
         if not source:
             return {
@@ -22,8 +31,10 @@ class RefactorProcessor(BaseThoughtProcessor):
             tree = ast.parse(source)
             for node in ast.walk(tree):
                 if isinstance(node, ast.Name):
-                    node.id = node.id.lower()
+                    node.id = self._to_snake_case(node.id)
             refactored = ast.unparse(tree)
+            if black:
+                refactored = black.format_str(refactored, mode=black.Mode())
         except Exception as e:
             logger.error(f"Refactoring error: {e}")
             return {
@@ -38,3 +49,7 @@ class RefactorProcessor(BaseThoughtProcessor):
             "refactored_code": refactored,
             "status": "completed",
         }
+
+    def _to_snake_case(self, name: str) -> str:
+        s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+        return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
