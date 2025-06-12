@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 import ast
+from .event_queue import EventQueue
 
 # --- Конфигурация логгирования ---
 logging.basicConfig(
@@ -404,9 +405,10 @@ class Jarvis:
 
         self.is_running = False; self.start_time = time.time()
         self.command_history: List[Dict[str, Any]] = [] ; self.max_command_history = 100
-        self.commands: Dict[str, Tuple[CommandInfo, Callable]] = {} 
+        self.commands: Dict[str, Tuple[CommandInfo, Callable]] = {}
         self._register_core_commands()
-        self.event_listeners: Dict[str, List[Callable]] = defaultdict(list)
+        self.event_queue = EventQueue()
+        self.event_listeners: Dict[str, List[Callable]] = self.event_queue._listeners
         self.user_name = self.memory.query("user_info.name") or "User"
         self.settings = self.memory.query("system.settings") or {"auto_save_memory": True}
         self.memory.remember("system.settings", self.settings) 
@@ -457,18 +459,17 @@ class Jarvis:
                 if alias.lower() in self.commands: del self.commands[alias.lower()]
             logger.debug(f"Удалена команда: {cmd_info.name}")
 
-    async def publish_event(self, event_name: str, *args, **kwargs):
-        if event_name not in self.event_listeners: return
-        logger.debug(f"Публикация события: {event_name} с {args}, {kwargs}")
-        for listener in self.event_listeners[event_name]:
-            try:
-                if asyncio.iscoroutinefunction(listener): await listener(*args, **kwargs)
-                else: listener(*args, **kwargs)
-            except Exception as e: logger.error(f"Ошибка в обработчике {event_name}: {e}\n{traceback.format_exc()}")
-    
+    async def publish_event(self, event_name: str, *args, priority: int = 0, **kwargs):
+        logger.debug(f"Публикация события: {event_name} с {args}, {kwargs}, priority={priority}")
+        await self.event_queue.emit(event_name, *args, priority=priority, **kwargs)
+
     def subscribe_event(self, event_name: str, listener: Callable):
-        self.event_listeners[event_name].append(listener)
+        self.event_queue.subscribe(event_name, listener)
         logger.debug(f"Добавлен обработчик {listener.__name__} для {event_name}")
+
+    async def add_background_task(self, coro: Coroutine, priority: int = 0) -> None:
+        """Schedule a coroutine to run in background with optional priority."""
+        await self.event_queue.add_task(coro, priority=priority)
     
     async def handle_user_input(self, text: str, source: str = "cli") -> Optional[str]:
         if not text.strip(): return None
@@ -495,6 +496,7 @@ class Jarvis:
             return str(result) if result is not None else "Команда выполнена."
         except Exception as e:
             logger.error(f"Ошибка выполнения {cmd_info.name}: {e}\n{traceback.format_exc()}")
+            await self.publish_event("on_error", str(e))
             return f"Ошибка '{cmd_info.name}': {e}"
     
     def _log_command_to_history(self, nlu_result: Dict[str, Any]):
@@ -725,6 +727,7 @@ class Jarvis:
         }
         await self.publish_event("brain_thinking_started", problem=problem_description, context_keys=list(current_context.keys()))
         solution = await self.brain.think(problem_description, current_context)
+        await self.publish_event("on_thought", solution)
         await self.publish_event("brain_thinking_finished", problem=problem_description, solution_keys=list(solution.keys()))
         try: solution_str = json.dumps(solution, indent=2, ensure_ascii=False, default=str) 
         except TypeError: solution_str = str(solution) 
@@ -800,7 +803,11 @@ class Jarvis:
         return "Использование: self_update <commit|pull> [аргументы]"
 
     async def interactive_loop(self):
-        self.is_running = True; await self._initialize_project(); logger.info("Запуск интерактивного режима")
+        self.is_running = True
+        await self.event_queue.start()
+        await self._initialize_project()
+        logger.info("Запуск интерактивного режима")
+        await self.publish_event("on_start")
         print(f"\nJarvis vBrain (Python {platform.python_version()})"); print(f"Пользователь: {self.user_name}")
         if self.project_manager.current_project: print(f"Проект: {self.project_manager.current_project['name']}")
         print("Введите 'help' для команд, 'exit' для выхода\n")
@@ -813,17 +820,27 @@ class Jarvis:
                 if user_input.lower() in ["exit", "quit", "выход"]: await self.shutdown()
                 if not self.is_running: break 
                 result = await self.handle_user_input(user_input)
-                if result: print(f"\n{result}\n") 
+                if result:
+                    print(f"\n{result}\n")
+                    await self.publish_event("on_output", result)
             except KeyboardInterrupt: print("\nДля выхода введите 'exit' или Ctrl+D."); continue
-            except EOFError: await self.shutdown(); break 
-            except Exception as e: logger.error(f"Критическая ошибка в цикле: {e}\n{traceback.format_exc()}")
+            except EOFError:
+                await self.shutdown()
+                break
+            except Exception as e:
+                logger.error(f"Критическая ошибка в цикле: {e}\n{traceback.format_exc()}")
+                await self.publish_event("on_error", str(e))
     
-    async def shutdown(self): 
-        if not self.is_running: return 
-        logger.info("Завершение работы Jarvis..."); self.is_running = False 
-        if self.settings.get("auto_save_memory", True): self.memory.save()
-        await self.publish_event("jarvis_shutdown"); logger.info("Jarvis завершил работу.")
-        print("\nJarvis завершил работу. До свидания!") 
+    async def shutdown(self):
+        if not self.is_running: return
+        logger.info("Завершение работы Jarvis...")
+        self.is_running = False
+        if self.settings.get("auto_save_memory", True):
+            self.memory.save()
+        await self.event_queue.stop()
+        await self.publish_event("jarvis_shutdown")
+        logger.info("Jarvis завершил работу.")
+        print("\nJarvis завершил работу. До свидания!")
 
 async def main(): 
     jarvis = None
