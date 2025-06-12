@@ -111,6 +111,97 @@ class ProjectManager:
             self._observer.join()
             self._observer = None
 
+    def _detect_project_type(self, path: Path) -> str:
+        """Определяет тип проекта по его структуре."""
+        files = {p.name.lower() for p in path.iterdir() if p.is_file()}
+        dirs = {p.name.lower() for p in path.iterdir() if p.is_dir()}
+        reqs_text = ""
+        req_file = path / "requirements.txt"
+        if req_file.exists():
+            try:
+                reqs_text = req_file.read_text().lower()
+            except Exception:
+                pass
+
+        if any(f.endswith(".ipynb") for f in files) or "notebooks" in dirs or "models" in dirs or any(lib in reqs_text for lib in ["torch", "tensorflow", "scikit-learn"]):
+            return "ML"
+        if "api" in dirs or "app.py" in files or any(framework in reqs_text for framework in ["flask", "fastapi", "django"]):
+            return "API"
+        if "cli.py" in files or "commands" in dirs or "__main__.py" in files:
+            return "CLI"
+        return "UNKNOWN"
+
+    async def _activate_modules_for_project_type(self, project_type: str) -> None:
+        """Автоматически загружает модули в зависимости от типа проекта."""
+        if not hasattr(self.jarvis, "module_manager"):
+            return
+        mapping = {
+            "CLI": ["voice_interface"],
+            "API": ["sql_interface"],
+            "ML": ["ml_trainer_seq2seq"],
+        }
+        for module in mapping.get(project_type.upper(), []):
+            try:
+                await self.jarvis.module_manager.load_module(module)
+            except Exception as e:
+                logger.error(f"Failed to load module {module}: {e}")
+
+    def _load_project_history(self, path: Path) -> List[Dict[str, Any]]:
+        """Загружает историю проекта из файла."""
+        history_file = path / "project_history.json"
+        if history_file.exists():
+            try:
+                with open(history_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                logger.error("Failed to read project history")
+        return []
+
+    def _update_project_history(self, event: str = "open") -> None:
+        """Обновляет историю работы с проектом и сохраняет ее в файл."""
+        if not self.current_project:
+            return
+        path = Path(self.current_project["path"])
+        history_file = path / "project_history.json"
+        history = self._project_history
+        history.append({"timestamp": datetime.now().isoformat(), "event": event})
+        history = history[-self._MAX_HISTORY:]
+        self._project_history = history
+        try:
+            with open(history_file, "w", encoding="utf-8") as f:
+                json.dump(history, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"Failed to write project history: {e}")
+
+    async def _calculate_project_stats(self, path: Path) -> Dict[str, int]:
+        """Подсчет простых статистик по проекту."""
+        stats = {"files": 0, "lines": 0}
+        for root, _, files in os.walk(path):
+            for fname in files:
+                stats["files"] += 1
+                try:
+                    with open(Path(root) / fname, "r", encoding="utf-8", errors="ignore") as f:
+                        stats["lines"] += sum(1 for _ in f)
+                except Exception:
+                    continue
+        return stats
+
+    async def _detect_vcs_needed(self) -> bool:
+        return False
+
+    def _should_create_venv(self) -> bool:
+        return False
+
+    def _generate_ide_configs(self) -> None:
+        pass
+
+    def _docker_available(self) -> bool:
+        try:
+            docker.from_env().ping()
+            return True
+        except Exception:
+            return False
+
     # ███████╗███████╗████████╗████████╗███████╗██████╗ ███████╗
     # ██╔════╝██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗██╔════╝
     # █████╗  ███████╗   ██║      ██║   █████╗  ██████╔╝███████╗
@@ -134,12 +225,14 @@ class ProjectManager:
             
             project_data = await self._scan_project(path)
             self.current_project = project_data
-            
+            self._project_history = self._load_project_history(path)
+
             if load_config:
                 await self.load_project_config()
-            
+
             await self._analyze_project_intelligence()
-            self._update_project_history()
+            await self._activate_modules_for_project_type(project_data.get("type", "UNKNOWN"))
+            self._update_project_history("open")
             await self._run_hooks('post_set')
             
             logger.info(f"Project activated: {project_data['name']}")
@@ -156,6 +249,7 @@ class ProjectManager:
             "name": path.name,
             "path": str(path),
             "system": platform.system(),
+            "type": self._detect_project_type(path),
             "metadata": ProjectMetadata(),
             "intelligence": ProjectIntelligence(),
             "stats": await self._calculate_project_stats(path)
@@ -276,6 +370,7 @@ class ProjectManager:
         await self._run_hooks('pre_close')
         self._stop_watchdog()
         await self._capture_template_diffs()
+        self._update_project_history("close")
         self.current_project = None
         await self._run_hooks('post_close')
         return True
