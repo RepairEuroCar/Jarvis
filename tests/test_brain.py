@@ -29,3 +29,20 @@ async def test_brain_analytical():
     result = await jarvis.brain.think("Проанализируй данные: 10, 20, 30, 40", context)
     assert result["status"].startswith("completed")
     assert result["analysis"]["metrics"]["sum"] == 100
+
+
+def test_log_thoughts_direct():
+    jarvis = Jarvis()
+    jarvis.brain.log_thoughts("dummy task", {"ok": True})
+    chain = jarvis.brain.get_chain_of_thought(limit=1)
+    assert chain
+    assert chain[-1]["problem"] == "dummy task"
+    assert chain[-1]["solution"]["ok"] is True
+
+
+@pytest.mark.asyncio
+async def test_chain_of_thought_after_think():
+    jarvis = Jarvis()
+    await jarvis.brain.think("Если завтра снег, то останемся дома", {})
+    chain = jarvis.brain.get_chain_of_thought()
+    assert any("снег" in rec["problem"] for rec in chain)
