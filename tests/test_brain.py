@@ -5,22 +5,29 @@ import pytest
 import asyncio
 from jarvis.core.main import Jarvis
 
+
 @pytest.mark.asyncio
 async def test_brain_logical():
     jarvis = Jarvis()
     context = {"user_name": "Tester"}
-    result = await jarvis.brain.think("Если пойдет дождь, то мы отменим прогулку", context)
+    result = await jarvis.brain.think(
+        "Если пойдет дождь, то мы отменим прогулку", context
+    )
     assert result["status"].startswith("completed")
     assert result["processed_by"] == "LogicalThoughtProcessor"
     assert "дождь" in result["conclusion"]
+
 
 @pytest.mark.asyncio
 async def test_brain_creative():
     jarvis = Jarvis()
     context = {"num_creative_ideas": 2}
-    result = await jarvis.brain.think("Придумай идею для мобильного приложения", context)
+    result = await jarvis.brain.think(
+        "Придумай идею для мобильного приложения", context
+    )
     assert result["status"].startswith("creative")
     assert len(result["ideas"]) == 2
+
 
 @pytest.mark.asyncio
 async def test_brain_analytical():
@@ -46,3 +53,14 @@ async def test_chain_of_thought_after_think():
     await jarvis.brain.think("Если завтра снег, то останемся дома", {})
     chain = jarvis.brain.get_chain_of_thought()
     assert any("снег" in rec["problem"] for rec in chain)
+
+
+@pytest.mark.asyncio
+async def test_brain_self_evolve(tmp_path):
+    sample = "def FooBar():\n    MyVar=1\n    return MyVar\n"
+    f = tmp_path / "sample.py"
+    f.write_text(sample, encoding="utf-8")
+    jarvis = Jarvis()
+    result = await jarvis.brain.self_evolve(directory=tmp_path)
+    assert str(f) in result
+    assert "my_var" in result[str(f)]["diff"]
