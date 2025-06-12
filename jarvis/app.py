@@ -423,6 +423,7 @@ class Jarvis:
             CommandInfo(name="help", description="Показывает справку по командам.", category=CommandCategory.CORE, usage="help [команда]", aliases=["помощь", "справка"]),
             CommandInfo(name="exit", description="Завершает работу Jarvis.", category=CommandCategory.CORE, usage="exit", aliases=["quit", "выход"]),
             CommandInfo(name="create_python_function", description="Создает Python функцию с использованием AST.", category=CommandCategory.DEVELOPMENT, usage="create_python_function <сигнатура функции>", aliases=["создай_функцию_ast", "новая_функция_ast"]),
+            CommandInfo(name="generate_large_python_file", description="Генерирует Python файл с большим количеством строк.", category=CommandCategory.DEVELOPMENT, usage="generate_large_python_file <путь_к_файлу.py> [число_строк]", aliases=["gen_long_py"]),
             CommandInfo(name="analyze_python_file", description="Анализирует Python файл.", category=CommandCategory.DEVELOPMENT, usage="analyze_python_file <путь_к_файлу.py>", aliases=["анализируй_py"]),
             CommandInfo(name="reason", description="Запускает Мозг для обдумывания проблемы.", category=CommandCategory.REASONING, usage="reason <описание проблемы>", aliases=["подумай", "обдумай_проблему"]),
             CommandInfo(name="load_module", description="Загружает модуль.", category=CommandCategory.SYSTEM, usage="load_module <имя_модуля>", aliases=["загрузи_модуль"]),
@@ -634,6 +635,27 @@ class Jarvis:
             except ImportError: logger.error("'astor' не найден."); return "Ошибка: ast.unparse и 'astor' не найдены."
         await self.publish_event("python_code_generated", type="function", name=func_name_str, code=generated_code)
         return f"Сгенерирована функция '{func_name_str}' (AST):\n\n{generated_code}"
+
+    async def generate_large_python_file_command(self, args_str: str) -> str:
+        """Create a Python file with many simple lines for testing purposes."""
+        parts = args_str.split()
+        if not parts:
+            return "Использование: generate_large_python_file <путь_к_файлу.py> [число_строк]"
+
+        filepath = parts[0]
+        try:
+            num_lines = int(parts[1]) if len(parts) > 1 else 1000
+        except ValueError:
+            return "Ошибка: число строк должно быть целым"
+
+        try:
+            from utils.code_generator import generate_large_python_file
+            abs_path = generate_large_python_file(filepath, num_lines)
+        except Exception as e:
+            logger.error(f"Ошибка генерации файла: {e}")
+            return f"Ошибка генерации файла: {e}"
+        await self.publish_event("python_code_generated", type="file", name=filepath, lines=num_lines)
+        return f"Сгенерирован файл {abs_path} с {num_lines} строками кода"
 
     async def analyze_python_file_command(self, args_str: str) -> str:
         filepath_str = args_str.strip()
