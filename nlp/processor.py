@@ -3,6 +3,7 @@
 # -----------------------------
 import re
 import logging
+import difflib
 from typing import Dict, List, Optional, Any, AsyncGenerator
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -80,6 +81,30 @@ class NLUProcessor:
                 category=CommandCategory.CORE,
                 description="Выход из Jarvis."
             ),
+            CommandPattern(
+                intent="create_class",
+                triggers=["create class", "создай класс", "напиши класс"],
+                entity_extraction_mode=EntityExtractionMode.ALL_AFTER_TRIGGER,
+                entity_names=["class_name_entity"],
+                category=CommandCategory.DEVELOPMENT,
+                description="Создает каркас класса",
+            ),
+            CommandPattern(
+                intent="generate_test",
+                triggers=["generate test", "создай тест", "напиши тест"],
+                entity_extraction_mode=EntityExtractionMode.ALL_AFTER_TRIGGER,
+                entity_names=["function_name_entity"],
+                category=CommandCategory.DEVELOPMENT,
+                description="Генерирует тест",
+            ),
+            CommandPattern(
+                intent="build_api",
+                triggers=["build api", "создай api", "создай веб-сервис"],
+                entity_extraction_mode=EntityExtractionMode.ALL_AFTER_TRIGGER,
+                entity_names=["path_entity"],
+                category=CommandCategory.DEVELOPMENT,
+                description="Создает API шаблон",
+            ),
         ]
 
     async def process(self, text: str) -> Dict[str, Any]:
@@ -107,12 +132,14 @@ class NLUProcessor:
                 
         return self._handle_fallback(text_original)
 
-    async def _match_pattern(self, pattern: CommandPattern, 
-                           text_original: str, 
+    async def _match_pattern(self, pattern: CommandPattern,
+                           text_original: str,
                            text_lower: str) -> Optional[ProcessingResult]:
         """Пытается сопоставить текст с конкретным шаблоном команды."""
         for trigger in pattern.triggers:
             if text_lower.startswith(trigger.lower()):
+                return await self._extract_entities(pattern, text_original, trigger)
+            if difflib.SequenceMatcher(None, text_lower, trigger.lower()).ratio() > 0.85:
                 return await self._extract_entities(pattern, text_original, trigger)
         return None
 
