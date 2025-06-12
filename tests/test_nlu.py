@@ -2,7 +2,7 @@
 # tests/test_nlu.py
 # -----------------------------
 import pytest
-from jarvis.nlu.processor import NLUProcessor
+from jarvis.nlu.processor import NLUProcessor, TaskSemantics
 from jarvis.memory.manager import MemoryManager
 
 
@@ -38,7 +38,7 @@ async def test_unknown_command(nlu):
 @pytest.mark.asyncio
 async def test_semantics_translation(nlu):
     result = await nlu.process("переведи это")
-    assert result["semantics"] == "translation"
+    assert result["semantics"] == TaskSemantics.TRANSLATION
 
 
 @pytest.mark.asyncio
