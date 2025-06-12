@@ -21,6 +21,8 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import difflib
 import difflib
+import patch
+import tempfile
 import aioredis
 import docker
 from prompt_toolkit import prompt
@@ -315,6 +317,28 @@ class ProjectManager:
             )
             self.jarvis.memory.remember("project_templates.history", history, category="project")
 
+    def learn_template_updates(self, project_name: str) -> List[str]:
+        """Apply user modifications from history to base templates."""
+        history = self.jarvis.memory.query("project_templates.history")
+        if isinstance(history, dict):
+            history = history.get("value")
+        if not history:
+            return []
+
+        updated: List[str] = []
+        for entry in history:
+            if entry.get("template") != project_name:
+                continue
+            for rel, diff in entry.get("diffs", {}).items():
+                key = FILE_TO_TEMPLATE_KEY.get(rel)
+                if not key or diff == "FILE REMOVED":
+                    continue
+                new_content = _apply_diff(TEMPLATES[key], diff)
+                if new_content != TEMPLATES[key]:
+                    TEMPLATES[key] = new_content
+                    updated.append(key)
+        return updated
+
     # ... (остальные методы из предыдущих реализаций с улучшениями)
 
     # ███████╗██╗  ██╗██████╗  ██████╗ ██╗  ██╗███████╗
@@ -377,3 +401,24 @@ TEMPLATES = {
     "basic_test": """import unittest\n\nclass TestBasic(unittest.TestCase):\n    def test_example(self):\n        self.assertTrue(True)""",
     "dockerfile_python": """FROM python:3.9\nWORKDIR /app\nCOPY . .\nRUN pip install -r requirements.txt\nCMD ["python", "./src/main.py"]"""
 }
+
+# Mapping of project file paths to template keys for learning
+FILE_TO_TEMPLATE_KEY = {
+    "tests/test_main.py": "basic_test",
+    "Dockerfile": "dockerfile_python",
+}
+
+def _apply_diff(original: str, diff_text: str) -> str:
+    """Apply unified diff to a text string using the patch library."""
+    try:
+        ps = patch.fromstring(diff_text.encode())
+    except Exception as e:
+        logger.error(f"Patch parse failed: {e}")
+        return original
+    with tempfile.TemporaryDirectory() as tmp:
+        file_path = Path(tmp) / "file"
+        file_path.write_text(original, encoding="utf-8")
+        if not ps.apply(root=tmp):
+            logger.error("Patch apply failed")
+            return original
+        return file_path.read_text(encoding="utf-8")

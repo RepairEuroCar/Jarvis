@@ -740,6 +740,10 @@ class Jarvis:
                 continue
             for rel in entry.get("diffs", {}):
                 counts[rel] += 1
+        updated = self.project_manager.learn_template_updates(template_name)
+        if updated:
+            self.memory.remember("templates.last_updated", {"template": template_name, "files": updated})
+            return "Обновлены шаблоны: " + ", ".join(updated)
         if not counts:
             return f"Нет записей для шаблона {template_name}."
         lines = [f"Изменения в {template_name}:"]
