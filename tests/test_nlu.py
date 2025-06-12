@@ -5,9 +5,11 @@ import pytest
 from jarvis.nlu.processor import NLUProcessor
 from jarvis.memory.manager import MemoryManager
 
+
 @pytest.fixture
 def nlu():
     return NLUProcessor()
+
 
 @pytest.mark.asyncio
 async def test_reason_intent(nlu):
@@ -17,6 +19,7 @@ async def test_reason_intent(nlu):
     assert result["confidence"] >= 0.9
     assert "problem_description_entity" in result["entities"]
 
+
 @pytest.mark.asyncio
 async def test_exit_intent(nlu):
     for variant in ["выйти", "exit", "quit"]:
@@ -24,11 +27,24 @@ async def test_exit_intent(nlu):
         assert result["intent"] == "exit"
         assert result["entities"] == {"raw_args": ""}
 
+
 @pytest.mark.asyncio
 async def test_unknown_command(nlu):
     result = await nlu.process("какая-то неизвестная команда")
     assert result["intent"] == "какая-то"
     assert result["confidence"] < 0.5
+
+
+@pytest.mark.asyncio
+async def test_semantics_translation(nlu):
+    result = await nlu.process("переведи это")
+    assert result["semantics"] == "translation"
+
+
+@pytest.mark.asyncio
+async def test_explain_solution_intent(nlu):
+    result = await nlu.process("как ты решил это")
+    assert result["intent"] == "explain_solution"
 
 
 @pytest.mark.asyncio
@@ -43,4 +59,3 @@ async def test_custom_pattern_persistence(tmp_path):
     nlu2 = NLUProcessor(memory_manager=mem2)
     result = await nlu2.process("hi")
     assert result["intent"] == "greet"
-
