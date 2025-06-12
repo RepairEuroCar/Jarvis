@@ -435,6 +435,8 @@ class Jarvis:
             CommandInfo(name="teach_pattern", description="Добавляет пользовательский NLU шаблон.", category=CommandCategory.DEVELOPMENT, usage="teach_pattern <intent> <trigger_phrase> [entity_type]", aliases=[]),
             CommandInfo(name="python_dsl", description="Преобразует фразу в код Python.", category=CommandCategory.DEVELOPMENT, usage="python_dsl <фраза>", aliases=["dsl_python"]),
             CommandInfo(name="parse_doc", description="Извлекает требования из описания.", category=CommandCategory.DEVELOPMENT, usage="parse_doc <текст>", aliases=["разбери_док"]),
+            CommandInfo(name="self_learn", description="Запускает обучение Seq2Seq модели.", category=CommandCategory.DEVELOPMENT, usage="self_learn <trainer_id>", aliases=[]),
+            CommandInfo(name="self_update", description="Коммитит изменения или делает pull.", category=CommandCategory.DEVELOPMENT, usage="self_update <commit|pull> [args]", aliases=[]),
         ]
         for cmd_info in core_command_infos:
             handler = getattr(self, cmd_info.handler_name or f"{cmd_info.name}_command")
@@ -767,6 +769,35 @@ class Jarvis:
         for rel, c in counts.items():
             lines.append(f"{rel}: {c} модификаций")
         return "\n".join(lines)
+
+    async def self_learn_command(self, args_str: str) -> str:
+        module_name = "ml_trainer_seq2seq"
+        if module_name not in self.module_manager.modules:
+            if not await self.module_manager.load_module(module_name):
+                return f"Не удалось загрузить модуль '{module_name}'."
+        module = self.module_manager.modules.get(module_name)
+        if hasattr(module, "start_training_command"):
+            return await module.start_training_command(self, args_str)
+        return "Команда обучения недоступна."
+
+    async def self_update_command(self, args_str: str) -> str:
+        parts = args_str.split(" ", 1)
+        if not parts:
+            return "Использование: self_update <commit|pull> [аргументы]"
+        action = parts[0].lower()
+        rest = parts[1] if len(parts) > 1 else ""
+        module_name = "git_manager"
+        if module_name not in self.module_manager.modules:
+            if not await self.module_manager.load_module(module_name):
+                return f"Не удалось загрузить модуль '{module_name}'."
+        git_module = self.module_manager.modules.get(module_name)
+        if action == "commit":
+            message = rest.strip() or "update"
+            await git_module.commands["git_add"](self, ".")
+            return await git_module.commands["git_commit"](self, f'"{message}"')
+        if action == "pull":
+            return await git_module.commands["git_pull"](self, rest)
+        return "Использование: self_update <commit|pull> [аргументы]"
 
     async def interactive_loop(self):
         self.is_running = True; await self._initialize_project(); logger.info("Запуск интерактивного режима")
