@@ -776,3 +776,28 @@ async def close_module(jarvis_instance):
     ):
         await jarvis_instance.git_manager_instance.close_session()
     print("Git manager module resources closed.")
+
+
+# ------------------------------------------------------
+# CommandDispatcher integration helpers
+# ------------------------------------------------------
+
+async def commit(message: str, repo: str | None = None) -> str:
+    """Commit staged changes with a message."""
+    gm = GitManager()
+    return await gm.commit(None, message, repo)
+
+
+async def push(remote: str = "origin", branch: str = "main", repo: str | None = None) -> str:
+    """Push commits to the given remote and branch."""
+    gm = GitManager()
+    remote_branch = f"{remote} {branch}".strip()
+    return await gm.push(None, remote_branch, repo)
+
+
+from command_dispatcher import default_dispatcher
+
+default_dispatcher.register_command_handler("git", "commit", commit)
+default_dispatcher.register_command_handler("git", "push", push)
+
+__all__ = ["GitManager", "commit", "push"]
