@@ -1,7 +1,9 @@
 import asyncio
 import json
 import os
+import re
 import subprocess  # Keep for GitManager._run_git_command (uses asyncio.create_subprocess_shell)
+from urllib.parse import urlparse
 
 import aiohttp
 
@@ -10,6 +12,26 @@ class GitManager:
     def __init__(self, base_dir=None):
         self.base_dir = base_dir if base_dir else os.getcwd()
         self.session = None  # aiohttp.ClientSession, initialized on demand
+
+    INVALID_PATTERNS = [";", "&&", "\n"]
+
+    def _is_safe(self, value: str) -> bool:
+        return not any(p in value for p in self.INVALID_PATTERNS)
+
+    def _validate_repo_url(self, url: str) -> bool:
+        if not url or not self._is_safe(url):
+            return False
+        parsed = urlparse(url)
+        if parsed.scheme:
+            return parsed.scheme in {"http", "https", "ssh", "git", "file"} and bool(
+                parsed.netloc or parsed.path
+            )
+        return bool(re.match(r"^[\w.@:/+-]+$", url))
+
+    def _validate_branch_name(self, name: str) -> bool:
+        if not name or not self._is_safe(name):
+            return False
+        return re.match(r"^[A-Za-z0-9._/-]+$", name) is not None
 
     async def _get_session(self):
         if self.session is None or self.session.closed:
@@ -51,6 +73,9 @@ class GitManager:
 
     async def clone(self, jarvis_instance, repo_url, local_path_str=None):
         """Clones a repository. <repo_url> [local_subdir]"""
+        if not self._validate_repo_url(repo_url):
+            return "Invalid repository URL."
+
         # If local_path_str is provided, clone into a subdirectory of base_dir
         # If not, git clone will create a dir based on repo name in base_dir
         command = ["clone", repo_url]
@@ -140,9 +165,13 @@ class GitManager:
         if not branch_name_ops_str:  # List branches
             pass
         elif len(parts) == 1 and not parts[0].startswith("-"):  # Create branch
+            if not self._validate_branch_name(parts[0]):
+                return "Invalid branch name."
             command.append(parts[0])
             action_msg = f"Creating branch '{parts[0]}'"
         elif len(parts) == 2 and parts[0] == "-d":  # Delete branch
+            if not self._validate_branch_name(parts[1]):
+                return "Invalid branch name."
             command.extend(["-d", parts[1]])
             action_msg = f"Deleting branch '{parts[1]}'"
         else:
@@ -161,6 +190,8 @@ class GitManager:
             if repo_path_str
             else self.base_dir
         )
+        if not self._validate_branch_name(branch_name):
+            return "Invalid branch name."
         stdout, stderr, returncode = await self._run_git_command(
             ["checkout", branch_name], cwd=path
         )
@@ -180,6 +211,9 @@ class GitManager:
         remote = parts[0] if len(parts) > 0 else "origin"
         branch = parts[1] if len(parts) > 1 else "main"  # Or get current branch
 
+        if not self._validate_branch_name(branch):
+            return "Invalid branch name."
+
         stdout, stderr, returncode = await self._run_git_command(
             ["push", remote, branch], cwd=path
         )
@@ -198,6 +232,9 @@ class GitManager:
         parts = remote_branch_str.split()
         remote = parts[0] if len(parts) > 0 else "origin"
         branch = parts[1] if len(parts) > 1 else "main"  # Or get current branch
+
+        if not self._validate_branch_name(branch):
+            return "Invalid branch name."
 
         stdout, stderr, returncode = await self._run_git_command(
             ["pull", remote, branch], cwd=path
