@@ -95,6 +95,10 @@ class Jarvis:
         self.memory  # initialize memory
         self.nlu = NLUProcessor()
         self.brain = Brain(self)
+        # Initialize per-instance cache for input parsing
+        self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
+            self._parse_input_uncached
+        )
 
     def _setup_logging(self):
         logging.basicConfig(level=self.settings.log_level)
@@ -166,9 +170,11 @@ class Jarvis:
 
         return result
 
-    @lru_cache(maxsize=Settings().max_cache_size)
     def parse_input(self, text: str) -> Dict:
-        """Упрощенный парсер команд"""
+        """Упрощенный парсер команд с кэшированием"""
+        return self._parse_input_cached(text)
+
+    def _parse_input_uncached(self, text: str) -> Dict:
         text = text.lower().strip()
         for cmd in self.commands.values():
             if text.startswith(cmd.info.name) or any(
