@@ -25,3 +25,11 @@ def test_top_level_call(tmp_path):
     linter = AstLinter()
     errors = linter.lint_paths([p])
     assert any("Top-level call" in e.message for e in errors)
+
+
+def test_detect_eval_usage(tmp_path):
+    p = tmp_path / "e.py"
+    p.write_text("def foo():\n    eval('1+1')\n", encoding="utf-8")
+    linter = AstLinter()
+    errors = linter.lint_paths([p])
+    assert any("code injection" in e.message for e in errors)
