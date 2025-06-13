@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import code
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
@@ -222,6 +223,16 @@ class Jarvis:
             for w in info["warnings"]:
                 lines.append(f"  - {w}")
         return "\n".join(lines)
+
+    async def repl_command(self, event: UserEvent):
+        """Запуск интерактивного Python REPL."""
+        banner = "Jarvis Python REPL. Type exit() or Ctrl-D to exit."
+        local_ns = {"jarvis": self}
+        try:
+            await asyncio.to_thread(code.interact, banner=banner, local=local_ns)
+        except SystemExit:
+            pass
+        return "REPL closed."
 
     async def voice_on_command(self, event: UserEvent):
         """Включить голосовой интерфейс."""
