@@ -75,6 +75,28 @@ class AstLinter:
                             msg,
                         )
                     )
+            if isinstance(node, ast.Call):
+                func = node.func
+                if isinstance(func, ast.Name) and func.id in {"eval", "exec"}:
+                    errors.append(
+                        LintError(
+                            path,
+                            node.lineno,
+                            f"Potential code injection via '{func.id}'",
+                        )
+                    )
+                if (
+                    isinstance(func, ast.Attribute)
+                    and isinstance(func.value, ast.Name)
+                    and func.attr in {"eval", "exec"}
+                ):
+                    errors.append(
+                        LintError(
+                            path,
+                            node.lineno,
+                            f"Potential code injection via '{func.attr}'",
+                        )
+                    )
         return errors
 
     def lint_paths(self, paths: Iterable[str]) -> List[LintError]:

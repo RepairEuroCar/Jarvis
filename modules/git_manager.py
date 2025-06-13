@@ -39,7 +39,7 @@ class GitManager:
         return self.session
 
     async def _run_git_command(self, command_args, cwd=None):
-        # command_args should be a list of arguments for git
+        """Run a git command and capture output with error handling."""
         git_executable = "git"  # Or allow configuration
         full_command = [git_executable] + command_args
 
@@ -47,14 +47,25 @@ class GitManager:
         if not os.path.isdir(effective_cwd):
             return "", f"Error: Working directory '{effective_cwd}' does not exist.", 1
 
-        process = await asyncio.create_subprocess_exec(
-            *full_command,  # Use create_subprocess_exec for list of args
-            cwd=effective_cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate()
-        return stdout.decode().strip(), stderr.decode().strip(), process.returncode
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *full_command,
+                cwd=effective_cwd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            stdout, stderr = await process.communicate()
+            return (
+                stdout.decode().strip(),
+                stderr.decode().strip(),
+                process.returncode,
+            )
+        except FileNotFoundError:
+            logging.warning("git executable not found")
+            return "", "git executable not found", 1
+        except Exception as e:
+            logging.warning("git command failed: %s", e)
+            return "", f"Exception while running git: {e}", 1
 
     async def init(self, jarvis_instance, repo_path_str=None):
         """Initializes a new Git repository. [repo_subdir]"""

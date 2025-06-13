@@ -11,6 +11,7 @@ class Table:
     def __init__(self, name, columns):
         self.name = name
         self.columns = columns
+        self._lock = asyncio.Lock()
 
     async def create(self, db):
         column_defs = ", ".join(
@@ -21,8 +22,11 @@ class Table:
                 for col in self.columns
             ]
         )
-        await db.execute(f"CREATE TABLE IF NOT EXISTS {self.name} ({column_defs})")
-        await db.commit()
+        async with self._lock:
+            await db.execute(
+                f"CREATE TABLE IF NOT EXISTS {self.name} ({column_defs})"
+            )
+            await db.commit()
 
     async def insert(self, db, data: dict):
         cols = ", ".join(data.keys())
@@ -38,14 +42,15 @@ class Table:
             ):
                 data["created_at"] = datetime.datetime.now().isoformat()
 
-        await db.execute(
-            f"INSERT INTO {self.name} ({cols}) VALUES ({placeholders})",
-            tuple(data.values()),
-        )
-        await db.commit()
-        async with db.execute(f"SELECT last_insert_rowid()") as cursor:
-            row = await cursor.fetchone()
-            return row[0] if row else None
+        async with self._lock:
+            await db.execute(
+                f"INSERT INTO {self.name} ({cols}) VALUES ({placeholders})",
+                tuple(data.values()),
+            )
+            await db.commit()
+            async with db.execute("SELECT last_insert_rowid()") as cursor:
+                row = await cursor.fetchone()
+                return row[0] if row else None
 
     async def select(
         self,
@@ -71,9 +76,10 @@ class Table:
             query += f" LIMIT ?"
             params.append(limit)
 
-        async with db.execute(query, tuple(params)) as cursor:
-            columns_desc = [desc[0] for desc in cursor.description]
-            return [dict(zip(columns_desc, row)) async for row in cursor]
+        async with self._lock:
+            async with db.execute(query, tuple(params)) as cursor:
+                columns_desc = [desc[0] for desc in cursor.description]
+                return [dict(zip(columns_desc, row)) async for row in cursor]
 
     async def update(self, db, data: dict, where: dict):
         if not data or not where:
@@ -83,10 +89,11 @@ class Table:
         set_clause = ", ".join([f"{key} = ?" for key in data])
         conditions = " AND ".join([f"{key} = ?" for key in where])
         params = tuple(data.values()) + tuple(where.values())
-        await db.execute(
-            f"UPDATE {self.name} SET {set_clause} WHERE {conditions}", params
-        )
-        await db.commit()
+        async with self._lock:
+            await db.execute(
+                f"UPDATE {self.name} SET {set_clause} WHERE {conditions}", params
+            )
+            await db.commit()
         # total_changes might not be reliable for selected rows, it's for the connection.
         # For specific feedback, one might need to count rows before/after or use specific SQL.
         # For now, let's return the number of changes in the last operation.
@@ -103,8 +110,9 @@ class Table:
             raise ValueError("Where clause cannot be empty for delete operation.")
         conditions = " AND ".join([f"{key} = ?" for key in where])
         params = tuple(where.values())
-        await db.execute(f"DELETE FROM {self.name} WHERE {conditions}", params)
-        await db.commit()
+        async with self._lock:
+            await db.execute(f"DELETE FROM {self.name} WHERE {conditions}", params)
+            await db.commit()
         return (
             db.total_changes
         )  # Similar to update, returns total changes on the connection.
