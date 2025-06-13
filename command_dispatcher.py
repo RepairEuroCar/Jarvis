@@ -115,3 +115,7 @@ class CommandDispatcher:
             return "Reload not supported"
         success = await self.jarvis.module_manager.reload_module(module)
         return f"Module {module} reloaded" if success else f"Failed to reload {module}"
+
+
+# Global dispatcher used for modules that register handlers on import
+default_dispatcher = CommandDispatcher()
