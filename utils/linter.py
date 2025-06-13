@@ -27,18 +27,9 @@ class AstLinter:
         """
         self.max_function_lines = max_function_lines
 
-    def lint_file(self, path: str) -> List[LintError]:
-        """Run lint checks on a single Python file.
-
-        Args:
-            path (str): Path to the file to lint.
-
-        Returns:
-            List[LintError]: List of found lint errors.
-        """
+    def _lint_source(self, source: str, path: str) -> List[LintError]:
+        """Run lint checks on given source code."""
         errors: List[LintError] = []
-        with open(path, "r", encoding="utf-8") as f:
-            source = f.read()
         tree = ast.parse(source, filename=path)
 
         for node in tree.body:
@@ -98,6 +89,23 @@ class AstLinter:
                         )
                     )
         return errors
+
+    def lint_file(self, path: str) -> List[LintError]:
+        """Run lint checks on a single Python file.
+
+        Args:
+            path (str): Path to the file to lint.
+
+        Returns:
+            List[LintError]: List of found lint errors.
+        """
+        with open(path, "r", encoding="utf-8") as f:
+            source = f.read()
+        return self._lint_source(source, path)
+
+    def lint_text(self, source: str, path: str = "<string>") -> List[LintError]:
+        """Lint Python code provided as a string."""
+        return self._lint_source(source, path)
 
     def lint_paths(self, paths: Iterable[str]) -> List[LintError]:
         """Lint multiple files or directories.

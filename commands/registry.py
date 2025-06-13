@@ -89,6 +89,13 @@ DEVEL_COMMANDS = [
         usage="code_tips <path> [--max-lines N]",
         aliases=["tips", "советы"],
     ),
+    CommandInfo(
+        name="rate_solutions",
+        description="Show ratings of stored solutions",
+        category=CommandCategory.DEVELOPMENT,
+        usage="rate_solutions",
+        aliases=[],
+    ),
 ]
 
 ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS + DEVEL_COMMANDS
