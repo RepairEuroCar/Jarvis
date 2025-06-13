@@ -72,3 +72,19 @@ The codebase utilises a couple of classic patterns:
   in the factory and the `Brain` class obtains them via this facility.
 - **Singleton** – `Jarvis` in `jarvis/core/main.py` implements the singleton
   pattern so repeated instantiation returns the same assistant instance.
+
+## Automatic import inference
+
+`write_code` can prepend common imports based on a textual description. Example:
+
+```python
+from utils.code_generator import write_code
+
+task = {
+    "dsl": "создай функцию foo",
+    "path": "foo.py",
+    "description": "Создай телеграм бота",
+}
+write_code(task)
+# foo.py will start with 'import aiogram'
+```
