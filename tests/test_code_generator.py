@@ -16,3 +16,16 @@ def test_write_code(tmp_path):
     assert os.path.isfile(result)
     content = path.read_text(encoding="utf-8")
     assert "def bar" in content
+
+
+def test_write_code_infers_imports(tmp_path):
+    path = tmp_path / "bot.py"
+    task = {
+        "dsl": "создай функцию foo",
+        "category": "utility",
+        "path": str(path),
+        "description": "Создай телеграм бота",
+    }
+    write_code(task)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    assert lines[0].startswith("import aiogram")
