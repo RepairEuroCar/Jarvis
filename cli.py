@@ -6,6 +6,7 @@ import logging
 import platform
 import sys
 
+from command_dispatcher import CommandDispatcher
 from jarvis.core.main import Jarvis
 
 logger = logging.getLogger("Jarvis.CLI")
@@ -13,6 +14,7 @@ logger = logging.getLogger("Jarvis.CLI")
 
 async def run():
     jarvis = Jarvis()
+    dispatcher = CommandDispatcher(jarvis)
     await jarvis.initialize()
     print(f"Jarvis CLI (Python {platform.python_version()})")
     print(f"User: {jarvis.user_name}\n")
@@ -27,16 +29,21 @@ async def run():
             text = line.strip()
             if not text:
                 continue
-            if text.lower() in ["exit", "quit"]:
+
+            result = await dispatcher.dispatch(text)
+            if result is CommandDispatcher.EXIT:
                 print("Exiting Jarvis...")
                 break
+            if result is not None:
+                print(result)
+                continue
 
-            result = await jarvis.nlu.process(text)
-            cmd = result.get("intent")
+            parsed = await jarvis.nlu.process(text)
+            cmd = parsed.get("intent")
             handler_tuple = jarvis.commands.get(cmd)
             if handler_tuple:
                 cmd_info, handler = handler_tuple
-                args = result.get("entities", {}).get("raw_args", "")
+                args = parsed.get("entities", {}).get("raw_args", "")
                 output = await handler(args) if cmd_info.is_async else handler(args)
                 print(output)
             else:
