@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Dict, List, Callable, Awaitable, Optional, TypeVar
 from collections import defaultdict
+from pathlib import Path
+import yaml
 from transitions import Machine
 from pydantic import BaseModel, BaseSettings
 from jarvis.voice.interface import VoiceInterface
@@ -20,6 +22,13 @@ class UserEvent(BaseModel):
     is_voice: bool = False
 
 class Settings(BaseSettings):
+    """Configuration for the :class:`Jarvis` core.
+
+    Values are populated from environment variables defined in ``.env`` and can
+    be overridden by a ``config.yaml`` file. Environment variables use the
+    ``JARVIS_`` prefix (e.g. ``JARVIS_LOG_LEVEL``).
+    """
+
     default_user: str = "User"
     log_level: str = "INFO"
     max_cache_size: int = 10
@@ -27,6 +36,23 @@ class Settings(BaseSettings):
     voice_activation_phrase: str = "джарвис"
     voice_rate: int = 180
     voice_volume: float = 0.9
+
+    class Config:
+        env_file = ".env"
+        env_prefix = "JARVIS_"
+
+    @classmethod
+    def load(cls, yaml_path: str = "config.yaml") -> "Settings":
+        """Load settings optionally overriding values from a YAML file."""
+        data = {}
+        yaml_file = Path(yaml_path)
+        if yaml_file.exists():
+            try:
+                with open(yaml_file, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f) or {}
+            except Exception as e:
+                logger.warning(f"Failed to read {yaml_path}: {e}")
+        return cls(**data)
 
 @dataclass
 class RegisteredCommand:
@@ -37,8 +63,9 @@ class RegisteredCommand:
 class Jarvis:
     states = ['idle', 'listening', 'processing', 'sleeping']
 
-    def __init__(self, settings: Settings = None):
-        self.settings = settings or Settings()
+    def __init__(self, settings: Settings = None, config_path: str = "config/config.yaml"):
+        # Load settings from YAML and environment unless explicitly provided
+        self.settings = settings or Settings.load(config_path)
         self._setup_logging()
         self._setup_state_machine()
         
@@ -143,3 +170,20 @@ class Jarvis:
         await self.initialize()
         while True:
             await asyncio.sleep(1)
+
+
+if __name__ == "__main__":
+    import argparse, json
+
+    parser = argparse.ArgumentParser(description="Jarvis settings helper")
+    parser.add_argument(
+        "--schema",
+        action="store_true",
+        help="print JSON schema of the Settings model",
+    )
+    args = parser.parse_args()
+
+    if args.schema:
+        print(json.dumps(Settings.schema(), indent=2, ensure_ascii=False))
+    else:
+        print(json.dumps(Settings().dict(), indent=2, ensure_ascii=False))

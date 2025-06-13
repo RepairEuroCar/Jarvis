@@ -1,0 +1,6 @@
+# Example configuration file for Jarvis
+# Values here override defaults defined in Settings
+# e.g.
+# log_level: DEBUG
+# voice_enabled: false
+
