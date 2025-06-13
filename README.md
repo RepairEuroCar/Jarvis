@@ -39,6 +39,16 @@ python -m jarvis.core.main --schema
 
 **Caution**: these commands execute heavy ML training and Git operations. Use them only if you understand the consequences and have configured the trainer and repository paths correctly.
 
+### Code formatting
+
+Run the formatting tools with:
+
+```bash
+./scripts/format.sh
+```
+
+Use `--check` to verify formatting in CI or before committing changes.
+
 ## Design patterns
 
 The codebase utilises a couple of classic patterns:

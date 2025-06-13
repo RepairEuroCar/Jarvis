@@ -1,9 +1,9 @@
 """Utility to generate large Python files for testing or demonstration."""
+
 from __future__ import annotations
 
-import os
 import ast
-
+import os
 from typing import Dict
 
 from utils.python_dsl import phrase_to_python

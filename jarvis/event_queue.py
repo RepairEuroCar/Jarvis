@@ -26,7 +26,9 @@ class EventQueue:
             await self._worker
             self._worker = None
 
-    async def emit(self, event_name: str, *args: Any, priority: int = 0, **kwargs: Any) -> None:
+    async def emit(
+        self, event_name: str, *args: Any, priority: int = 0, **kwargs: Any
+    ) -> None:
         """Queue an event for processing."""
         await self._queue.put((priority, ("event", (event_name, args, kwargs))))
 

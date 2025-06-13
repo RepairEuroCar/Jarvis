@@ -1,25 +1,29 @@
-import logging
 import asyncio
+import logging
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Dict, List, Callable, Awaitable, Optional, TypeVar
-from collections import defaultdict
 from pathlib import Path
+from typing import Awaitable, Callable, Dict, List, Optional, TypeVar
+
 import yaml
-from transitions import Machine
 from pydantic import BaseModel, BaseSettings
-from jarvis.voice.interface import VoiceInterface
-from jarvis.memory.manager import MemoryManager
-from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
+from transitions import Machine
+
 from jarvis.brain import Brain
+from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
+from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
+from jarvis.voice.interface import VoiceInterface
 
 logger = logging.getLogger("Jarvis.Core")
+
 
 class UserEvent(BaseModel):
     user_id: int
     text: str
     is_voice: bool = False
+
 
 class Settings(BaseSettings):
     """Configuration for the :class:`Jarvis` core.
@@ -54,16 +58,18 @@ class Settings(BaseSettings):
                 logger.warning(f"Failed to read {yaml_path}: {e}")
         return cls(**data)
 
+
 @dataclass
 class RegisteredCommand:
     info: CommandInfo
     handler: Callable
     is_alias: bool = False
 
+
 class Jarvis:
     """Main application orchestrator implemented as a Singleton."""
 
-    states = ['idle', 'listening', 'processing', 'sleeping']
+    states = ["idle", "listening", "processing", "sleeping"]
     _instance: Optional["Jarvis"] = None
 
     def __new__(cls, *args, **kwargs):
@@ -71,12 +77,14 @@ class Jarvis:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, settings: Settings = None, config_path: str = "config/config.yaml"):
+    def __init__(
+        self, settings: Settings = None, config_path: str = "config/config.yaml"
+    ):
         # Load settings from YAML and environment unless explicitly provided
         self.settings = settings or Settings.load(config_path)
         self._setup_logging()
         self._setup_state_machine()
-        
+
         self.commands: Dict[str, RegisteredCommand] = {}
         self._memory = None
         self._voice_interface = None
@@ -84,16 +92,16 @@ class Jarvis:
         self.memory  # initialize memory
         self.nlu = NLUProcessor()
         self.brain = Brain(self)
-        
+
     def _setup_logging(self):
         logging.basicConfig(level=self.settings.log_level)
-        
+
     def _setup_state_machine(self):
-        self.machine = Machine(model=self, states=self.states, initial='idle')
-        self.machine.add_transition('wake', 'sleeping', 'idle')
-        self.machine.add_transition('sleep', '*', 'sleeping')
-        self.machine.add_transition('listen', 'idle', 'listening')
-        self.machine.add_transition('process', 'listening', 'processing')
+        self.machine = Machine(model=self, states=self.states, initial="idle")
+        self.machine.add_transition("wake", "sleeping", "idle")
+        self.machine.add_transition("sleep", "*", "sleeping")
+        self.machine.add_transition("listen", "idle", "listening")
+        self.machine.add_transition("process", "listening", "processing")
 
     @property
     def memory(self) -> MemoryManager:
@@ -111,17 +119,14 @@ class Jarvis:
         for cmd_info in ALL_COMMANDS:
             if not hasattr(self, f"{cmd_info.name}_command"):
                 continue
-                
+
             handler = getattr(self, f"{cmd_info.name}_command")
             self.commands[cmd_info.name] = RegisteredCommand(
-                info=cmd_info, 
-                handler=handler
+                info=cmd_info, handler=handler
             )
             for alias in cmd_info.aliases:
                 self.commands[alias] = RegisteredCommand(
-                    info=cmd_info,
-                    handler=handler,
-                    is_alias=True
+                    info=cmd_info, handler=handler, is_alias=True
                 )
 
     async def initialize(self):
@@ -134,22 +139,22 @@ class Jarvis:
         parsed = self.parse_input(command_text)
         if not parsed:
             return await self.unknown_command(command_text, is_voice)
-            
-        cmd = self.commands.get(parsed['command'])
+
+        cmd = self.commands.get(parsed["command"])
         if not cmd:
             return await self.unknown_command(command_text, is_voice)
-            
+
         event = UserEvent(
-            user_id=0,  # Системный пользователь
-            text=command_text,
-            is_voice=is_voice
+            user_id=0, text=command_text, is_voice=is_voice  # Системный пользователь
         )
-        
+
         result = await cmd.handler(event)
-        
+
         if is_voice and self.voice_interface:
-            await self.voice_interface.say_async(result[:200])  # Ограничение длины ответа
-            
+            await self.voice_interface.say_async(
+                result[:200]
+            )  # Ограничение длины ответа
+
         return result
 
     @lru_cache(maxsize=Settings().max_cache_size)
@@ -157,10 +162,12 @@ class Jarvis:
         """Упрощенный парсер команд"""
         text = text.lower().strip()
         for cmd in self.commands.values():
-            if text.startswith(cmd.info.name) or any(text.startswith(a) for a in cmd.info.aliases):
+            if text.startswith(cmd.info.name) or any(
+                text.startswith(a) for a in cmd.info.aliases
+            ):
                 return {
-                    'command': cmd.info.name,
-                    'args': text[len(cmd.info.name):].strip()
+                    "command": cmd.info.name,
+                    "args": text[len(cmd.info.name) :].strip(),
                 }
         return None
 
@@ -172,7 +179,9 @@ class Jarvis:
 
     # Пример команды
     async def help_command(self, event: UserEvent):
-        return "Доступные команды: " + ", ".join(cmd.info.name for cmd in self.commands.values())
+        return "Доступные команды: " + ", ".join(
+            cmd.info.name for cmd in self.commands.values()
+        )
 
     async def run(self):
         await self.initialize()
@@ -181,7 +190,8 @@ class Jarvis:
 
 
 if __name__ == "__main__":
-    import argparse, json
+    import argparse
+    import json
 
     parser = argparse.ArgumentParser(description="Jarvis settings helper")
     parser.add_argument(

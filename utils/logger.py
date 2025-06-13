@@ -2,7 +2,6 @@ import logging
 import sys
 from typing import Optional
 
-
 _LOGGER: Optional[logging.Logger] = None
 
 
