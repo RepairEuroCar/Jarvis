@@ -46,6 +46,41 @@ python -m jarvis.core.main --schema
 
 **Caution**: these commands execute heavy ML training and Git operations. Use them only if you understand the consequences and have configured the trainer and repository paths correctly.
 
+## Command dispatcher
+
+Jarvis includes a lightweight command dispatcher that lets modules expose
+additional CLI actions. Commands are written in the form
+`<module>.<action> [--param=value]` and are resolved at runtime.
+
+Use `list_commands` to print every registered command or `help <module> <action>`
+to display the handler's documentation. The dispatcher prints a short usage
+message when no command is specified:
+
+```text
+Enter <module> <action> [--param=value]...
+```
+
+Modules register handlers by calling
+`default_dispatcher.register_command_handler()` during import. For example,
+`ml_trainer` and `git_manager` register their commands as shown below:
+
+```python
+default_dispatcher.register_command_handler("ml", "train", train)
+default_dispatcher.register_command_handler("ml", "evaluate", evaluate)
+```
+
+```python
+default_dispatcher.register_command_handler("git", "commit", commit)
+default_dispatcher.register_command_handler("git", "push", push)
+```
+
+### Examples
+
+- `ml.train --config=training.json`
+- `ml.evaluate --config=eval.json --checkpoint=model.pt`
+- `git.commit --message="Initial commit" --repo=project`
+- `git.push --remote=origin --branch=main --repo=project`
+
 ### Code formatting
 
 Run the formatting tools with:
