@@ -14,6 +14,8 @@
 import ast
 import difflib
 import logging
+import os
+import tempfile
 import time
 import uuid
 
@@ -22,6 +24,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Type
 
+from utils.linter import AstLinter
 from .processors import (
     AnalyticalThoughtProcessor,
     APIBuilderProcessor,
@@ -194,3 +197,27 @@ class Brain:
             results[str(file_path)] = {"analysis": analysis, "diff": diff}
 
         return results
+
+    def self_review(self) -> Dict[str, Any]:
+        """Lint recently generated code and return warnings."""
+        linter = AstLinter()
+        review: Dict[str, Any] = {}
+        for entry in self.get_chain_of_thought(limit=5):
+            code = entry.get("solution", {}).get("generated_code")
+            if not code:
+                continue
+            with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as tmp:
+                tmp.write(code)
+                tmp_path = tmp.name
+            try:
+                errors = linter.lint_file(tmp_path)
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+            if errors:
+                review[entry["problem"]] = {
+                    "warnings": [f"{e.lineno}: {e.message}" for e in errors]
+                }
+        return review
