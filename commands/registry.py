@@ -60,4 +60,14 @@ VOICE_COMMANDS = [
     ),
 ]
 
-ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS
+DEVEL_COMMANDS = [
+    CommandInfo(
+        name="lint",
+        description="Run AST linter on a file or directory",
+        category=CommandCategory.DEVELOPMENT,
+        usage="lint <path> [--max-lines N]",
+        aliases=[],
+    ),
+]
+
+ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS + DEVEL_COMMANDS

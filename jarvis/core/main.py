@@ -6,6 +6,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Awaitable, Callable, Dict, List, Optional, TypeVar
 
+import argparse
+
 import yaml
 from pydantic import BaseModel, BaseSettings
 from transitions import Machine
@@ -15,6 +17,7 @@ from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
 from jarvis.voice.interface import VoiceInterface
+from utils.linter import AstLinter
 
 logger = logging.getLogger("Jarvis.Core")
 
@@ -181,6 +184,28 @@ class Jarvis:
     async def help_command(self, event: UserEvent):
         return "Доступные команды: " + ", ".join(
             cmd.info.name for cmd in self.commands.values()
+        )
+
+    async def lint_command(self, event: UserEvent):
+        """Run AST linter on a path."""
+        parts = event.text.split(maxsplit=1)
+        if len(parts) < 2:
+            return "Usage: lint <path> [--max-lines N]"
+
+        parser = argparse.ArgumentParser(prog="lint", add_help=False)
+        parser.add_argument("path")
+        parser.add_argument("--max-lines", type=int, default=50)
+        try:
+            opts = parser.parse_args(parts[1].split())
+        except SystemExit:
+            return "Invalid arguments"
+
+        linter = AstLinter(max_function_lines=opts.max_lines)
+        errors = linter.lint_paths([opts.path])
+        if not errors:
+            return "No lint errors found."
+        return "\n".join(
+            f"{e.filepath}:{e.lineno}: {e.message}" for e in errors
         )
 
     async def run(self):
