@@ -50,6 +50,19 @@ Run the formatting tools with:
 
 Use `--check` to verify formatting in CI or before committing changes.
 
+## Learning from mistakes
+
+The repository includes an example script `scripts/run_with_retry.py` that
+demonstrates how you can restart a Python program after fixing a `SyntaxError`.
+Run it with a path to a Python file:
+
+```bash
+python scripts/run_with_retry.py your_script.py
+```
+
+If a syntax issue is detected, you'll be prompted to correct the file and try
+again, illustrating a simple "learn from mistakes" workflow.
+
 ## Design patterns
 
 The codebase utilises a couple of classic patterns:
