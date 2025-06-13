@@ -1,3 +1,5 @@
+"""TODO: add summary."""
+
 import ast
 import asyncio
 import contextlib
@@ -42,6 +44,8 @@ logger = logging.getLogger("Jarvis")
 
 # --- Константы и перечисления ---
 class CommandCategory(Enum):
+    """TODO: add summary."""
+
     CORE = "Основные"
     MODULE = "Модули"
     SYSTEM = "Система"
@@ -54,6 +58,8 @@ class CommandCategory(Enum):
 
 @dataclass
 class CommandInfo:
+    """TODO: add summary."""
+
     name: str
     description: str
     category: CommandCategory
@@ -64,13 +70,26 @@ class CommandInfo:
     requires_confirmation: bool = False
 
     def __post_init__(self):
+        """TODO: add summary."""
         if not self.handler_name:
             self.handler_name = f"{self.name}_command"
 
 
 # --- Мыслительные Процессоры ---
 class BaseThoughtProcessor:
+    """TODO: add summary."""
+
     async def process(self, problem: str, context: dict) -> dict:
+        """
+        TODO: add summary.
+
+        Args:
+            problem (Any): TODO
+            context (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         logger.info(
             f"Процессор {self.__class__.__name__} обрабатывает: {problem[:50]}..."
         )
@@ -83,7 +102,19 @@ class BaseThoughtProcessor:
 
 
 class LogicalThoughtProcessor(BaseThoughtProcessor):
+    """TODO: add summary."""
+
     async def process(self, problem: str, context: dict) -> dict:
+        """
+        TODO: add summary.
+
+        Args:
+            problem (Any): TODO
+            context (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         solution = await super().process(problem, context)
         solution["details"] = "Логический анализ выполнен. Найдены возможные шаги."
         # Пример: извлечение ключевых слов
@@ -94,7 +125,19 @@ class LogicalThoughtProcessor(BaseThoughtProcessor):
 
 
 class CreativeThoughtProcessor(BaseThoughtProcessor):
+    """TODO: add summary."""
+
     async def process(self, problem: str, context: dict) -> dict:
+        """
+        TODO: add summary.
+
+        Args:
+            problem (Any): TODO
+            context (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         solution = await super().process(problem, context)
         num_ideas = context.get(
             "num_creative_ideas", 3
@@ -111,6 +154,8 @@ class CreativeThoughtProcessor(BaseThoughtProcessor):
 class AnalyticalThoughtProcessor(
     BaseThoughtProcessor
 ):  # Наследуемся от BaseThoughtProcessor
+    """TODO: add summary."""
+
     async def _extract_metrics(
         self, problem_or_data: Union[str, Dict]
     ) -> Dict[str, Any]:
@@ -185,7 +230,7 @@ class AnalyticalThoughtProcessor(
         return "Общая рекомендация: Продолжайте сбор данных и мониторинг ситуации (заглушка)."
 
     async def process(self, problem: str, context: dict) -> dict:
-        """Анализирует данные и выявляет закономерности"""
+        """Анализирует данные и выявляет закономерности."""
         logger.info(f"AnalyticalProcessor обрабатывает: {problem[:50]}...")
         # Здесь мы можем передавать `problem` или какие-то данные из `context`
         # в аналитические функции. Для примера, передаем `problem`.
@@ -221,7 +266,15 @@ class AnalyticalThoughtProcessor(
 
 # --- Класс Мозга ---
 class Brain:
+    """TODO: add summary."""
+
     def __init__(self, jarvis_instance: Any):
+        """
+        TODO: add summary.
+
+        Args:
+            jarvis_instance (Any): TODO
+        """
         self.jarvis = jarvis_instance
         self.working_memory: Dict[str, Any] = {}
         self.thought_processors: Dict[str, BaseThoughtProcessor] = {
@@ -232,6 +285,16 @@ class Brain:
         logger.info("Мозг (Brain) инициализирован.")
 
     async def think(self, problem: str, context: dict) -> dict:
+        """
+        TODO: add summary.
+
+        Args:
+            problem (Any): TODO
+            context (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         logger.info(
             f"Мозг получил задачу: {problem[:100]}... с контекстом: {list(context.keys())}"
         )
@@ -269,6 +332,16 @@ class Brain:
         return solution
 
     async def _classify_problem(self, problem: str, context: dict) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            problem (Any): TODO
+            context (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         problem_lower = problem.lower()
         # Приоритет для аналитики, если есть явные слова
         if (
@@ -303,6 +376,13 @@ class Brain:
         return "logical"
 
     def _update_long_term_memory(self, problem: str, solution: dict):
+        """
+        TODO: add summary.
+
+        Args:
+            problem (Any): TODO
+            solution (Any): TODO
+        """
         problem_hash = uuid.uuid5(uuid.NAMESPACE_DNS, problem).hex
         memory_key = f"brain.thoughts.{problem_hash}"
 
@@ -325,27 +405,71 @@ class Brain:
 
 
 class ModuleManager:
+    """TODO: add summary."""
+
     def __init__(self, jarvis_instance: Any):
+        """
+        TODO: add summary.
+
+        Args:
+            jarvis_instance (Any): TODO
+        """
         self.jarvis = jarvis_instance
         self.modules: Dict[str, Any] = {}
 
     async def load_module(
         self, module_name: str, config: Optional[Dict] = None
     ) -> bool:
+        """
+        TODO: add summary.
+
+        Args:
+            module_name (Any): TODO
+            config (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         logger.info(f"Загрузка модуля {module_name} (заглушка)...")
         return True
 
     async def unload_module(self, module_name: str) -> bool:
+        """
+        TODO: add summary.
+
+        Args:
+            module_name (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         logger.info(f"Выгрузка модуля {module_name} (заглушка)...")
         return True
 
 
 class ProjectManager:
+    """TODO: add summary."""
+
     def __init__(self, jarvis_instance: Any):
+        """
+        TODO: add summary.
+
+        Args:
+            jarvis_instance (Any): TODO
+        """
         self.jarvis = jarvis_instance
         self.current_project: Optional[Dict[str, Any]] = None
 
     async def set_project(self, path: str) -> bool:
+        """
+        TODO: add summary.
+
+        Args:
+            path (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         self.current_project = {"name": os.path.basename(path), "path": path}
         os.chdir(path)
         logger.info(f"Установлен проект: {self.current_project['name']}")
@@ -353,7 +477,10 @@ class ProjectManager:
 
 
 class Jarvis:
+    """TODO: add summary."""
+
     def __init__(self):
+        """TODO: add summary."""
         self.memory = MemoryManager()
         self.nlu = NLUProcessor()
         self.module_manager = ModuleManager(self)
@@ -382,12 +509,14 @@ class Jarvis:
         logger.info(f"Jarvis инициализирован для пользователя {self.user_name}")
 
     async def _initialize_project(self):
+        """TODO: add summary."""
         if self._initial_project_path:
             await self.project_manager.set_project(self._initial_project_path)
         elif self.project_manager.current_project is None:
             await self.project_manager.set_project(os.getcwd())
 
     def _register_core_commands(self):
+        """TODO: add summary."""
         core_command_infos = [
             CommandInfo(
                 name="help",
@@ -514,6 +643,13 @@ class Jarvis:
             self.register_command(cmd_info, handler)
 
     def register_command(self, cmd_info: CommandInfo, handler: Callable):
+        """
+        TODO: add summary.
+
+        Args:
+            cmd_info (Any): TODO
+            handler (Any): TODO
+        """
         if not callable(handler):
             logger.error(f"Обработчик для '{cmd_info.name}' не callable.")
             return
@@ -524,6 +660,12 @@ class Jarvis:
         logger.debug(f"Зарегистрирована команда: {cmd_info.name}")
 
     def unregister_command(self, command_name: str):
+        """
+        TODO: add summary.
+
+        Args:
+            command_name (Any): TODO
+        """
         command_name_lower = command_name.lower()
         if command_name_lower in self.commands:
             cmd_info, _ = self.commands.pop(command_name_lower)
@@ -533,12 +675,25 @@ class Jarvis:
             logger.debug(f"Удалена команда: {cmd_info.name}")
 
     async def publish_event(self, event_name: str, *args, priority: int = 0, **kwargs):
+        """
+        TODO: add summary.
+
+        Args:
+            event_name (Any): TODO
+        """
         logger.debug(
             f"Публикация события: {event_name} с {args}, {kwargs}, priority={priority}"
         )
         await self.event_queue.emit(event_name, *args, priority=priority, **kwargs)
 
     def subscribe_event(self, event_name: str, listener: Callable):
+        """
+        TODO: add summary.
+
+        Args:
+            event_name (Any): TODO
+            listener (Any): TODO
+        """
         self.event_queue.subscribe(event_name, listener)
         logger.debug(f"Добавлен обработчик {listener.__name__} для {event_name}")
 
@@ -547,6 +702,16 @@ class Jarvis:
         await self.event_queue.add_task(coro, priority=priority)
 
     async def handle_user_input(self, text: str, source: str = "cli") -> Optional[str]:
+        """
+        TODO: add summary.
+
+        Args:
+            text (Any): TODO
+            source (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         if not text.strip():
             return None
         nlu_result = await self.nlu.process(text)
@@ -591,14 +756,38 @@ class Jarvis:
             return f"Ошибка '{cmd_info.name}': {e}"
 
     def _log_command_to_history(self, nlu_result: Dict[str, Any]):
+        """
+        TODO: add summary.
+
+        Args:
+            nlu_result (Any): TODO
+        """
         if len(self.command_history) >= self.max_command_history:
             self.command_history.pop(0)
         self.command_history.append({"timestamp": time.time(), **nlu_result})
 
     async def ask_user(self, prompt: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            prompt (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         return await asyncio.to_thread(input, f"Jarvis ({self.user_name}): {prompt}")
 
     async def help_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         filter_name = args_str.strip().lower()
         if filter_name:
             lookup = self.commands.get(filter_name)
@@ -630,10 +819,28 @@ class Jarvis:
         return "\n".join(output)
 
     async def exit_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         await self.shutdown()
         return "Завершение работы..."
 
     async def remember_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         parts = args_str.split(" ", 1)
         if len(parts) < 2:
             return "Использование: remember <ключ> <значение>"
@@ -647,6 +854,15 @@ class Jarvis:
         return f"Не удалось запомнить '{key}'."
 
     async def query_memory_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         key = args_str.strip()
         if not key:
             return "Использование: query_memory <ключ>"
@@ -660,6 +876,15 @@ class Jarvis:
         return f"Ключ '{key}' не найден в памяти."
 
     async def forget_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         key = args_str.strip()
         if not key:
             return "Использование: forget <ключ>"
@@ -668,6 +893,15 @@ class Jarvis:
         return f"Не удалось забыть '{key}'."
 
     async def teach_pattern_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         parts = args_str.split(" ", 2)
         if len(parts) < 2:
             return (
@@ -679,6 +913,15 @@ class Jarvis:
         return f"Паттерн для '{intent}' добавлен."
 
     async def python_dsl_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         phrase = args_str.strip()
         if not phrase:
             return "Использование: python_dsl <фраза>"
@@ -687,6 +930,15 @@ class Jarvis:
         return phrase_to_python(phrase)
 
     async def parse_doc_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         text = args_str.strip()
         if not text:
             return "Использование: parse_doc <текст>"
@@ -698,6 +950,16 @@ class Jarvis:
     def _parse_arg_string_to_ast(
         self, arg_str: str, arg_name: str
     ) -> Optional[ast.expr]:
+        """
+        TODO: add summary.
+
+        Args:
+            arg_str (Any): TODO
+            arg_name (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         try:
             if not arg_str:
                 return None
@@ -759,6 +1021,15 @@ class Jarvis:
             return ast.Constant(value=arg_str)
 
     async def create_python_function_command(self, entities: Dict[str, Any]) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            entities (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         raw_signature_str = entities.get("function_signature_raw", "").strip()
         if not raw_signature_str:
             return "Использование: create_python_function <имя_функции>[(аргументы)] [-> возвращаемый_тип]"
@@ -941,6 +1212,15 @@ class Jarvis:
         return f"Сгенерирован файл {abs_path} с {num_lines} строками кода"
 
     async def analyze_python_file_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         filepath_str = args_str.strip()
         if not filepath_str:
             return "Использование: analyze_python_file <путь_к_файлу.py>"
@@ -1026,6 +1306,15 @@ class Jarvis:
     async def reason_command(
         self, entities_or_problem_str: Union[Dict[str, Any], str]
     ) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            entities_or_problem_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         problem_description: str
         if isinstance(entities_or_problem_str, dict):
             problem_description = entities_or_problem_str.get(
@@ -1067,6 +1356,15 @@ class Jarvis:
         return f"Результат обдумывания проблемы '{problem_description[:50]}...':\n{solution_str}"
 
     async def load_module_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         module_name = args_str.strip()
         if not module_name:
             return "Использование: load_module <имя_модуля>"
@@ -1075,6 +1373,15 @@ class Jarvis:
         return f"Не удалось загрузить модуль '{module_name}'."
 
     async def set_project_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         project_path = args_str.strip()
         if not project_path:
             return "Использование: set_project <путь_к_проекту>"
@@ -1088,6 +1395,15 @@ class Jarvis:
         return f"Не удалось установить проект '{project_path}'."
 
     async def update_template_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         template_name = args_str.strip()
         if not template_name:
             return "Использование: update_template <template_name>"
@@ -1116,6 +1432,15 @@ class Jarvis:
         return "\n".join(lines)
 
     async def self_learn_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         module_name = "ml_trainer_seq2seq"
         if module_name not in self.module_manager.modules:
             if not await self.module_manager.load_module(module_name):
@@ -1126,6 +1451,15 @@ class Jarvis:
         return "Команда обучения недоступна."
 
     async def self_update_command(self, args_str: str) -> str:
+        """
+        TODO: add summary.
+
+        Args:
+            args_str (Any): TODO
+
+        Returns:
+            Any: TODO
+        """
         parts = args_str.split(" ", 1)
         if not parts:
             return "Использование: self_update <commit|pull> [аргументы]"
@@ -1145,6 +1479,7 @@ class Jarvis:
         return "Использование: self_update <commit|pull> [аргументы]"
 
     async def interactive_loop(self):
+        """TODO: add summary."""
         self.is_running = True
         await self.event_queue.start()
         await self._initialize_project()
@@ -1190,6 +1525,7 @@ class Jarvis:
                 await self.publish_event("on_error", str(e))
 
     async def shutdown(self):
+        """TODO: add summary."""
         if not self.is_running:
             return
         logger.info("Завершение работы Jarvis...")
@@ -1203,6 +1539,7 @@ class Jarvis:
 
 
 async def main():
+    """TODO: add summary."""
     jarvis = None
     try:
         jarvis = Jarvis()
