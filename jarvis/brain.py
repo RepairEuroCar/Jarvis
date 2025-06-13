@@ -23,8 +23,9 @@ from .processors import (
     RefactorProcessor,
     TestGeneratorProcessor,
     APIBuilderProcessor,
+    BaseThoughtProcessor,
 )
-from typing import Any, Dict
+from typing import Any, Dict, Type
 import logging
 import time
 import uuid
@@ -32,18 +33,46 @@ import uuid
 logger = logging.getLogger("Jarvis.Brain")
 
 
+class ThoughtProcessorFactory:
+    """Factory to create :class:`BaseThoughtProcessor` instances."""
+
+    _registry: Dict[str, Type[BaseThoughtProcessor]] = {
+        "logical": LogicalThoughtProcessor,
+        "creative": CreativeThoughtProcessor,
+        "analytical": AnalyticalThoughtProcessor,
+        "refactor": RefactorProcessor,
+        "test_generation": TestGeneratorProcessor,
+        "api_builder": APIBuilderProcessor,
+    }
+
+    @classmethod
+    def register(cls, name: str, processor_cls: Type[BaseThoughtProcessor]) -> None:
+        """Register a new processor class."""
+        cls._registry[name] = processor_cls
+
+    @classmethod
+    def create(cls, name: str, jarvis: Any = None) -> BaseThoughtProcessor:
+        """Instantiate a processor by name."""
+        processor_cls = cls._registry.get(name)
+        if not processor_cls:
+            raise ValueError(f"Unknown processor type: {name}")
+        return processor_cls(jarvis=jarvis)
+
+
 class Brain:
+    """Central coordinator of reasoning logic.
+
+    Thought processors are instantiated via :class:`ThoughtProcessorFactory` to
+    allow easy extension and registration of new processors."""
+
     def __init__(self, jarvis):
         self.jarvis = jarvis
         self.working_memory = {}
         self.reasoning_history: deque = deque(maxlen=50)
+        # Instantiate processors via the factory to decouple creation logic.
         self.thought_processors = {
-            "logical": LogicalThoughtProcessor(),
-            "creative": CreativeThoughtProcessor(),
-            "analytical": AnalyticalThoughtProcessor(),
-            "refactor": RefactorProcessor(),
-            "test_generation": TestGeneratorProcessor(),
-            "api_builder": APIBuilderProcessor(),
+            name: ThoughtProcessorFactory.create(name, jarvis=self.jarvis)
+            for name in ThoughtProcessorFactory._registry
         }
 
     async def think(self, problem, context):
