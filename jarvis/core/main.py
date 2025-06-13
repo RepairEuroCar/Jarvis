@@ -17,6 +17,7 @@ from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
 from jarvis.voice.interface import VoiceInterface
+from jarvis.goal_manager import GoalManager
 from utils.linter import AstLinter
 
 logger = logging.getLogger("Jarvis.Core")
@@ -95,6 +96,7 @@ class Jarvis:
         self.memory  # initialize memory
         self.nlu = NLUProcessor()
         self.brain = Brain(self)
+        self.goals = GoalManager(self)
         # Initialize per-instance cache for input parsing
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
             self._parse_input_uncached
@@ -316,6 +318,29 @@ class Jarvis:
             self._voice_interface.engine.setProperty("rate", rate)
             self._voice_interface.engine.setProperty("volume", volume)
         return f"Голос обновлён: скорость {rate}, громкость {volume}"
+
+    async def set_goal_command(self, event: UserEvent):
+        """Set a goal and optional motivation."""
+        parts = event.text.split(maxsplit=2)
+        if len(parts) < 2:
+            return "Usage: set_goal <goal> [motivation]"
+        goal = parts[1]
+        motivation = parts[2] if len(parts) > 2 else ""
+        self.goals.set_goal(goal, motivation)
+        return f"Goal set: {goal}" + (f" (motivation: {motivation})" if motivation else "")
+
+    async def execute_goal_command(self, event: UserEvent):
+        """Execute the current goal if known."""
+        data = self.goals.get_goal()
+        if not data:
+            return "No goal set."
+        goal = str(data.get("goal", "")).lower()
+        if "уязвимост" in goal or "vulner" in goal:
+            from modules import kali_tools
+
+            result = await kali_tools.run_nmap("127.0.0.1")
+            return f"Vulnerability scan completed:\n{result}"
+        return f"No automated action for goal: {goal}"
 
     async def run(self):
         await self.initialize()
