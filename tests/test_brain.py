@@ -1,8 +1,10 @@
 # -----------------------------
 # tests/test_brain.py,
 # -----------------------------
-import pytest
 import asyncio
+
+import pytest
+
 from jarvis.core.main import Jarvis
 
 

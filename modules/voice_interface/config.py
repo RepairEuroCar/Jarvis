@@ -3,11 +3,14 @@
 Конфигурация голосового интерфейса
 """
 import os
-from typing import Optional, List
+from typing import List, Optional
+
 
 class VoiceConfig:
     def __init__(self):
-        self.model_path: str = os.path.expanduser("~/.vosk/models/vosk-model-small-ru-0.22")
+        self.model_path: str = os.path.expanduser(
+            "~/.vosk/models/vosk-model-small-ru-0.22"
+        )
         self.model_lang: str = "ru"
         self.samplerate: int = 16000
         self.blocksize: int = 4000
@@ -18,8 +21,13 @@ class VoiceConfig:
         self.enable_wake_word: bool = True
 
         self.context_phrases: List[str] = [
-            "какая погода", "включи свет", "выключи музыку", "добавь задачу",
-            "открой настройки", "найди информацию о", "[unk]"
+            "какая погода",
+            "включи свет",
+            "выключи музыку",
+            "добавь задачу",
+            "открой настройки",
+            "найди информацию о",
+            "[unk]",
         ]
 
         self.enable_advanced_noise_reduction: bool = True

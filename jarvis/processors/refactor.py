@@ -1,7 +1,7 @@
 import ast
 import logging
 import re
-from typing import Dict, Any
+from typing import Any, Dict
 
 from .base import BaseThoughtProcessor
 

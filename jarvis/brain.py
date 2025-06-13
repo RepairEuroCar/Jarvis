@@ -11,24 +11,26 @@
 # ├── project.py
 # └── utils.py
 
-# jarvis/brain.py
-from collections import deque
-import difflib
 import ast
-from pathlib import Path
-from .processors import (
-    LogicalThoughtProcessor,
-    CreativeThoughtProcessor,
-    AnalyticalThoughtProcessor,
-    RefactorProcessor,
-    TestGeneratorProcessor,
-    APIBuilderProcessor,
-    BaseThoughtProcessor,
-)
-from typing import Any, Dict, Type
+import difflib
 import logging
 import time
 import uuid
+
+# jarvis/brain.py
+from collections import deque
+from pathlib import Path
+from typing import Any, Dict, Type
+
+from .processors import (
+    AnalyticalThoughtProcessor,
+    APIBuilderProcessor,
+    BaseThoughtProcessor,
+    CreativeThoughtProcessor,
+    LogicalThoughtProcessor,
+    RefactorProcessor,
+    TestGeneratorProcessor,
+)
 
 logger = logging.getLogger("Jarvis.Brain")
 

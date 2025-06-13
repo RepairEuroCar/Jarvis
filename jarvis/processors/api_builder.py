@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from .base import BaseThoughtProcessor
 

@@ -1,15 +1,16 @@
 # -----------------------------
 # jarvis/nlu/processor.py
 # -----------------------------
-import re
-import logging
+import asyncio
 import difflib
-from typing import Dict, List, Optional, Any, AsyncGenerator
+import logging
+import re
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from collections import defaultdict, deque
 from pathlib import Path
-import asyncio
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 from ..commands.registry import CommandCategory
 
 # TODO: Развитие интеллекта задач

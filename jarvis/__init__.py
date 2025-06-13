@@ -8,22 +8,22 @@ if str(ROOT) not in sys.path:
 
 _module_map = {
     # Base dependencies
-    'memory': 'jarvis.memory',
-    'memory.manager': 'jarvis.memory.manager',
-    'voice': 'voice',
-    'voice.interface': 'voice.interface',
-    'commands': 'commands',
-    'commands.registry': 'commands.registry',
+    "memory": "jarvis.memory",
+    "memory.manager": "jarvis.memory.manager",
+    "voice": "voice",
+    "voice.interface": "voice.interface",
+    "commands": "commands",
+    "commands.registry": "commands.registry",
     # NLU is used inside core
-    'nlu': 'jarvis.nlp',
+    "nlu": "jarvis.nlp",
     # Core itself
-    'core': 'jarvis.core',
+    "core": "jarvis.core",
     # Expose Jarvis class directly
-    'core.main': 'jarvis.core.main',
+    "core.main": "jarvis.core.main",
 }
 
 for alias, target in _module_map.items():
     try:
-        sys.modules[f'{__name__}.{alias}'] = importlib.import_module(target)
+        sys.modules[f"{__name__}.{alias}"] = importlib.import_module(target)
     except Exception:
         pass
