@@ -82,6 +82,13 @@ DEVEL_COMMANDS = [
         usage="repl",
         aliases=["python"],
     ),
+    CommandInfo(
+        name="code_tips",
+        description="Provide code improvement suggestions",
+        category=CommandCategory.DEVELOPMENT,
+        usage="code_tips <path> [--max-lines N]",
+        aliases=["tips", "советы"],
+    ),
 ]
 
 ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS + DEVEL_COMMANDS

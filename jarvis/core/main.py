@@ -212,6 +212,27 @@ class Jarvis:
             return "No lint errors found."
         return "\n".join(f"{e.filepath}:{e.lineno}: {e.message}" for e in errors)
 
+    async def code_tips_command(self, event: UserEvent):
+        """Provide code improvement suggestions for the given path."""
+        parts = event.text.split(maxsplit=1)
+        if len(parts) < 2:
+            return "Usage: code_tips <path> [--max-lines N]"
+
+        parser = argparse.ArgumentParser(prog="code_tips", add_help=False)
+        parser.add_argument("path")
+        parser.add_argument("--max-lines", type=int, default=50)
+        try:
+            opts = parser.parse_args(parts[1].split())
+        except SystemExit:
+            return "Invalid arguments"
+
+        linter = AstLinter(max_function_lines=opts.max_lines)
+        errors = linter.lint_paths([opts.path])
+        if not errors:
+            return "No suggestions. Code looks good."
+        tips = [f"{e.filepath}:{e.lineno} – {e.message}" for e in errors]
+        return "\n".join(tips)
+
     async def self_review_command(self, event: UserEvent):
         """Run self review using recent history."""
         review = self.brain.self_review()
