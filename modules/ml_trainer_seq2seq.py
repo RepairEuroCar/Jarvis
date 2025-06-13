@@ -19,36 +19,8 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
-# Предполагается, что CommandInfo и CommandCategory определены в основном файле Jarvis
-try:
-    from jarvis.app import CommandCategory, CommandInfo
-except ImportError:
-    from dataclasses import dataclass, field
-    from enum import Enum, auto
-
-    class CommandCategory(Enum):  # Определяем для автономности, если нужно
-        CORE = "Основные"
-        MODULE = "Модули"
-        SYSTEM = "Система"
-        UTILITY = "Утилиты"
-        DEVELOPMENT = "Разработка"
-        PROJECT = "Проект"
-        MEMORY = "Память"
-
-    @dataclass
-    class CommandInfo:
-        name: str
-        description: str
-        category: CommandCategory
-        usage: str
-        handler_name: Optional[str] = None
-        aliases: List[str] = field(default_factory=list)
-        is_async: bool = True
-        requires_confirmation: bool = False
-
-        def __post_init__(self):
-            if not self.handler_name:
-                self.handler_name = f"{self.name}_command"
+# Command metadata used by Jarvis
+from commands.registry import CommandCategory, CommandInfo
 
 
 logger = logging.getLogger(__name__)  # Логгер для модуля

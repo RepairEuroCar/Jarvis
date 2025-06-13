@@ -1,6 +1,5 @@
 [run]
 omit =
-    jarvis/app.py
     jarvis/core/*
     jarvis/event_queue.py
     voice/*
