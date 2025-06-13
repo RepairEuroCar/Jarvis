@@ -75,6 +75,13 @@ DEVEL_COMMANDS = [
         usage="self_review",
         aliases=[],
     ),
+    CommandInfo(
+        name="repl",
+        description="Запускает интерактивный Python REPL",
+        category=CommandCategory.DEVELOPMENT,
+        usage="repl",
+        aliases=["python"],
+    ),
 ]
 
 ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS + DEVEL_COMMANDS
