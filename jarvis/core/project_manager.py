@@ -19,8 +19,16 @@ from pathlib import Path
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Set, Union
 
 import aiofiles
-import aioredis
-import docker
+
+try:
+    import aioredis
+except ImportError:  # pragma: no cover - optional dependency
+    aioredis = None  # type: ignore
+
+try:
+    import docker
+except ImportError:  # pragma: no cover - optional dependency
+    docker = None  # type: ignore
 import patch
 import yaml
 from prompt_toolkit import prompt
@@ -98,7 +106,9 @@ class ProjectManager:
             "post_close": [],
         }
         self._redis = None  # Для кеширования
-        self._docker_client = docker.from_env() if self._docker_available() else None
+        self._docker_client = (
+            docker.from_env() if docker and self._docker_available() else None
+        )
         self._observer = None  # Для наблюдения за файлами
         self._template_files: Dict[str, str] = {}
         self._modified_files: Set[str] = set()
@@ -218,6 +228,8 @@ class ProjectManager:
         pass
 
     def _docker_available(self) -> bool:
+        if docker is None:
+            return False
         try:
             docker.from_env().ping()
             return True
@@ -397,7 +409,11 @@ class ProjectManager:
         self._generate_ide_configs()
 
         # 4. Docker-инициализация
-        if self._docker_available() and (path / "Dockerfile").exists():
+        if (
+            self._docker_client
+            and self._docker_available()
+            and (path / "Dockerfile").exists()
+        ):
             self._docker_client.images.build(
                 path=str(path), tag=f"{path.name.lower()}:latest"
             )
