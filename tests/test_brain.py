@@ -97,3 +97,19 @@ def test_find_similar_solution():
     result = jarvis.brain.find_similar_solution("как приготовить борщ быстро")
     assert result is not None
     assert result["answer"] == "Используй свёклу"
+
+
+def test_compare_recent_code_and_self_review_diff():
+    jarvis = Jarvis()
+    first = "x = 1\n"
+    second = "x = 2\n"
+    jarvis.brain.log_thoughts("repeat", {"generated_code": first})
+    jarvis.brain.log_thoughts("repeat", {"generated_code": second})
+
+    diffs = jarvis.brain.compare_recent_code(limit=2)
+    assert "repeat" in diffs
+    assert "value=Constant(value=1)" in diffs["repeat"]
+
+    review = jarvis.brain.self_review()
+    assert "repeat" in review
+    assert "structural_diff" in review["repeat"]
