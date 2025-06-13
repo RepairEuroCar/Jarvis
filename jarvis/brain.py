@@ -169,6 +169,40 @@ class Brain:
             summaries.append(f"{problem[:50]} -> {status}")
         return "\n".join(summaries)
 
+    def find_similar_solution(
+        self, problem: str, threshold: float = 0.5
+    ) -> Dict[str, Any] | None:
+        """Return a stored solution for a similar problem if found.
+
+        The method uses a very naive token overlap metric: the ratio of
+        overlapping tokens to all unique tokens across the problems. If the
+        best match score meets ``threshold`` the associated solution is
+        returned, otherwise ``None`` is returned.
+        """
+
+        thoughts = self.jarvis.memory.query("brain.thoughts") or {}
+
+        problem_tokens = set(problem.lower().split())
+        best_score = 0.0
+        best_record: Dict[str, Any] | None = None
+
+        for entry in thoughts.values():
+            record = entry.get("value") if isinstance(entry, dict) else entry
+            stored_problem = str(record.get("problem", "")).lower()
+            tokens = set(stored_problem.split())
+            if not tokens:
+                continue
+            overlap = problem_tokens & tokens
+            union = problem_tokens | tokens
+            score = len(overlap) / len(union)
+            if score > best_score:
+                best_score = score
+                best_record = record
+
+        if best_record and best_score >= threshold:
+            return best_record.get("solution")
+        return None
+
     async def self_evolve(self, directory: str = ".") -> Dict[str, Any]:
         """Analyze and refactor Python files within a directory."""
         root = Path(directory)

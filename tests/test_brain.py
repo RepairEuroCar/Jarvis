@@ -85,3 +85,15 @@ def test_summarize_recent_thoughts():
     summary = jarvis.brain.summarize_recent_thoughts(limit=2)
     assert "task one" in summary and "done" in summary
     assert "task two" in summary and "failed" in summary
+
+
+def test_find_similar_solution():
+    jarvis = Jarvis()
+    jarvis.brain.log_thoughts(
+        "как приготовить борщ",
+        {"answer": "Используй свёклу", "status": "completed"},
+    )
+
+    result = jarvis.brain.find_similar_solution("как приготовить борщ быстро")
+    assert result is not None
+    assert result["answer"] == "Используй свёклу"
