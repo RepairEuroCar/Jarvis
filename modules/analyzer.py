@@ -365,6 +365,125 @@ class AdvancedCodeAnalyzer:
         self._cache_analysis_result(filepath, "code_smells", smells)
         return smells, None
 
+    async def detect_magic_numbers(self, filepath):
+        """Ищет в коде числовые литералы, не сохранённые в константы."""
+        cached = self._get_cached_analysis(filepath, "magic_numbers")
+        if cached:
+            return cached, None
+
+        if not os.path.isfile(filepath):
+            return None, f"Файл не найден: {filepath}"
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                source = f.read()
+            tree = ast.parse(source, filename=filepath)
+
+            class MagicVisitor(ast.NodeVisitor):
+                def __init__(self):
+                    self.stack = []
+                    self.items = []
+
+                def generic_visit(self, node):
+                    self.stack.append(node)
+                    super().generic_visit(node)
+                    self.stack.pop()
+
+                def visit_Constant(self, node):
+                    if isinstance(node.value, (int, float, complex)):
+                        skip = False
+                        if self.stack:
+                            parent = self.stack[-1]
+                            if (
+                                isinstance(parent, (ast.Assign, ast.AnnAssign))
+                                and parent.value is node
+                            ):
+                                targets = (
+                                    parent.targets
+                                    if isinstance(parent, ast.Assign)
+                                    else [parent.target]
+                                )
+                                if all(
+                                    isinstance(t, ast.Name) and t.id.isupper()
+                                    for t in targets
+                                ):
+                                    skip = True
+                        if not skip:
+                            self.items.append(
+                                {"value": node.value, "lineno": node.lineno}
+                            )
+
+            visitor = MagicVisitor()
+            visitor.visit(tree)
+            self._cache_analysis_result(filepath, "magic_numbers", visitor.items)
+            return visitor.items, None
+        except SyntaxError as e:
+            return None, f"Синтаксическая ошибка в {filepath}: {e}"
+
+    async def detect_duplicate_code(self, filepath):
+        """Находит дублирующиеся функции в файле."""
+        cached = self._get_cached_analysis(filepath, "duplicate_code")
+        if cached:
+            return cached, None
+
+        if not os.path.isfile(filepath):
+            return None, f"Файл не найден: {filepath}"
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                source = f.read()
+            tree = ast.parse(source, filename=filepath)
+            func_map = {}
+            duplicates = []
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    body_module = ast.Module(body=node.body, type_ignores=[])
+                    body_dump = ast.dump(body_module, include_attributes=False)
+                    key = body_dump
+                    info = {"name": node.name, "lineno": node.lineno}
+                    if key in func_map:
+                        prev = func_map[key]
+                        duplicates.append(
+                            {
+                                "function_1": prev["name"],
+                                "lineno_1": prev["lineno"],
+                                "function_2": info["name"],
+                                "lineno_2": info["lineno"],
+                            }
+                        )
+                    else:
+                        func_map[key] = info
+
+            self._cache_analysis_result(filepath, "duplicate_code", duplicates)
+            return duplicates, None
+        except SyntaxError as e:
+            return None, f"Синтаксическая ошибка в {filepath}: {e}"
+
+    async def detect_module_globals(self, filepath):
+        """Ищет присваивания на уровне модуля."""
+        cached = self._get_cached_analysis(filepath, "module_globals")
+        if cached:
+            return cached, None
+
+        if not os.path.isfile(filepath):
+            return None, f"Файл не найден: {filepath}"
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                source = f.read()
+            tree = ast.parse(source, filename=filepath)
+            globals_found = []
+            for node in tree.body:
+                if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                    targets = (
+                        node.targets if isinstance(node, ast.Assign) else [node.target]
+                    )
+                    for t in targets:
+                        if isinstance(t, ast.Name) and not t.id.isupper():
+                            globals_found.append({"name": t.id, "lineno": t.lineno})
+
+            self._cache_analysis_result(filepath, "module_globals", globals_found)
+            return globals_found, None
+        except SyntaxError as e:
+            return None, f"Синтаксическая ошибка в {filepath}: {e}"
+
     async def generate_comprehensive_report(self, path_str, report_format=None):
         """Генерирует комплексный отчет для файла или директории."""
         report_format = report_format if report_format else self.default_report_format
@@ -407,6 +526,9 @@ class AdvancedCodeAnalyzer:
         }
         all_smells_count = 0
         critical_smells_count = 0
+        total_magic_numbers = 0
+        total_duplicate_functions = 0
+        total_module_globals = 0
 
         for filepath in files_to_analyze:
             metrics, err_m = await self.get_file_metrics_radon(filepath)
@@ -415,6 +537,9 @@ class AdvancedCodeAnalyzer:
             smells, err_sm = await self.detect_code_smells(
                 filepath, structure, complexity
             )
+            magic_nums, _ = await self.detect_magic_numbers(filepath)
+            duplicates, _ = await self.detect_duplicate_code(filepath)
+            globals_defs, _ = await self.detect_module_globals(filepath)
 
             file_report = {"filepath": filepath}
             if metrics:
@@ -431,6 +556,15 @@ class AdvancedCodeAnalyzer:
                     for s in smells["detected_smells"]
                     if s.get("severity") == "critical"
                 )
+            if magic_nums:
+                file_report["magic_numbers"] = magic_nums
+                total_magic_numbers += len(magic_nums)
+            if duplicates:
+                file_report["duplicate_code"] = duplicates
+                total_duplicate_functions += len(duplicates)
+            if globals_defs:
+                file_report["globals"] = globals_defs
+                total_module_globals += len(globals_defs)
 
             if metrics and metrics.get("maintainability_index") != "N/A":
                 all_metrics_summary["maintainability_index_sum"] += metrics[
@@ -456,6 +590,9 @@ class AdvancedCodeAnalyzer:
             report_data["summary"]["average_maintainability_index"] = round(avg_mi, 2)
         report_data["summary"]["total_code_smells_detected"] = all_smells_count
         report_data["summary"]["critical_code_smells"] = critical_smells_count
+        report_data["summary"]["total_magic_numbers"] = total_magic_numbers
+        report_data["summary"]["duplicate_functions"] = total_duplicate_functions
+        report_data["summary"]["module_level_globals"] = total_module_globals
 
         # Концептуально: AI генерирует общее резюме по проекту
         # if self.config.get("enable_ai_project_summary", False) and report_data["files"]:
@@ -544,6 +681,18 @@ def _format_report(report_data, format_type="markdown"):
             md += '### Обнаруженные "запахи кода":\n'
             for smell in file_report["smells"]:
                 md += f"- **[{smell['severity'].upper()}]** {smell['type']} (строка {smell['location'].split(':')[-1]}): {smell['message']}\n"
+        if "magic_numbers" in file_report and file_report["magic_numbers"]:
+            md += "### Найденные magic numbers:\n"
+            for item in file_report["magic_numbers"]:
+                md += f"- {item['value']} (строка {item['lineno']})\n"
+        if "duplicate_code" in file_report and file_report["duplicate_code"]:
+            md += "### Дублирующиеся функции:\n"
+            for dup in file_report["duplicate_code"]:
+                md += f"- `{dup['function_1']}`:{dup['lineno_1']} дублирует `{dup['function_2']}`:{dup['lineno_2']}\n"
+        if "globals" in file_report and file_report["globals"]:
+            md += "### Глобальные переменные:\n"
+            for g in file_report["globals"]:
+                md += f"- `{g['name']}` (строка {g['lineno']})\n"
         # Можно добавить вывод структуры (импорты, классы, функции) при необходимости
     return md
 
