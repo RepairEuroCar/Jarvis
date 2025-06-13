@@ -22,7 +22,6 @@ from transformers import (
 # Command metadata used by Jarvis
 from commands.registry import CommandCategory, CommandInfo
 
-
 logger = logging.getLogger(__name__)  # Логгер для модуля
 
 MODULE_METADATA = {

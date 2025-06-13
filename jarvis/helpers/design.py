@@ -33,7 +33,9 @@ def design_module(task_description: str) -> Dict[str, List[str] | str]:
                 design["files"].extend(["bot.py", "config.py", "requirements.txt"])
                 design["classes"].append("TelegramBot")
             elif ptype == "web_app":
-                design["files"].extend(["app.py", "requirements.txt", "templates/index.html"])
+                design["files"].extend(
+                    ["app.py", "requirements.txt", "templates/index.html"]
+                )
                 design["classes"].append("WebApp")
             elif ptype == "cli":
                 design["files"].extend(["cli.py", "requirements.txt"])
