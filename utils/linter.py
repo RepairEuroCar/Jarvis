@@ -1,4 +1,4 @@
-"""TODO: add summary."""
+"""Utilities for performing basic AST-based lint checks."""
 
 import ast
 import os
@@ -8,7 +8,7 @@ from typing import Iterable, List
 
 @dataclass
 class LintError:
-    """TODO: add summary."""
+    """Container describing a single lint violation."""
 
     filepath: str
     lineno: int
@@ -19,23 +19,22 @@ class AstLinter:
     """Simple AST-based linter."""
 
     def __init__(self, max_function_lines: int = 50):
-        """
-        TODO: add summary.
+        """Initialize the linter.
 
         Args:
-            max_function_lines (Any): TODO
+            max_function_lines (int):
+                Maximum allowed length of a function body in lines.
         """
         self.max_function_lines = max_function_lines
 
     def lint_file(self, path: str) -> List[LintError]:
-        """
-        TODO: add summary.
+        """Run lint checks on a single Python file.
 
         Args:
-            path (Any): TODO
+            path (str): Path to the file to lint.
 
         Returns:
-            Any: TODO
+            List[LintError]: List of found lint errors.
         """
         errors: List[LintError] = []
         with open(path, "r", encoding="utf-8") as f:
@@ -46,13 +45,17 @@ class AstLinter:
             if isinstance(node, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
                 errors.append(
                     LintError(
-                        path, node.lineno, "Global variable assignment not allowed"
+                        path,
+                        node.lineno,
+                        "Global variable assignment not allowed",
                     )
                 )
             if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
                 errors.append(
                     LintError(
-                        path, node.lineno, "Top-level call detected during import"
+                        path,
+                        node.lineno,
+                        "Top-level call detected during import",
                     )
                 )
 
@@ -61,24 +64,28 @@ class AstLinter:
                 end = node.end_lineno or node.lineno
                 length = end - node.lineno + 1
                 if length > self.max_function_lines:
+                    msg = (
+                        f"Function '{node.name}' too long "
+                        f"({length} > {self.max_function_lines})"
+                    )
                     errors.append(
                         LintError(
                             path,
                             node.lineno,
-                            f"Function '{node.name}' too long ({length} > {self.max_function_lines})",
+                            msg,
                         )
                     )
         return errors
 
     def lint_paths(self, paths: Iterable[str]) -> List[LintError]:
-        """
-        TODO: add summary.
+        """Lint multiple files or directories.
 
         Args:
-            paths (Any): TODO
+            paths (Iterable[str]):
+                Collection of file or directory paths to check.
 
         Returns:
-            Any: TODO
+            List[LintError]: Combined lint errors for all provided paths.
         """
         all_errors: List[LintError] = []
         for p in paths:
@@ -86,7 +93,8 @@ class AstLinter:
                 for root, _, files in os.walk(p):
                     for fname in files:
                         if fname.endswith(".py"):
-                            all_errors.extend(self.lint_file(os.path.join(root, fname)))
+                            file_path = os.path.join(root, fname)
+                            all_errors.extend(self.lint_file(file_path))
             else:
                 all_errors.extend(self.lint_file(p))
         return all_errors
@@ -96,7 +104,11 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Run simple AST lint checks")
-    parser.add_argument("paths", nargs="+", help="Files or directories to lint")
+    parser.add_argument(
+        "paths",
+        nargs="+",
+        help="Files or directories to lint",
+    )
     parser.add_argument(
         "--max-lines",
         type=int,
