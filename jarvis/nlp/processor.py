@@ -90,8 +90,12 @@ class NLUProcessor:
             TaskSemantics.DIAGNOSTICS: ["диагност", "ошибка", "diagnose"],
         }
 
+        self.learned_corrections: Dict[str, str] = {}
         if self.memory_manager:
             self._load_custom_patterns()
+            self.learned_corrections = (
+                self.memory_manager.recall("nlu.corrections") or {}
+            )
 
     def _detect_task_semantics(self, text_lower: str) -> TaskSemantics:
         for sem, words in self.semantics_keywords.items():
@@ -171,6 +175,17 @@ class NLUProcessor:
         self, text_original: str, text_lower: str
     ) -> ProcessingResult:
         """Обрабатывает текст, пытаясь сопоставить с известными шаблонами команд."""
+        if text_lower in self.learned_corrections:
+            intent = self.learned_corrections[text_lower]
+            pattern = CommandPattern(
+                intent=intent,
+                triggers=[text_lower],
+                entity_extraction_mode=EntityExtractionMode.NO_ARGS,
+                description="Learned correction",
+            )
+            result = await self._extract_entities(pattern, text_original, text_lower, 1.0)
+            self._update_history(result)
+            return result
         for pattern in self.command_patterns:
             if result := await self._match_pattern(pattern, text_original, text_lower):
                 self._update_history(result)
@@ -296,6 +311,13 @@ class NLUProcessor:
             self.memory_manager.remember("nlu.custom_patterns", existing)
             self.memory_manager.save()
 
+    def learn_correction(self, wrong_text: str, intent: str, persist: bool = False) -> None:
+        """Запоминает исправление неверно распознанной команды."""
+        self.learned_corrections[wrong_text.lower()] = intent
+        if persist and self.memory_manager:
+            self.memory_manager.remember("nlu.corrections", self.learned_corrections)
+            self.memory_manager.save()
+
     def _load_custom_patterns(self) -> None:
         """Загружает сохраненные пользователем шаблоны из памяти."""
         stored = self.memory_manager.recall("nlu.custom_patterns") or []
@@ -314,3 +336,6 @@ class NLUProcessor:
                 self.command_patterns.append(cp)
             except Exception as e:
                 logger.error(f"Ошибка загрузки пользовательского паттерна: {e}")
+
+        corrections = self.memory_manager.recall("nlu.corrections") or {}
+        self.learned_corrections.update({k.lower(): v for k, v in corrections.items()})

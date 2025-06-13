@@ -160,6 +160,15 @@ class Brain:
         """Return recent reasoning records."""
         return list(self.reasoning_history)[-limit:]
 
+    def summarize_recent_thoughts(self, limit: int = 5) -> str:
+        """Return a text summary of recent reasoning steps."""
+        summaries = []
+        for entry in self.get_chain_of_thought(limit=limit):
+            problem = entry.get("problem", "")
+            status = entry.get("solution", {}).get("status", "unknown")
+            summaries.append(f"{problem[:50]} -> {status}")
+        return "\n".join(summaries)
+
     async def self_evolve(self, directory: str = ".") -> Dict[str, Any]:
         """Analyze and refactor Python files within a directory."""
         root = Path(directory)

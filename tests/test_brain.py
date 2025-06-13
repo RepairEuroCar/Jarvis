@@ -76,3 +76,12 @@ def test_brain_self_review():
     assert review
     warnings = list(review.values())[0]["warnings"]
     assert any("Global variable" in w for w in warnings)
+
+
+def test_summarize_recent_thoughts():
+    jarvis = Jarvis()
+    jarvis.brain.log_thoughts("task one", {"status": "done"})
+    jarvis.brain.log_thoughts("task two", {"status": "failed"})
+    summary = jarvis.brain.summarize_recent_thoughts(limit=2)
+    assert "task one" in summary and "done" in summary
+    assert "task two" in summary and "failed" in summary
