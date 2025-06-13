@@ -1,11 +1,12 @@
-import os
 import json
-import time
-import shutil
 import logging
+import os
+import shutil
+import time
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger("Jarvis.Memory")
+
 
 class MemoryManager:
     def __init__(self, memory_file: str = "jarvis_memory.json"):
@@ -18,9 +19,9 @@ class MemoryManager:
             "user_info": {"name": "User"},
             "system": {},
             "voice_settings": {},
-            "commands_history": []
+            "commands_history": [],
         }
-        
+
         if os.path.exists(self.memory_file):
             try:
                 with open(self.memory_file, "r", encoding="utf-8") as f:
@@ -28,7 +29,7 @@ class MemoryManager:
                     return {**base_structure, **loaded}
             except Exception as e:
                 logger.error(f"Ошибка загрузки памяти: {e}")
-                
+
         return base_structure
 
     def save(self):
@@ -36,7 +37,7 @@ class MemoryManager:
         try:
             if os.path.exists(self.memory_file):
                 shutil.copy(self.memory_file, f"{self.memory_file}.bak")
-                
+
             with open(self.memory_file, "w", encoding="utf-8") as f:
                 json.dump(self.memory, f, indent=2, ensure_ascii=False)
         except Exception as e:
@@ -45,14 +46,14 @@ class MemoryManager:
     def remember(self, key: str, value: Any, category: str = "general") -> bool:
         """Сохранение данных в память"""
         try:
-            keys = key.split('.')
+            keys = key.split(".")
             current = self.memory
             for k in keys[:-1]:
                 current = current.setdefault(k, {})
             current[keys[-1]] = {
                 "value": value,
                 "timestamp": time.time(),
-                "category": category
+                "category": category,
             }
             return True
         except Exception as e:
@@ -62,11 +63,11 @@ class MemoryManager:
     def query(self, key: str) -> Optional[Any]:
         """Получение данных по ключу"""
         try:
-            parts = key.split('.')
+            parts = key.split(".")
             current = self.memory
             for part in parts:
                 if isinstance(current, dict):
-                    if part.startswith('[') and part.endswith(']'):
+                    if part.startswith("[") and part.endswith("]"):
                         current = current[int(part[1:-1])]
                     else:
                         current = current.get(part)
@@ -81,7 +82,7 @@ class MemoryManager:
     def forget(self, key: str) -> bool:
         """Удаление записи из памяти"""
         try:
-            parts = key.split('.')
+            parts = key.split(".")
             current = self.memory
             parent = None
             last_part = None
@@ -101,7 +102,7 @@ class MemoryManager:
     def recall(self, key: str) -> Optional[Any]:
         """Извлечение данных из памяти"""
         try:
-            keys = key.split('.')
+            keys = key.split(".")
             current = self.memory
             for k in keys:
                 current = current[k]
