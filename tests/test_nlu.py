@@ -60,3 +60,16 @@ async def test_custom_pattern_persistence(tmp_path):
     nlu2 = NLUProcessor(memory_manager=mem2)
     result = await nlu2.process("hi")
     assert result["intent"] == "greet"
+
+
+@pytest.mark.asyncio
+async def test_learn_correction(tmp_path):
+    mem_file = tmp_path / "mem.json"
+    mem = MemoryManager(str(mem_file))
+    nlu = NLUProcessor(memory_manager=mem)
+    nlu.learn_correction("helo", "exit", persist=True)
+    mem.save()
+
+    nlu2 = NLUProcessor(memory_manager=MemoryManager(str(mem_file)))
+    result = await nlu2.process("helo")
+    assert result["intent"] == "exit"
