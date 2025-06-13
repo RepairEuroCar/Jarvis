@@ -2,7 +2,7 @@ import asyncio
 import logging
 import sys
 
-from jarvis.cli import run
+from cli import run
 
 
 logging.basicConfig(

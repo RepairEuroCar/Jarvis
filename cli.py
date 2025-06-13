@@ -6,7 +6,7 @@ import logging
 import platform
 import sys
 
-from .core.main import Jarvis
+from jarvis.core.main import Jarvis
 
 logger = logging.getLogger("Jarvis.CLI")
 

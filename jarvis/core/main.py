@@ -118,6 +118,12 @@ class Jarvis:
             self._voice_interface = VoiceInterface(self)
         return self._voice_interface
 
+    @property
+    def user_name(self) -> str:
+        """Return the configured user name from memory or settings."""
+        name = self.memory.recall("user_info.name")
+        return name or self.settings.default_user
+
     def _register_commands(self):
         for cmd_info in ALL_COMMANDS:
             if not hasattr(self, f"{cmd_info.name}_command"):
@@ -204,9 +210,7 @@ class Jarvis:
         errors = linter.lint_paths([opts.path])
         if not errors:
             return "No lint errors found."
-        return "\n".join(
-            f"{e.filepath}:{e.lineno}: {e.message}" for e in errors
-        )
+        return "\n".join(f"{e.filepath}:{e.lineno}: {e.message}" for e in errors)
 
     async def run(self):
         await self.initialize()
