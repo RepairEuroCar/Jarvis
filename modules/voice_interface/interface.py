@@ -1,4 +1,3 @@
-
 # 📁 modules/voice_interface/interface.py
 """
 Основной класс VoiceInterface: инициализация, прослушка, остановка
@@ -13,6 +12,7 @@ import vosk
 
 from .config import VoiceConfig
 
+
 class VoiceInterface:
     def __init__(self, jarvis_instance, config: VoiceConfig = None):
         self.jarvis = jarvis_instance
@@ -25,7 +25,9 @@ class VoiceInterface:
 
         self.model = vosk.Model(self.config.model_path)
         context_json = json.dumps(self.config.context_phrases, ensure_ascii=False)
-        self.recognizer = vosk.KaldiRecognizer(self.model, self.config.samplerate, context_json)
+        self.recognizer = vosk.KaldiRecognizer(
+            self.model, self.config.samplerate, context_json
+        )
 
         self.is_running = False
         self.is_listening_active = not self.config.enable_wake_word
@@ -70,7 +72,7 @@ class VoiceInterface:
             else:
                 partial = json.loads(self.recognizer.PartialResult())
                 if partial.get("partial"):
-                    print("Partial:", partial['partial'], end="\r")
+                    print("Partial:", partial["partial"], end="\r")
             await asyncio.sleep(0.01)
 
     async def start(self):
@@ -82,8 +84,14 @@ class VoiceInterface:
         self._audio_processor_task = asyncio.create_task(self._process_audio_data())
 
         def stream():
-            with sd.RawInputStream(samplerate=self.config.samplerate, blocksize=self.config.blocksize,
-                                   device=self.config.device, dtype='int16', channels=1, callback=self._audio_callback):
+            with sd.RawInputStream(
+                samplerate=self.config.samplerate,
+                blocksize=self.config.blocksize,
+                device=self.config.device,
+                dtype="int16",
+                channels=1,
+                callback=self._audio_callback,
+            ):
                 print("🎤 Слушаю...")
                 while self.is_running:
                     sd.sleep(100)
