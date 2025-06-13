@@ -50,6 +50,16 @@ Run the formatting tools with:
 
 Use `--check` to verify formatting in CI or before committing changes.
 
+## Optional features
+
+Jarvis can leverage Redis for caching and Docker for project initialization.
+Install the optional packages if you plan to use these capabilities:
+
+```bash
+pip install aioredis docker
+```
+
+
 ## Learning from mistakes
 
 The repository includes an example script `scripts/run_with_retry.py` that
