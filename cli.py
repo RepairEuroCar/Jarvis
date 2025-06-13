@@ -13,6 +13,7 @@ logger = logging.getLogger("Jarvis.CLI")
 
 async def run():
     jarvis = Jarvis()
+    await jarvis.initialize()
     print(f"Jarvis CLI (Python {platform.python_version()})")
     print(f"User: {jarvis.user_name}\n")
     print("Type 'help' for commands. Type 'exit' to quit.\n")

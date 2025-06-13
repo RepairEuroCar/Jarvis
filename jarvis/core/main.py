@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import logging
 from collections import defaultdict
@@ -5,8 +6,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Awaitable, Callable, Dict, List, Optional, TypeVar
-
-import argparse
 
 import yaml
 from pydantic import BaseModel, BaseSettings
@@ -211,6 +210,41 @@ class Jarvis:
         if not errors:
             return "No lint errors found."
         return "\n".join(f"{e.filepath}:{e.lineno}: {e.message}" for e in errors)
+
+    async def voice_on_command(self, event: UserEvent):
+        """Включить голосовой интерфейс."""
+        if not self._voice_interface:
+            self._voice_interface = VoiceInterface(self)
+        if self._voice_interface.is_active:
+            return "Голосовой режим уже активен."
+        self._voice_interface.start()
+        self.settings.voice_enabled = True
+        return "Голосовой режим включён."
+
+    async def voice_off_command(self, event: UserEvent):
+        """Выключить голосовой интерфейс."""
+        if not self._voice_interface or not self._voice_interface.is_active:
+            return "Голосовой режим не активен."
+        self._voice_interface.stop()
+        self.settings.voice_enabled = False
+        return "Голосовой режим выключен."
+
+    async def change_voice_command(self, event: UserEvent):
+        """Изменить параметры голоса."""
+        parts = event.text.split()
+        if len(parts) < 3:
+            return "Usage: change_voice <rate> <volume>"
+        try:
+            rate = int(parts[1])
+            volume = float(parts[2])
+        except ValueError:
+            return "Usage: change_voice <rate> <volume>"
+        self.settings.voice_rate = rate
+        self.settings.voice_volume = volume
+        if self._voice_interface:
+            self._voice_interface.engine.setProperty("rate", rate)
+            self._voice_interface.engine.setProperty("volume", volume)
+        return f"Голос обновлён: скорость {rate}, громкость {volume}"
 
     async def run(self):
         await self.initialize()
