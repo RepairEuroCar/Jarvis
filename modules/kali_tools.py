@@ -1,8 +1,35 @@
 import asyncio
 import shlex
+from ipaddress import ip_address, ip_network
 from typing import List, Tuple
+from urllib.parse import urlparse
+
+from jarvis.core.main import Settings
 
 INVALID_PATTERNS = [";", "&&", "|", "`", "$(", ")", ">"]
+
+_settings = Settings.load("config/config.yaml")
+ALLOWED_NETWORKS = [ip_network(n) for n in _settings.allowed_networks]
+
+
+def _target_ip(value: str):
+    try:
+        return ip_address(value)
+    except ValueError:
+        parsed = urlparse(value)
+        if parsed.hostname:
+            try:
+                return ip_address(parsed.hostname)
+            except ValueError:
+                return None
+        return None
+
+
+def _is_allowed(target: str) -> bool:
+    ip = _target_ip(target)
+    if ip is None:
+        return False
+    return any(ip in net for net in ALLOWED_NETWORKS)
 
 
 def _is_safe(value: str) -> bool:
@@ -32,6 +59,8 @@ async def run_nmap(target: str, options: str = "") -> str:
     """Run nmap against the specified target."""
     if not _is_safe(target) or not _is_safe(options):
         return "Invalid target or options"
+    if not _is_allowed(target):
+        return f"Target {target} not in allowed networks"
     cmd = ["nmap"] + shlex.split(options) + [target]
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -43,6 +72,8 @@ async def bruteforce_ssh(
     """Run hydra to bruteforce SSH credentials."""
     if not all(_is_safe(x) for x in [ip, userlist, passlist, options]):
         return "Invalid arguments"
+    if not _is_allowed(ip):
+        return f"Target {ip} not in allowed networks"
     cmd = (
         ["hydra", "-L", userlist, "-P", passlist]
         + shlex.split(options)
@@ -56,6 +87,8 @@ async def run_sqlmap(target: str, options: str = "") -> str:
     """Run sqlmap for the given target URL."""
     if not _is_safe(target) or not _is_safe(options):
         return "Invalid target or options"
+    if not _is_allowed(target):
+        return f"Target {target} not in allowed networks"
     cmd = ["sqlmap"] + shlex.split(options) + ["-u", target]
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"

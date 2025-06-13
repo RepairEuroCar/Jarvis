@@ -14,10 +14,10 @@ from transitions import Machine
 
 from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
+from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
 from jarvis.voice.interface import VoiceInterface
-from jarvis.goal_manager import GoalManager
 from utils.linter import AstLinter
 
 logger = logging.getLogger("Jarvis.Core")
@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     voice_activation_phrase: str = "джарвис"
     voice_rate: int = 180
     voice_volume: float = 0.9
+    allowed_networks: List[str] = ["0.0.0.0/0"]
 
     class Config:
         env_file = ".env"
@@ -327,7 +328,9 @@ class Jarvis:
         goal = parts[1]
         motivation = parts[2] if len(parts) > 2 else ""
         self.goals.set_goal(goal, motivation)
-        return f"Goal set: {goal}" + (f" (motivation: {motivation})" if motivation else "")
+        return f"Goal set: {goal}" + (
+            f" (motivation: {motivation})" if motivation else ""
+        )
 
     async def execute_goal_command(self, event: UserEvent):
         """Execute the current goal if known."""

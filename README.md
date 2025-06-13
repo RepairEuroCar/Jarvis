@@ -30,12 +30,25 @@ Default values are:
 | `JARVIS_VOICE_ACTIVATION_PHRASE` | `джарвис` |
 | `JARVIS_VOICE_RATE` | `180` |
 | `JARVIS_VOICE_VOLUME` | `0.9` |
+| `JARVIS_ALLOWED_NETWORKS` | `0.0.0.0/0` |
 
 To inspect the full JSON schema of available settings, run:
 
 ```bash
 python -m jarvis.core.main --schema
 ```
+
+The `allowed_networks` setting defines which IP ranges can be targeted by
+security-related commands. Configure it in `config/config.yaml`:
+
+```yaml
+allowed_networks:
+  - 192.168.0.0/24
+  - 10.0.0.0/8
+```
+
+Only addresses that fall within the listed CIDR ranges will be scanned by tools
+like `nmap` and `sqlmap`.
 
 ## Additional commands
 

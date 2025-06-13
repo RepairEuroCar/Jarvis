@@ -1,4 +1,5 @@
 import asyncio
+from ipaddress import ip_network
 
 import pytest
 
@@ -21,6 +22,7 @@ async def test_run_nmap(monkeypatch):
         return Proc()
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("0.0.0.0/0")])
     result = await kali_tools.run_nmap("127.0.0.1")
     assert called["args"][0] == "nmap"
     assert "ok" in result
@@ -42,6 +44,14 @@ async def test_bruteforce_ssh(monkeypatch):
         return Proc()
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("0.0.0.0/0")])
     result = await kali_tools.bruteforce_ssh("1.2.3.4", "users.txt", "pass.txt")
     assert "hydra" in called["args"][0]
     assert "done" in result
+
+
+@pytest.mark.asyncio
+async def test_disallowed_target(monkeypatch):
+    monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("10.0.0.0/8")])
+    result = await kali_tools.run_nmap("8.8.8.8")
+    assert "not in allowed networks" in result
