@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any, Dict, Type
 
 from utils.linter import AstLinter
+from utils.solution_compare import structural_diff
 
 from .processors import (
     AnalyticalThoughtProcessor,
@@ -243,10 +244,16 @@ class Brain:
         return results
 
     def self_review(self) -> Dict[str, Any]:
-        """Lint recently generated code and return warnings."""
+        """Lint recently generated code and return warnings.
+
+        Additionally compares the structure of the latest code with any previous
+        versions stored in ``reasoning_history`` and includes a structural diff
+        when available.
+        """
         linter = AstLinter()
         review: Dict[str, Any] = {}
-        for entry in self.get_chain_of_thought(limit=5):
+        history = self.get_chain_of_thought(limit=5)
+        for entry in history:
             code = entry.get("solution", {}).get("generated_code")
             if not code:
                 continue
@@ -264,4 +271,39 @@ class Brain:
                 review[entry["problem"]] = {
                     "warnings": [f"{e.lineno}: {e.message}" for e in errors]
                 }
+
+        diffs = self.compare_recent_code(limit=5)
+        for problem, diff in diffs.items():
+            review.setdefault(problem, {})["structural_diff"] = diff
+
         return review
+
+    def compare_recent_code(self, limit: int = 5) -> Dict[str, str]:
+        """Compare recent generated code snippets with past versions.
+
+        The function searches the ``reasoning_history`` for earlier records of
+        the same problem and returns unified diffs of the AST structures.
+        """
+        history = list(self.reasoning_history)
+        diffs: Dict[str, str] = {}
+
+        for idx in range(max(0, len(history) - limit), len(history)):
+            entry = history[idx]
+            problem = entry.get("problem")
+            code = entry.get("solution", {}).get("generated_code")
+            if not problem or not code:
+                continue
+
+            prev_code = None
+            for past in reversed(history[:idx]):
+                if past.get("problem") == problem:
+                    prev_code = past.get("solution", {}).get("generated_code")
+                    if prev_code:
+                        break
+
+            if prev_code:
+                diff = structural_diff(prev_code, code)
+                if diff:
+                    diffs[problem] = diff
+
+        return diffs
