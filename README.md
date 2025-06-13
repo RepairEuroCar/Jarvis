@@ -50,6 +50,16 @@ allowed_networks:
 Only addresses that fall within the listed CIDR ranges will be scanned by tools
 like `nmap` and `sqlmap`.
 
+## Responsible security testing
+
+Jarvis provides modules for network scanning and exploitation. Use them **only**
+against systems where you have explicit permission&mdash;for example your own
+lab machines, Capture-the-Flag challenges or other authorised environments.
+
+The `allowed_networks` configuration serves as an allowlist for these modules.
+Adjust the ranges to match your local network or lab before running any
+security-related commands.
+
 ## Additional commands
 
 - `self_learn <trainer_id>` – trains or fine-tunes a model through the Seq2SeqTrainer module.
