@@ -66,3 +66,13 @@ async def test_brain_self_evolve(tmp_path):
     result = await jarvis.brain.self_evolve(directory=tmp_path)
     assert str(f) in result
     assert "my_var" in result[str(f)]["diff"]
+
+
+def test_brain_self_review():
+    jarvis = Jarvis()
+    code = "x = 1\nprint('hi')\n"
+    jarvis.brain.log_thoughts("test", {"generated_code": code})
+    review = jarvis.brain.self_review()
+    assert review
+    warnings = list(review.values())[0]["warnings"]
+    assert any("Global variable" in w for w in warnings)

@@ -211,6 +211,18 @@ class Jarvis:
             return "No lint errors found."
         return "\n".join(f"{e.filepath}:{e.lineno}: {e.message}" for e in errors)
 
+    async def self_review_command(self, event: UserEvent):
+        """Run self review using recent history."""
+        review = self.brain.self_review()
+        if not review:
+            return "No recent code to review."
+        lines: List[str] = []
+        for problem, info in review.items():
+            lines.append(f"{problem}:")
+            for w in info["warnings"]:
+                lines.append(f"  - {w}")
+        return "\n".join(lines)
+
     async def voice_on_command(self, event: UserEvent):
         """Включить голосовой интерфейс."""
         if not self._voice_interface:

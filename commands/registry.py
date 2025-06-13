@@ -68,6 +68,13 @@ DEVEL_COMMANDS = [
         usage="lint <path> [--max-lines N]",
         aliases=[],
     ),
+    CommandInfo(
+        name="self_review",
+        description="Review recent generated code for lint issues",
+        category=CommandCategory.DEVELOPMENT,
+        usage="self_review",
+        aliases=[],
+    ),
 ]
 
 ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS + DEVEL_COMMANDS
