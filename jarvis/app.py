@@ -24,6 +24,7 @@ from pathlib import Path
 import ast
 from .event_queue import EventQueue
 from jarvis.nlp.processor import NLUProcessor
+from jarvis.memory.manager import MemoryManager
 
 # --- Конфигурация логгирования ---
 logging.basicConfig(
@@ -233,48 +234,6 @@ class Brain:
             logger.warning(f"Не удалось сохранить мысль по проблеме '{problem[:50]}...'.")
 
 
-class MemoryManager:
-    def __init__(self, memory_file: str = "jarvis_memory.json"):
-        self.memory_file = memory_file; self.memory: Dict[str, Any] = {}; self._initialize_memory()
-    def _initialize_memory(self):
-        base_structure = {"user_info": {"name": "User"}, "system": {}, "knowledge": {}, "temporal": {}}
-        if os.path.exists(self.memory_file):
-            try:
-                with open(self.memory_file, "r", encoding="utf-8") as f: self.memory = json.load(f)
-                for key in base_structure: self.memory.setdefault(key, base_structure[key])
-            except Exception as e: logger.error(f"Ошибка загрузки памяти: {e}"); self.memory = base_structure
-        else: self.memory = base_structure
-    def save(self):
-        try:
-            if os.path.exists(self.memory_file): shutil.copy(self.memory_file, f"{self.memory_file}.bak.{int(time.time())}")
-            with open(self.memory_file, "w", encoding="utf-8") as f: json.dump(self.memory, f, indent=2, ensure_ascii=False)
-            logger.info("Память успешно сохранена")
-        except Exception as e: logger.error(f"Ошибка сохранения памяти: {e}")
-    def query(self, query: str) -> Any:
-        try:
-            parts = query.split("."); current = self.memory
-            for part in parts:
-                if part.startswith("[") and part.endswith("]"): current = current[int(part[1:-1])]
-                else: current = current.get(part)
-                if current is None: return None
-            return current
-        except Exception: return None
-    def remember(self, key: str, value: Any, category: str = "general") -> bool:
-        try:
-            parts = key.split("."); current = self.memory
-            for part in parts[:-1]: current = current.setdefault(part, {})
-            current[parts[-1]] = {"value": value, "timestamp": time.time(), "category": category}
-            return True
-        except Exception as e: logger.error(f"Ошибка записи в память '{key}': {e}"); return False
-    def forget(self, key: str) -> bool:
-        try:
-            parts = key.split("."); current = self.memory; parent = None; last_part = None
-            for part in parts:
-                if not isinstance(current, dict) or part not in current: return False
-                parent = current; last_part = part; current = current[part]
-            if parent and last_part and last_part in parent : del parent[last_part]; return True # Добавлена проверка last_part in parent
-            return False
-        except Exception: return False
 
 class ModuleManager: 
     def __init__(self, jarvis_instance: Any): self.jarvis = jarvis_instance; self.modules: Dict[str, Any] = {}
