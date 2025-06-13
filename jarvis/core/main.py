@@ -61,7 +61,15 @@ class RegisteredCommand:
     is_alias: bool = False
 
 class Jarvis:
+    """Main application orchestrator implemented as a Singleton."""
+
     states = ['idle', 'listening', 'processing', 'sleeping']
+    _instance: Optional["Jarvis"] = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self, settings: Settings = None, config_path: str = "config/config.yaml"):
         # Load settings from YAML and environment unless explicitly provided

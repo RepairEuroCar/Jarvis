@@ -38,3 +38,13 @@ python -m jarvis.core.main --schema
 - `self_update pull [remote branch]` – pulls updates from a remote repository.
 
 **Caution**: these commands execute heavy ML training and Git operations. Use them only if you understand the consequences and have configured the trainer and repository paths correctly.
+
+## Design patterns
+
+The codebase utilises a couple of classic patterns:
+
+- **Factory** – `jarvis/brain.py` defines `ThoughtProcessorFactory` which
+  creates instances of different thought processors. Processors are registered
+  in the factory and the `Brain` class obtains them via this facility.
+- **Singleton** – `Jarvis` in `jarvis/core/main.py` implements the singleton
+  pattern so repeated instantiation returns the same assistant instance.
