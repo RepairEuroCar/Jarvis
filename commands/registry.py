@@ -98,4 +98,21 @@ DEVEL_COMMANDS = [
     ),
 ]
 
-ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS + DEVEL_COMMANDS
+UTILITY_COMMANDS = [
+    CommandInfo(
+        name="set_goal",
+        description="Set an active goal with optional motivation",
+        category=CommandCategory.UTILITY,
+        usage="set_goal <goal> [motivation]",
+        aliases=["goal"],
+    ),
+    CommandInfo(
+        name="execute_goal",
+        description="Execute actions for the current goal",
+        category=CommandCategory.UTILITY,
+        usage="execute_goal",
+        aliases=["run_goal"],
+    ),
+]
+
+ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS + DEVEL_COMMANDS + UTILITY_COMMANDS
