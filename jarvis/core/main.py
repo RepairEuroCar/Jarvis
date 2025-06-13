@@ -251,6 +251,27 @@ class Jarvis:
                 lines.append(f"  - {w}")
         return "\n".join(lines)
 
+    async def rate_solutions_command(self, event: UserEvent):
+        """Display ratings for stored solutions."""
+        thoughts = self.memory.query("brain.thoughts") or {}
+        lines: List[str] = []
+        for entry in thoughts.values():
+            record = entry.get("value") if isinstance(entry, dict) else entry
+            rating = record.get("rating")
+            if not rating:
+                continue
+            problem = record.get("problem", "")[:30]
+            brevity = rating.get("brevity", {})
+            lines.append(
+                f"{problem}: lines={brevity.get('lines', 0)}, "
+                f"funcs={brevity.get('functions', 0)}, "
+                f"MI={rating.get('readability', 0)}, "
+                f"risky={rating.get('safety', 0)}"
+            )
+        if not lines:
+            return "No rated solutions."
+        return "\n".join(lines)
+
     async def repl_command(self, event: UserEvent):
         """Запуск интерактивного Python REPL."""
         banner = "Jarvis Python REPL. Type exit() or Ctrl-D to exit."

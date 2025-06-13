@@ -26,6 +26,7 @@ from typing import Any, Dict, Type
 
 from utils.linter import AstLinter
 from utils.solution_compare import structural_diff
+from utils.code_rating import rate_code
 
 from .processors import (
     AnalyticalThoughtProcessor,
@@ -128,11 +129,18 @@ class Brain:
 
     def _update_long_term_memory(self, problem, solution):
         memory_key = f"brain.thoughts.{uuid.uuid5(uuid.NAMESPACE_DNS, problem).hex}"
+        rating = None
+        code = solution.get("generated_code")
+        if code is not None:
+            rating = rate_code(code)
         record = {
             "problem": problem,
             "solution": solution,
             "timestamp": time.time(),
         }
+        if rating is not None:
+            record["rating"] = rating
+            solution["rating"] = rating
         self.jarvis.memory.remember(memory_key, record, category="reasoning")
         history = self.jarvis.memory.recall("brain.reasoning_history") or []
         history.append(record)
