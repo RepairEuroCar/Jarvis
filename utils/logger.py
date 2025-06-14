@@ -1,4 +1,10 @@
-"""TODO: add summary."""
+"""Logger utilities for the Jarvis project.
+
+This module provides ``setup_logging`` to configure a global ``logging``
+instance and ``get_logger`` to retrieve it. All modules should use these
+helpers instead of creating loggers directly so that log output is
+consistently formatted.
+"""
 
 import logging
 import sys
