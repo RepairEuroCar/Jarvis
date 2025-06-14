@@ -13,6 +13,7 @@ from transitions import Machine
 
 from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
+from jarvis.core.agent_loop import AgentLoop
 from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
@@ -100,7 +101,8 @@ class Jarvis:
         self.brain = Brain(self)
         self.goals = GoalManager(self)
         self.event_queue = EventQueue()
-        self.sensor_manager = SensorManager(self, self.event_queue)
+        self.sensor_manager = SensorManager(self, self.event_queue
+        self.agent_loop = None
         # Initialize per-instance cache for input parsing
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
             self._parse_input_uncached
@@ -361,8 +363,8 @@ class Jarvis:
 
     async def run(self):
         await self.initialize()
-        while True:
-            await asyncio.sleep(1)
+        self.agent_loop = AgentLoop(self)
+        await self.agent_loop.run()
 
 
 if __name__ == "__main__":
