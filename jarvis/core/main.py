@@ -19,6 +19,7 @@ from jarvis.event_queue import EventQueue
 from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
+from jarvis.plugins import load_plugins
 from jarvis.voice.interface import VoiceInterface
 from modules.git_manager import GitManager
 from utils.linter import AstLinter
@@ -48,6 +49,7 @@ class Settings(BaseSettings):
     voice_rate: int = 180
     voice_volume: float = 0.9
     allowed_networks: List[str] = ["0.0.0.0/0"]
+    plugin_dir: str = "plugins"
 
     class Config:
         env_file = ".env"
@@ -108,6 +110,8 @@ class Jarvis:
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
             self._parse_input_uncached
         )
+        # Load optional plugins
+        load_plugins(self, self.settings.plugin_dir)
 
     def _setup_logging(self):
         logging.basicConfig(level=self.settings.log_level)

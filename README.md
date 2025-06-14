@@ -31,6 +31,7 @@ Default values are:
 | `JARVIS_VOICE_RATE` | `180` |
 | `JARVIS_VOICE_VOLUME` | `0.9` |
 | `JARVIS_ALLOWED_NETWORKS` | `0.0.0.0/0` |
+| `JARVIS_PLUGIN_DIR` | `plugins` |
 
 To inspect the full JSON schema of available settings, run:
 
@@ -164,4 +165,27 @@ task = {
 }
 write_code(task)
 # foo.py will start with 'import aiogram'
+```
+
+## Developing plugins
+
+Jarvis can load additional functionality from Python modules located in the
+directory defined by the `plugin_dir` setting (default: `plugins`). Every module
+found there is imported on startup and, if it exposes a `register(jarvis)`
+function, that function is called with the running `Jarvis` instance. Use it to
+register new commands or initialise background tasks.
+
+An example plugin that adds a simple command:
+
+```python
+from jarvis.core.main import RegisteredCommand, CommandInfo
+
+def register(jarvis):
+    async def hello(event):
+        return "Hello from plugin!"
+
+    jarvis.commands["hello"] = RegisteredCommand(
+        info=CommandInfo(name="hello", aliases=[], description="Say hello"),
+        handler=hello,
+    )
 ```
