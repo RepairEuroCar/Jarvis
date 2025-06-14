@@ -21,6 +21,7 @@ _module_map = {
     # Expose Jarvis class directly
     "core.main": "jarvis.core.main",
     "goal_manager": "jarvis.goal_manager",
+    "reasoning_engine": "jarvis.reasoning_engine",
 }
 
 for alias, target in _module_map.items():
