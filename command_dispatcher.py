@@ -36,9 +36,7 @@ class CommandDispatcher:
     # ------------------------------------------------------------------
     # Parsing
     # ------------------------------------------------------------------
-    def parse(
-        self, text: str
-    ) -> Optional[tuple[str, Optional[str], Dict[str, str]]]:
+    def parse(self, text: str) -> Optional[tuple[str, Optional[str], Dict[str, str]]]:
         """Parse ``text`` into module, action and ``--key=value`` pairs."""
         tokens = shlex.split(text)
         if not tokens:
@@ -115,11 +113,7 @@ class CommandDispatcher:
         if not self.jarvis or not hasattr(self.jarvis, "module_manager"):
             return "Reload not supported"
         success = await self.jarvis.module_manager.reload_module(module)
-        return (
-            f"Module {module} reloaded"
-            if success
-            else f"Failed to reload {module}"
-        )
+        return f"Module {module} reloaded" if success else f"Failed to reload {module}"
 
 
 # Global dispatcher used for modules that register handlers on import

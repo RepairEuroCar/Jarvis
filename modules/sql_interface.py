@@ -1,5 +1,6 @@
 import asyncio
 import datetime  # Added for created_at
+
 import aiosqlite
 
 DATABASE_FILE = "jarvis_data.db"
@@ -21,9 +22,7 @@ class Table:
             ]
         )
         async with self._lock:
-            await db.execute(
-                f"CREATE TABLE IF NOT EXISTS {self.name} ({column_defs})"
-            )
+            await db.execute(f"CREATE TABLE IF NOT EXISTS {self.name} ({column_defs})")
             await db.commit()
 
     async def insert(self, db, data: dict):
@@ -232,7 +231,7 @@ async def edit_note_async(jarvis_instance, args: str):
             field = parts[1].lower()
             new_value = parts[2]
             if field in ["title", "content"]:
-                changes = await jarvis_instance.notes_table.update(
+                await jarvis_instance.notes_table.update(
                     jarvis_instance.sql_db, {field: new_value}, {"id": note_id}
                 )
                 # db.total_changes is cumulative for the connection.

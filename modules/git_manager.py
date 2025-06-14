@@ -782,13 +782,16 @@ async def close_module(jarvis_instance):
 # CommandDispatcher integration helpers
 # ------------------------------------------------------
 
+
 async def commit(message: str, repo: str | None = None) -> str:
     """Commit staged changes with a message."""
     gm = GitManager()
     return await gm.commit(None, message, repo)
 
 
-async def push(remote: str = "origin", branch: str = "main", repo: str | None = None) -> str:
+async def push(
+    remote: str = "origin", branch: str = "main", repo: str | None = None
+) -> str:
     """Push commits to the given remote and branch."""
     gm = GitManager()
     remote_branch = f"{remote} {branch}".strip()
