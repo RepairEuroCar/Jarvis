@@ -73,7 +73,7 @@ async def bruteforce_ssh(
 ) -> str:
     """Run hydra to bruteforce SSH credentials."""
     if not all(_is_safe(x) for x in [ip, userlist, passlist, options]):
-        return "Invalid arguments"
+        return "Invalid target or options"
     if not _is_allowed(ip):
         return f"Target {ip} not in allowed networks"
     cmd = (
@@ -99,7 +99,7 @@ async def run_sqlmap(target: str, options: str = "") -> str:
 async def run_msfconsole(resource_script: str = "") -> str:
     """Launch msfconsole optionally with a resource script."""
     if resource_script and not _is_safe(resource_script):
-        return "Invalid resource script"
+        return "Invalid target or options"
     cmd = ["msfconsole", "-q"]
     if resource_script:
         cmd += ["-r", resource_script]
@@ -110,7 +110,7 @@ async def run_msfconsole(resource_script: str = "") -> str:
 async def run_burpsuite(options: str = "") -> str:
     """Start Burp Suite with optional parameters."""
     if not _is_safe(options):
-        return "Invalid options"
+        return "Invalid target or options"
     cmd = ["burpsuite"] + shlex.split(options)
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
