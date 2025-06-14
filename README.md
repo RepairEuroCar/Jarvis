@@ -31,6 +31,13 @@ Default values are:
 | `JARVIS_VOICE_RATE` | `180` |
 | `JARVIS_VOICE_VOLUME` | `0.9` |
 | `JARVIS_PLUGIN_DIR` | `plugins` |
+| `JARVIS_ALLOWED_NETWORKS` | `0.0.0.0/0` |
+
+`allowed_networks` defines the CIDR ranges Jarvis modules may
+connect to or scan. Leaving the default `0.0.0.0/0` allows
+operations against any address, which could be unsafe in untrusted
+environments. Provide a restricted list in `config/config.yaml`
+to limit network commands to known networks.
 
 To inspect the full JSON schema of available settings, run:
 
