@@ -96,6 +96,13 @@ DEVEL_COMMANDS = [
         usage="rate_solutions",
         aliases=[],
     ),
+    CommandInfo(
+        name="self_update",
+        description="Update Jarvis source via Git",
+        category=CommandCategory.DEVELOPMENT,
+        usage="self_update <commit|pull> ...",
+        aliases=[],
+    ),
 ]
 
 UTILITY_COMMANDS = [

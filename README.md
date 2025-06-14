@@ -63,8 +63,8 @@ security-related commands.
 ## Additional commands
 
 - `self_learn <trainer_id>` – trains or fine-tunes a model through the Seq2SeqTrainer module.
-- `self_update commit <message>` – stages all changes and commits them with the provided message.
-- `self_update pull [remote branch]` – pulls updates from a remote repository.
+- `self_update commit <message> [remote branch]` – stages all changes, commits with the message and pushes if a remote/branch is specified.
+- `self_update pull [remote branch]` – pulls updates from the given remote and branch (defaults to `origin main`).
 - `repl` – opens an interactive Python session with Jarvis loaded.
 
 **Caution**: these commands execute heavy ML training and Git operations. Use them only if you understand the consequences and have configured the trainer and repository paths correctly.
