@@ -39,6 +39,30 @@ operations against any address, which could be unsafe in untrusted
 environments. Provide a restricted list in `config/config.yaml`
 to limit network commands to known networks.
 
+## Security tool wrappers
+
+Jarvis exposes asynchronous helpers for several security utilities through
+`modules/kali_tools.py`.
+
+| Tool | Purpose | Comments |
+|------|---------|----------|
+| `nmap` | Network scanning and host discovery | Respects `allowed_networks` |
+| `hydra` | Credential bruteforce for many services | `bruteforce_ssh` wraps SSH |
+| `sqlmap` | Automated SQL injection testing | |
+| `msfconsole` | Launch the Metasploit console | Optional resource script |
+| `burpsuite` | Web vulnerability testing | |
+| `aircrack-ng` | Crack captured Wi-Fi handshakes | |
+| `wireshark` | Inspect packet captures | |
+| `john` | Password hash cracking | new wrapper |
+| `hashcat` | GPU-accelerated hash cracking | new wrapper |
+| `crunch` | Generate custom wordlists | new wrapper |
+| `yara` | Scan files with YARA rules | new wrapper |
+| `volatility` | Memory forensics | new wrapper |
+| `mitmproxy` | Intercept HTTP/S traffic | new wrapper |
+
+The newest additions include wrappers for `john`, `hashcat`, `crunch`, `yara`,
+`volatility` and `mitmproxy`.
+
 To inspect the full JSON schema of available settings, run:
 
 ```bash
