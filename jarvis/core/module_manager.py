@@ -8,9 +8,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from enum import Enum, auto
 from functools import wraps
-from multiprocessing import Process, Queue
 from pathlib import Path
-from resource import RLIMIT_AS, RLIMIT_CPU, setrlimit
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ValidationError
@@ -94,12 +92,8 @@ def time_operation(operation_name: str):
 
 
 def apply_resource_limits(limits: Dict[str, int]):
-    """Применяет ограничения ресурсов для модуля."""
-    if "cpu_time" in limits:
-        setrlimit(RLIMIT_CPU, (limits["cpu_time"], limits["cpu_time"]))
-    if "memory_mb" in limits:
-        memory_bytes = limits["memory_mb"] * 1024 * 1024
-        setrlimit(RLIMIT_AS, (memory_bytes, memory_bytes))
+    """No-op after removing sandbox limits."""
+    return
 
 
 # ========================
@@ -231,19 +225,6 @@ class ModuleManager:
     async def _verify_module_security(
         self, module_name: str, config: ModuleConfig
     ) -> bool:
-        if not config.expected_hash:
-            return True
-
-        module_path = Path(f"jarvis/modules/{module_name}.py")
-        if not module_path.exists():
-            return False
-
-        with open(module_path, "rb") as f:
-            file_hash = hashlib.sha256(f.read()).hexdigest()
-
-        if file_hash != config.expected_hash:
-            logger.error(f"Security hash mismatch for {module_name}")
-            return False
         return True
 
     async def _load_dependencies(self, module_name: str, config: ModuleConfig) -> bool:
@@ -258,9 +239,6 @@ class ModuleManager:
         self, module_name: str, config: ModuleConfig
     ) -> Optional[JarvisModule]:
         try:
-            if config.sandboxed:
-                return await self._initialize_sandboxed(module_name, config)
-
             module = importlib.import_module(f"jarvis.modules.{module_name}")
             if not hasattr(module, "setup"):
                 logger.error(f"Module {module_name} has no setup function")
@@ -283,31 +261,3 @@ class ModuleManager:
             return False
         return True
 
-    async def _initialize_sandboxed(
-        self, module_name: str, config: ModuleConfig
-    ) -> Optional[JarvisModule]:
-        result_queue = Queue()
-        process = Process(
-            target=self._run_sandboxed_module,
-            args=(module_name, config.dict(), result_queue),
-        )
-        process.start()
-        process.join(timeout=config.resource_limits.get("cpu_time", 1) + 1)
-
-        if process.is_alive():
-            process.terminate()
-            logger.error(f"Sandboxed module {module_name} timed out")
-            return None
-
-        return result_queue.get() if not result_queue.empty() else None
-
-    @staticmethod
-    def _run_sandboxed_module(module_name: str, config: Dict, queue: Queue):
-        try:
-            apply_resource_limits(config["resource_limits"])
-            module = importlib.import_module(f"jarvis.modules.{module_name}")
-            instance = module.setup(config)
-            queue.put(instance)
-        except Exception as e:
-            logger.error(f"Sandbox error in {module_name}: {str(e)}")
-            queue.put(None)

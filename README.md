@@ -30,7 +30,6 @@ Default values are:
 | `JARVIS_VOICE_ACTIVATION_PHRASE` | `джарвис` |
 | `JARVIS_VOICE_RATE` | `180` |
 | `JARVIS_VOICE_VOLUME` | `0.9` |
-| `JARVIS_ALLOWED_NETWORKS` | `0.0.0.0/0` |
 | `JARVIS_PLUGIN_DIR` | `plugins` |
 
 To inspect the full JSON schema of available settings, run:
@@ -39,27 +38,6 @@ To inspect the full JSON schema of available settings, run:
 python -m jarvis.core.main --schema
 ```
 
-The `allowed_networks` setting defines which IP ranges can be targeted by
-security-related commands. Configure it in `config/config.yaml`:
-
-```yaml
-allowed_networks:
-  - 192.168.0.0/24
-  - 10.0.0.0/8
-```
-
-Only addresses that fall within the listed CIDR ranges will be scanned by tools
-like `nmap` and `sqlmap`.
-
-## Responsible security testing
-
-Jarvis provides modules for network scanning and exploitation. Use them **only**
-against systems where you have explicit permission&mdash;for example your own
-lab machines, Capture-the-Flag challenges or other authorised environments.
-
-The `allowed_networks` configuration serves as an allowlist for these modules.
-Adjust the ranges to match your local network or lab before running any
-security-related commands.
 
 ## Additional commands
 
