@@ -61,18 +61,31 @@ async def run_nmap(target: str, options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+async def run_hydra(
+    service: str, target: str, userlist: str, passlist: str, options: str = ""
+) -> str:
+    """Run hydra against a service with given credential lists."""
+    # Security checks removed
+    cmd = (
+        [
+            "hydra",
+            "-L",
+            userlist,
+            "-P",
+            passlist,
+        ]
+        + shlex.split(options)
+        + [f"{service}://{target}"]
+    )
+    stdout, stderr, rc = await _run_command(cmd)
+    return stdout if rc == 0 else f"Error: {stderr}"
+
+
 async def bruteforce_ssh(
     ip: str, userlist: str, passlist: str, options: str = ""
 ) -> str:
     """Run hydra to bruteforce SSH credentials."""
-    # Security checks removed
-    cmd = (
-        ["hydra", "-L", userlist, "-P", passlist]
-        + shlex.split(options)
-        + [f"ssh://{ip}"]
-    )
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
+    return await run_hydra("ssh", ip, userlist, passlist, options)
 
 
 async def run_sqlmap(target: str, options: str = "") -> str:
@@ -117,12 +130,67 @@ async def run_wireshark(options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+async def run_john(hash_file: str, options: str = "") -> str:
+    """Run John the Ripper with a given hash file."""
+    # Security checks removed
+    cmd = ["john"] + shlex.split(options) + [hash_file]
+    stdout, stderr, rc = await _run_command(cmd)
+    return stdout if rc == 0 else f"Error: {stderr}"
+
+
+async def run_hashcat(hash_file: str, wordlist: str, options: str = "") -> str:
+    """Run hashcat against the specified hashes and wordlist."""
+    # Security checks removed
+    cmd = ["hashcat"] + shlex.split(options) + [hash_file, wordlist]
+    stdout, stderr, rc = await _run_command(cmd)
+    return stdout if rc == 0 else f"Error: {stderr}"
+
+
+async def run_crunch(min_len: int, max_len: int, options: str = "") -> str:
+    """Run crunch to generate a wordlist."""
+    # Security checks removed
+    cmd = ["crunch", str(min_len), str(max_len)] + shlex.split(options)
+    stdout, stderr, rc = await _run_command(cmd)
+    return stdout if rc == 0 else f"Error: {stderr}"
+
+
+async def run_yara(rule_file: str, target: str, options: str = "") -> str:
+    """Run yara with the given rule file against a target."""
+    # Security checks removed
+    cmd = ["yara"] + shlex.split(options) + [rule_file, target]
+    stdout, stderr, rc = await _run_command(cmd)
+    return stdout if rc == 0 else f"Error: {stderr}"
+
+
+async def run_volatility(memory_image: str, plugin: str, options: str = "") -> str:
+    """Run Volatility on a memory image using the specified plugin."""
+    # Security checks removed
+    cmd = ["volatility", "-f", memory_image] + shlex.split(options) + [plugin]
+    stdout, stderr, rc = await _run_command(cmd)
+    return stdout if rc == 0 else f"Error: {stderr}"
+
+
+async def run_mitmproxy(options: str = "") -> str:
+    """Run mitmproxy with optional parameters."""
+    # Security checks removed
+    cmd = ["mitmproxy"] + shlex.split(options)
+    stdout, stderr, rc = await _run_command(cmd)
+    return stdout if rc == 0 else f"Error: {stderr}"
+
+
 __all__ = [
     "run_nmap",
     "bruteforce_ssh",
+    "run_hydra",
     "run_sqlmap",
     "run_msfconsole",
     "run_burpsuite",
     "run_aircrack",
     "run_wireshark",
+    "run_john",
+    "run_hashcat",
+    "run_crunch",
+    "run_yara",
+    "run_volatility",
+    "run_mitmproxy",
 ]
