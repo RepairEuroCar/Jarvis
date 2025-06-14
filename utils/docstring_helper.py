@@ -11,19 +11,19 @@ def _generate_docstring(node: ast.AST | None, style: str, kind: str) -> str:
         if kind == "function" and isinstance(
             node, (ast.FunctionDef, ast.AsyncFunctionDef)
         ):
-            lines = ['"""', "TODO: add summary.", ""]
+            lines = ['"""', "Auto-generated summary.", ""]
             for arg in [a.arg for a in node.args.args if a.arg not in {"self", "cls"}]:
                 lines.append(f":param {arg}: TODO")
             if node.returns:
                 lines.append(":return: TODO")
             lines.append('"""')
             return "\n".join(lines)
-        return '"""TODO: add summary."""'
+        return '"""Auto-generated summary."""'
 
     # default google style
     if kind == "function" and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         args = [a.arg for a in node.args.args if a.arg not in {"self", "cls"}]
-        lines = ['"""', "TODO: add summary."]
+        lines = ['"""', "Auto-generated summary."]
         if args or node.returns:
             lines.append("")
         if args:
@@ -36,7 +36,7 @@ def _generate_docstring(node: ast.AST | None, style: str, kind: str) -> str:
             lines.append("    Any: TODO")
         lines.append('"""')
         return "\n".join(lines)
-    return '"""TODO: add summary."""'
+    return '"""Auto-generated summary."""'
 
 
 def _indent_lines(text: str, indent: str) -> List[str]:

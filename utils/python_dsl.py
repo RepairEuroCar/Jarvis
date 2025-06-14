@@ -1,4 +1,10 @@
-"""TODO: add summary."""
+"""Helpers for generating Python code from simple descriptions.
+
+The functions in this module translate high level specifications into
+Python ``ast`` objects or code snippets. They are primarily used by tests
+to verify dynamic generation of code structures from minimal schemas or
+natural language phrases.
+"""
 
 import ast
 import re
