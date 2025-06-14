@@ -1,6 +1,6 @@
 import logging
 import os
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List
 
 logger = logging.getLogger("Jarvis.ReasoningEngine")

@@ -183,7 +183,9 @@ class NLUProcessor:
                 entity_extraction_mode=EntityExtractionMode.NO_ARGS,
                 description="Learned correction",
             )
-            result = await self._extract_entities(pattern, text_original, text_lower, 1.0)
+            result = await self._extract_entities(
+                pattern, text_original, text_lower, 1.0
+            )
             self._update_history(result)
             return result
         for pattern in self.command_patterns:
@@ -311,7 +313,9 @@ class NLUProcessor:
             self.memory_manager.remember("nlu.custom_patterns", existing)
             self.memory_manager.save()
 
-    def learn_correction(self, wrong_text: str, intent: str, persist: bool = False) -> None:
+    def learn_correction(
+        self, wrong_text: str, intent: str, persist: bool = False
+    ) -> None:
         """Запоминает исправление неверно распознанной команды."""
         self.learned_corrections[wrong_text.lower()] = intent
         if persist and self.memory_manager:

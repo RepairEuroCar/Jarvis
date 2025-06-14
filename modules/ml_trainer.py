@@ -2,6 +2,7 @@ import json
 import os
 
 from command_dispatcher import default_dispatcher
+
 from .ml_trainer_seq2seq import Seq2SeqTrainer
 
 

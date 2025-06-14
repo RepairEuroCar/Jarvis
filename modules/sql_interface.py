@@ -1,5 +1,6 @@
 import asyncio
 import datetime  # Added for created_at
+
 import aiosqlite
 
 DATABASE_FILE = "jarvis_data.db"
@@ -21,9 +22,7 @@ class Table:
             ]
         )
         async with self._lock:
-            await db.execute(
-                f"CREATE TABLE IF NOT EXISTS {self.name} ({column_defs})"
-            )
+            await db.execute(f"CREATE TABLE IF NOT EXISTS {self.name} ({column_defs})")
             await db.commit()
 
     async def insert(self, db, data: dict):

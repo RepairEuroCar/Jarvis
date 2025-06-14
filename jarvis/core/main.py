@@ -184,7 +184,7 @@ class Jarvis:
             ):
                 return {
                     "command": cmd.info.name,
-                    "args": text[len(cmd.info.name):].strip(),
+                    "args": text[len(cmd.info.name) :].strip(),
                 }
         return None
 

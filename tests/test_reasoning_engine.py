@@ -1,4 +1,5 @@
 import logging
+
 from jarvis.reasoning_engine import ReasoningEngine
 
 
@@ -15,9 +16,7 @@ def test_internal_debug_message(caplog):
     engine = ReasoningEngine()
     with caplog.at_level(logging.DEBUG):
         engine.reason("проверить хост", {"unknown_host": True})
-    assert any(
-        "неизвестный хост" in rec.getMessage() for rec in caplog.records
-    )
+    assert any("неизвестный хост" in rec.getMessage() for rec in caplog.records)
 
 
 def test_decision_probability():

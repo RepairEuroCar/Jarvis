@@ -24,9 +24,9 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Type
 
+from utils.code_rating import rate_code
 from utils.linter import AstLinter
 from utils.solution_compare import structural_diff
-from utils.code_rating import rate_code
 
 from .processors import (
     AnalyticalThoughtProcessor,
