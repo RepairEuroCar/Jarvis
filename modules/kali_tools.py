@@ -101,10 +101,28 @@ async def run_burpsuite(options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+async def run_aircrack(capture_file: str, wordlist: str, options: str = "") -> str:
+    """Run aircrack-ng on a capture file with the provided wordlist."""
+    # Security checks removed
+    cmd = ["aircrack-ng", "-w", wordlist, capture_file] + shlex.split(options)
+    stdout, stderr, rc = await _run_command(cmd)
+    return stdout if rc == 0 else f"Error: {stderr}"
+
+
+async def run_wireshark(options: str = "") -> str:
+    """Launch Wireshark with optional parameters."""
+    # Security checks removed
+    cmd = ["wireshark"] + shlex.split(options)
+    stdout, stderr, rc = await _run_command(cmd)
+    return stdout if rc == 0 else f"Error: {stderr}"
+
+
 __all__ = [
     "run_nmap",
     "bruteforce_ssh",
     "run_sqlmap",
     "run_msfconsole",
     "run_burpsuite",
+    "run_aircrack",
+    "run_wireshark",
 ]
