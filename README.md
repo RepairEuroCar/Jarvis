@@ -112,6 +112,9 @@ Run the formatting tools with:
 ./scripts/format.sh
 ```
 
+`flake8` reads its configuration from `pyproject.toml` via the
+`flake8-pyproject` plugin installed with the development requirements.
+
 Use `--check` to verify formatting in CI or before committing changes.
 
 ## Optional features
