@@ -65,9 +65,15 @@ async def test_invalid_inputs_rejected(monkeypatch):
     monkeypatch.setattr(kali_tools, "_run_command", fake_run)
     monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("0.0.0.0/0")])
 
-    assert "Invalid target or options" in await kali_tools.run_nmap("127.0.0.1; rm -rf /")
-    assert "Invalid target or options" in await kali_tools.bruteforce_ssh("1.2.3.4", "users.txt", "pass.txt", "--opt;")
-    assert "Invalid target or options" in await kali_tools.run_sqlmap("http://test/;", "")
+    assert "Invalid target or options" in await kali_tools.run_nmap(
+        "127.0.0.1; rm -rf /"
+    )
+    assert "Invalid target or options" in await kali_tools.bruteforce_ssh(
+        "1.2.3.4", "users.txt", "pass.txt", "--opt;"
+    )
+    assert "Invalid target or options" in await kali_tools.run_sqlmap(
+        "http://test/;", ""
+    )
     assert "Invalid target or options" in await kali_tools.run_msfconsole("bad.sh;")
     assert "Invalid target or options" in await kali_tools.run_burpsuite(";--bad")
 
@@ -80,8 +86,14 @@ async def test_unsafe_and_inputs(monkeypatch):
     monkeypatch.setattr(kali_tools, "_run_command", fake_run)
     monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("0.0.0.0/0")])
 
-    assert "Invalid target or options" in await kali_tools.run_nmap("127.0.0.1", "-A && rm")
-    assert "Invalid target or options" in await kali_tools.bruteforce_ssh("1.2.3.4", "users.txt", "pass.txt", "-f &&")
-    assert "Invalid target or options" in await kali_tools.run_sqlmap("http://test", "--risk 3 &&")
+    assert "Invalid target or options" in await kali_tools.run_nmap(
+        "127.0.0.1", "-A && rm"
+    )
+    assert "Invalid target or options" in await kali_tools.bruteforce_ssh(
+        "1.2.3.4", "users.txt", "pass.txt", "-f &&"
+    )
+    assert "Invalid target or options" in await kali_tools.run_sqlmap(
+        "http://test", "--risk 3 &&"
+    )
     assert "Invalid target or options" in await kali_tools.run_msfconsole("bad.rc &&")
     assert "Invalid target or options" in await kali_tools.run_burpsuite("--tmp && id")

@@ -9,7 +9,9 @@ logger = logging.getLogger("Jarvis.Memory")
 
 
 class MemoryManager:
-    def __init__(self, memory_file: str = "jarvis_memory.json", auto_save: bool = False):
+    def __init__(
+        self, memory_file: str = "jarvis_memory.json", auto_save: bool = False
+    ):
         """Initialize the memory manager.
 
         Parameters
