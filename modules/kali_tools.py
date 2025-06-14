@@ -1,4 +1,5 @@
 import asyncio
+import re
 import shlex
 from ipaddress import ip_address, ip_network
 from typing import List, Tuple
@@ -6,7 +7,7 @@ from urllib.parse import urlparse
 
 from jarvis.core.main import Settings
 
-INVALID_PATTERNS = [";", "&&", "|", "`", "$(", ")", ">"]
+SAFE_PATTERN = re.compile(r"^[A-Za-z0-9._/=: -]*$")
 
 _settings = Settings.load("config/config.yaml")
 ALLOWED_NETWORKS = [ip_network(n) for n in _settings.allowed_networks]
@@ -33,7 +34,8 @@ def _is_allowed(target: str) -> bool:
 
 
 def _is_safe(value: str) -> bool:
-    return not any(p in value for p in INVALID_PATTERNS)
+    """Return True if the value contains only safe characters."""
+    return bool(SAFE_PATTERN.fullmatch(value))
 
 
 async def _run_command(command: List[str]) -> Tuple[str, str, int]:
