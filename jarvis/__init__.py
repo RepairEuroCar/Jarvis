@@ -10,6 +10,8 @@ _module_map = {
     # Base dependencies
     "memory": "jarvis.memory",
     "memory.manager": "jarvis.memory.manager",
+    "memory.core": "jarvis.memory.core",
+    "memory.knowledge_base": "jarvis.memory.knowledge_base",
     "voice": "voice",
     "voice.interface": "voice.interface",
     "commands": "commands",
