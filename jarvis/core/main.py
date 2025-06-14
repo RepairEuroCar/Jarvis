@@ -14,12 +14,13 @@ from transitions import Machine
 from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.core.agent_loop import AgentLoop
+from jarvis.core.sensor_manager import SensorManager
+from jarvis.event_queue import EventQueue
 from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
 from jarvis.voice.interface import VoiceInterface
-from jarvis.event_queue import EventQueue
-from jarvis.core.sensor_manager import SensorManager
+from modules.git_manager import GitManager
 from utils.linter import AstLinter
 
 logger = logging.getLogger("Jarvis.Core")
@@ -291,6 +292,40 @@ class Jarvis:
             return "No rated solutions."
         return "\n".join(lines)
 
+    async def self_update_command(self, event: UserEvent):
+        """Commit or pull Jarvis source using GitManager."""
+        import shlex
+
+        parts = shlex.split(event.text)
+        if len(parts) < 2:
+            return "Usage: self_update <commit|pull> ..."
+
+        action = parts[1]
+        gm = GitManager()
+
+        if action == "commit":
+            if len(parts) < 3:
+                return "Usage: self_update commit <message> [remote branch]"
+
+            message = parts[2]
+            push_args = " ".join(parts[3:]) if len(parts) > 3 else ""
+
+            add_res = await gm.add(self)
+            commit_res = await gm.commit(self, message)
+            result = f"{add_res}\n{commit_res}"
+
+            if push_args:
+                push_res = await gm.push(self, push_args)
+                result += f"\n{push_res}"
+
+            return result
+
+        if action == "pull":
+            remote_branch = " ".join(parts[2:]) if len(parts) > 2 else ""
+            return await gm.pull(self, remote_branch)
+
+        return "Usage: self_update <commit|pull> ..."
+
     async def repl_command(self, event: UserEvent):
         """Запуск интерактивного Python REPL."""
         banner = "Jarvis Python REPL. Type exit() or Ctrl-D to exit."
@@ -380,7 +415,7 @@ class Jarvis:
         lines = []
         for idx, g in enumerate(goals):
             line = f"{idx}: {g['goal']} (priority {g['priority']})"
-            if g.get('deadline'):
+            if g.get("deadline"):
                 line += f" due {g['deadline']}"
             lines.append(line)
         return "\n".join(lines)
