@@ -1,7 +1,5 @@
 import asyncio
 import datetime  # Added for created_at
-import json
-
 import aiosqlite
 
 DATABASE_FILE = "jarvis_data.db"
@@ -73,7 +71,7 @@ class Table:
             query += f" ORDER BY {order_by}"  # Be careful with SQL injection if order_by comes from user input
 
         if limit:
-            query += f" LIMIT ?"
+            query += " LIMIT ?"
             params.append(limit)
 
         async with self._lock:
