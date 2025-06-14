@@ -2,11 +2,10 @@ import argparse
 import asyncio
 import code
 import logging
-from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Awaitable, Callable, Dict, List, Optional, TypeVar
+from typing import Callable, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, BaseSettings
@@ -185,7 +184,7 @@ class Jarvis:
             ):
                 return {
                     "command": cmd.info.name,
-                    "args": text[len(cmd.info.name) :].strip(),
+                    "args": text[len(cmd.info.name):].strip(),
                 }
         return None
 
@@ -352,7 +351,6 @@ class Jarvis:
 
 
 if __name__ == "__main__":
-    import argparse
     import json
 
     parser = argparse.ArgumentParser(description="Jarvis settings helper")

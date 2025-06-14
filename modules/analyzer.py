@@ -1,14 +1,10 @@
 import ast  # Abstract Syntax Tree для анализа структуры кода
-import asyncio
 import datetime
 import json
 import os
 
 import radon.complexity as radon_complexity  # Для цикломатической сложности
-from radon.metrics import (  # Для метрик Холстеда и индекса обслуживаемости
-    h_visit,
-    mi_visit,
-)
+from radon.metrics import mi_visit  # Для метрик Холстеда и индекса обслуживаемости
 from radon.raw import analyze as radon_raw_analyze  # Для SLOC, комментариев и т.д.
 
 # Концептуально: интеграция с AI моделями для более глубокого анализа
@@ -235,7 +231,6 @@ class AdvancedCodeAnalyzer:
             # For classes, Radon calculates complexity for methods within them.
             # We can aggregate or list them.
             for item in visitor.classes:
-                class_methods_complexities = []
                 # Need to iterate through methods of this class if available in visitor output
                 # This part might need adjustment based on Radon's exact output for classes
                 # For now, let's assume item.real_complexity or similar if available
