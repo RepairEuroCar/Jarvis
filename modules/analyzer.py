@@ -488,16 +488,20 @@ class AdvancedCodeAnalyzer:
         """Генерирует комплексный отчет для файла или директории."""
         report_format = report_format if report_format else self.default_report_format
 
-        if os.path.isfile(path_str):
-            files_to_analyze = [path_str]
-        elif os.path.isdir(path_str):
+        abs_path = os.path.abspath(path_str)
+
+        if os.path.isfile(abs_path):
+            files_to_analyze = [abs_path]
+            project_root = os.path.dirname(abs_path)
+        elif os.path.isdir(abs_path):
             files_to_analyze = []
-            for root, _, files in os.walk(path_str):
-                if self._is_path_ignored(root, path_str):
+            project_root = abs_path
+            for root, _, files in os.walk(abs_path):
+                if self._is_path_ignored(root, abs_path):
                     continue
                 for file in files:
                     if file.endswith(".py") and not self._is_path_ignored(
-                        os.path.join(root, file), path_str
+                        os.path.join(root, file), abs_path
                     ):
                         files_to_analyze.append(os.path.join(root, file))
         else:
@@ -516,6 +520,7 @@ class AdvancedCodeAnalyzer:
             "summary": {},
             "files": [],
             "timestamp": datetime.datetime.now().isoformat(),
+            "project_root": project_root,
         }
         all_metrics_summary = {
             "sloc": 0,
@@ -531,17 +536,30 @@ class AdvancedCodeAnalyzer:
         total_module_globals = 0
 
         for filepath in files_to_analyze:
+            rel_path = os.path.relpath(filepath, project_root)
+
             metrics, err_m = await self.get_file_metrics_radon(filepath)
+            if metrics:
+                metrics["filepath"] = rel_path
+
             structure, err_s = await self.get_file_structure_ast(filepath)
+            if structure:
+                structure["filepath"] = rel_path
+
             complexity, err_c = await self.get_cyclomatic_complexity(filepath)
+            if complexity:
+                complexity["filepath"] = rel_path
+
             smells, err_sm = await self.detect_code_smells(
                 filepath, structure, complexity
             )
+            if smells:
+                smells["filepath"] = rel_path
             magic_nums, _ = await self.detect_magic_numbers(filepath)
             duplicates, _ = await self.detect_duplicate_code(filepath)
             globals_defs, _ = await self.detect_module_globals(filepath)
 
-            file_report = {"filepath": filepath}
+            file_report = {"filepath": rel_path}
             if metrics:
                 file_report["metrics"] = metrics
             if structure:
@@ -661,9 +679,7 @@ def _format_report(report_data, format_type="markdown"):
         md += f"\n### Обзор проекта (AI):\n{summary['ai_project_overview']}\n"
 
     for file_report in report_data.get("files", []):
-        relative_filepath = file_report.get(
-            "filepath"
-        )  # TODO: Сделать путь относительным к корню анализа
+        relative_filepath = file_report.get("filepath")
         md += f"\n## Файл: `{relative_filepath}`\n"
 
         if "metrics" in file_report:
