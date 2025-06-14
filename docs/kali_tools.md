@@ -20,3 +20,18 @@ Available functions:
 - `run_yara`
 - `run_volatility`
 - `run_mitmproxy`
+
+`run_yara`, `run_volatility` and `run_mitmproxy` depend on optional utilities.
+
+- **YARA** – signature heuristics scanning.
+  ```python
+  await run_yara("rules.yar", "suspect.bin")
+  ```
+- **Volatility** – analyse memory dumps.
+  ```python
+  await run_volatility("mem.img", "pslist")
+  ```
+- **mitmproxy** – intercept traffic for training or manual analysis.
+  ```python
+  await run_mitmproxy("-p 8080")
+  ```
