@@ -66,6 +66,7 @@ async def test_run_hydra(monkeypatch):
         return Proc()
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("0.0.0.0/0")])
     result = await kali_tools.run_hydra(
         "ftp",
         "1.2.3.4",
@@ -247,28 +248,22 @@ async def test_run_wireshark(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_disallowed_target(monkeypatch):
-    called = {}
+    called = False
 
-    async def fake_exec(*args, **kwargs):
-        called["args"] = args
+    async def fake_run(cmd):
+        nonlocal called
+        called = True
+        return "", "", 0
 
-        class Proc:
-            returncode = 0
-
-            async def communicate(self):
-                return b"scan", b""
-
-        return Proc()
-
-    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(kali_tools, "_run_command", fake_run)
     monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("10.0.0.0/8")])
     result = await kali_tools.run_nmap("8.8.8.8")
-    assert called["args"][0] == "nmap"
-    assert "scan" in result
+    assert not called
+    assert "not allowed" in result.lower()
 
 
 @pytest.mark.asyncio
-async def test_invalid_inputs_allowed(monkeypatch):
+async def test_invalid_inputs_blocked(monkeypatch):
     called = []
 
     async def fake_run(cmd):
@@ -293,11 +288,11 @@ async def test_invalid_inputs_allowed(monkeypatch):
     await kali_tools.run_mitmproxy("--o;")
     await kali_tools.run_wireshark("--random;")
 
-    assert len(called) == 14
+    assert len(called) == 0
 
 
 @pytest.mark.asyncio
-async def test_unsafe_inputs_allowed(monkeypatch):
+async def test_unsafe_inputs_blocked(monkeypatch):
     called = []
 
     async def fake_run(cmd):
@@ -322,4 +317,4 @@ async def test_unsafe_inputs_allowed(monkeypatch):
     await kali_tools.run_mitmproxy("--cmd &&")
     await kali_tools.run_wireshark("--cmd &&")
 
-    assert len(called) == 14
+    assert len(called) == 0
