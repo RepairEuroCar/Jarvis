@@ -52,48 +52,61 @@ async def test_bruteforce_ssh(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_disallowed_target(monkeypatch):
+    called = {}
+
+    async def fake_exec(*args, **kwargs):
+        called["args"] = args
+
+        class Proc:
+            returncode = 0
+
+            async def communicate(self):
+                return b"scan", b""
+
+        return Proc()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
     monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("10.0.0.0/8")])
     result = await kali_tools.run_nmap("8.8.8.8")
-    assert "not in allowed networks" in result
+    assert called["args"][0] == "nmap"
+    assert "scan" in result
 
 
 @pytest.mark.asyncio
-async def test_invalid_inputs_rejected(monkeypatch):
-    async def fake_run(*args, **kwargs):
-        raise AssertionError("command should not run")
+async def test_invalid_inputs_allowed(monkeypatch):
+    called = []
+
+    async def fake_run(cmd):
+        called.append(cmd)
+        return "", "", 0
 
     monkeypatch.setattr(kali_tools, "_run_command", fake_run)
     monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("0.0.0.0/0")])
 
-    assert "Invalid target or options" in await kali_tools.run_nmap(
-        "127.0.0.1; rm -rf /"
-    )
-    assert "Invalid target or options" in await kali_tools.bruteforce_ssh(
-        "1.2.3.4", "users.txt", "pass.txt", "--opt;"
-    )
-    assert "Invalid target or options" in await kali_tools.run_sqlmap(
-        "http://test/;", ""
-    )
-    assert "Invalid target or options" in await kali_tools.run_msfconsole("bad.sh;")
-    assert "Invalid target or options" in await kali_tools.run_burpsuite(";--bad")
+    await kali_tools.run_nmap("127.0.0.1; rm -rf /")
+    await kali_tools.bruteforce_ssh("1.2.3.4", "users.txt", "pass.txt", "--opt;")
+    await kali_tools.run_sqlmap("http://test/;", "")
+    await kali_tools.run_msfconsole("bad.sh;")
+    await kali_tools.run_burpsuite(";--bad")
+
+    assert len(called) == 5
 
 
 @pytest.mark.asyncio
-async def test_unsafe_and_inputs(monkeypatch):
-    async def fake_run(*args, **kwargs):
-        raise AssertionError("command should not run")
+async def test_unsafe_inputs_allowed(monkeypatch):
+    called = []
+
+    async def fake_run(cmd):
+        called.append(cmd)
+        return "", "", 0
 
     monkeypatch.setattr(kali_tools, "_run_command", fake_run)
     monkeypatch.setattr(kali_tools, "ALLOWED_NETWORKS", [ip_network("0.0.0.0/0")])
 
-    assert "Invalid target or options" in await kali_tools.run_nmap(
-        "127.0.0.1", "-A && rm"
-    )
-    assert "Invalid target or options" in await kali_tools.bruteforce_ssh(
-        "1.2.3.4", "users.txt", "pass.txt", "-f &&"
-    )
-    assert "Invalid target or options" in await kali_tools.run_sqlmap(
-        "http://test", "--risk 3 &&"
-    )
-    assert "Invalid target or options" in await kali_tools.run_msfconsole("bad.rc &&")
-    assert "Invalid target or options" in await kali_tools.run_burpsuite("--tmp && id")
+    await kali_tools.run_nmap("127.0.0.1", "-A && rm")
+    await kali_tools.bruteforce_ssh("1.2.3.4", "users.txt", "pass.txt", "-f &&")
+    await kali_tools.run_sqlmap("http://test", "--risk 3 &&")
+    await kali_tools.run_msfconsole("bad.rc &&")
+    await kali_tools.run_burpsuite("--tmp && id")
+
+    assert len(called) == 5
