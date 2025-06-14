@@ -101,7 +101,7 @@ class Jarvis:
         self.brain = Brain(self)
         self.goals = GoalManager(self)
         self.event_queue = EventQueue()
-        self.sensor_manager = SensorManager(self, self.event_queue
+        self.sensor_manager = SensorManager(self, self.event_queue)
         self.agent_loop = None
         # Initialize per-instance cache for input parsing
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
@@ -347,6 +347,56 @@ class Jarvis:
         return f"Goal set: {goal}" + (
             f" (motivation: {motivation})" if motivation else ""
         )
+
+    async def add_goal_command(self, event: UserEvent):
+        """Add a goal with priority and optional deadline/source."""
+        parser = argparse.ArgumentParser(prog="add_goal", add_help=False)
+        parser.add_argument("priority", type=int)
+        parser.add_argument("goal")
+        parser.add_argument("--deadline", type=float, default=None)
+        parser.add_argument("--source", default="user")
+        parser.add_argument("--motivation", default="")
+
+        parts = event.text.split()[1:]
+        try:
+            opts = parser.parse_args(parts)
+        except SystemExit:
+            return "Usage: add_goal <priority> <goal> [--deadline TS] [--source SRC] [--motivation TEXT]"
+
+        self.goals.add_goal(
+            opts.goal,
+            motivation=opts.motivation,
+            priority=opts.priority,
+            deadline=opts.deadline,
+            source=opts.source,
+        )
+        return f"Goal added: {opts.goal}"
+
+    async def list_goals_command(self, event: UserEvent):
+        """List active goals ordered by priority."""
+        goals = self.goals.list_goals()
+        if not goals:
+            return "No active goals."
+        lines = []
+        for idx, g in enumerate(goals):
+            line = f"{idx}: {g['goal']} (priority {g['priority']})"
+            if g.get('deadline'):
+                line += f" due {g['deadline']}"
+            lines.append(line)
+        return "\n".join(lines)
+
+    async def remove_goal_command(self, event: UserEvent):
+        """Remove a goal by index."""
+        parts = event.text.split()
+        if len(parts) != 2:
+            return "Usage: remove_goal <index>"
+        try:
+            idx = int(parts[1])
+        except ValueError:
+            return "Usage: remove_goal <index>"
+        if self.goals.remove_goal(idx):
+            return "Goal removed"
+        return "Invalid index"
 
     async def execute_goal_command(self, event: UserEvent):
         """Execute the current goal if known."""

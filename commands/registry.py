@@ -113,6 +113,27 @@ UTILITY_COMMANDS = [
         usage="execute_goal",
         aliases=["run_goal"],
     ),
+    CommandInfo(
+        name="add_goal",
+        description="Add a goal with priority",
+        category=CommandCategory.UTILITY,
+        usage="add_goal <priority> <goal> [--deadline TS] [--source SRC] [--motivation TEXT]",
+        aliases=[],
+    ),
+    CommandInfo(
+        name="list_goals",
+        description="List active goals",
+        category=CommandCategory.UTILITY,
+        usage="list_goals",
+        aliases=[],
+    ),
+    CommandInfo(
+        name="remove_goal",
+        description="Remove a goal by index",
+        category=CommandCategory.UTILITY,
+        usage="remove_goal <index>",
+        aliases=[],
+    ),
 ]
 
 ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS + DEVEL_COMMANDS + UTILITY_COMMANDS

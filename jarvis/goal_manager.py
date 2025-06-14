@@ -1,31 +1,104 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List, Optional
+
+
+@dataclass(order=True)
+class Goal:
+    """Representation of a single goal."""
+
+    priority: int
+    goal: str = field(compare=False)
+    motivation: str = field(default="", compare=False)
+    deadline: Optional[float] = field(default=None, compare=False)
+    source: str = field(default="user", compare=False)
+    timestamp: float = field(default_factory=time.time, compare=False)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
 
 
 class GoalManager:
-    """Simple manager for storing a current goal with motivation."""
+    """Manage multiple goals with priority."""
 
     def __init__(self, jarvis: Any) -> None:
         self.jarvis = jarvis
+        self._active_goals: List[Goal] = []
+        stored = self.jarvis.memory.recall("goals.active") or []
+        for g in stored:
+            self._active_goals.append(Goal(**g))
+        self._active_goals.sort(reverse=True)
 
+    # ------------------------------------------------------------------
+    # Compatibility helpers
     def set_goal(self, goal: str, motivation: str = "") -> None:
-        """Store a goal and motivation in Jarvis memory."""
-        data = {
-            "goal": goal,
-            "motivation": motivation,
-            "timestamp": time.time(),
-        }
-        self.jarvis.memory.remember("goals.current", data, category="goals")
-        history = self.jarvis.memory.recall("goals.history") or []
-        history.append(data)
-        self.jarvis.memory.remember("goals.history", history, category="goals")
+        """Set a single goal (compatibility wrapper)."""
+        self._active_goals.clear()
+        self.add_goal(goal, motivation)
+        self.jarvis.memory.remember(
+            "goals.current", self._active_goals[0].to_dict(), category="goals"
+        )
 
     def get_goal(self) -> Optional[Dict[str, Any]]:
-        """Return the currently stored goal information."""
-        return self.jarvis.memory.recall("goals.current")
+        """Return the highest priority goal if available."""
+        if not self._active_goals:
+            return None
+        return self._active_goals[0].to_dict()
 
     def clear_goal(self) -> None:
-        """Remove the current goal from memory."""
+        """Remove all active goals."""
+        self._active_goals.clear()
         self.jarvis.memory.forget("goals.current")
+        self.jarvis.memory.remember("goals.active", [], category="goals")
+
+    # ------------------------------------------------------------------
+    def add_goal(
+        self,
+        goal: str,
+        motivation: str = "",
+        priority: int = 1,
+        deadline: Optional[float] = None,
+        source: str = "user",
+    ) -> Goal:
+        """Add a goal to the active list."""
+
+        new_goal = Goal(
+            priority=priority,
+            goal=goal,
+            motivation=motivation,
+            deadline=deadline,
+            source=source,
+        )
+        self._active_goals.append(new_goal)
+        self._active_goals.sort(reverse=True)
+        self.jarvis.memory.remember(
+            "goals.active", [g.to_dict() for g in self._active_goals], category="goals"
+        )
+        history = self.jarvis.memory.recall("goals.history") or []
+        history.append(new_goal.to_dict())
+        self.jarvis.memory.remember("goals.history", history, category="goals")
+        return new_goal
+
+    def list_goals(self) -> List[Dict[str, Any]]:
+        """Return active goals ordered by priority."""
+
+        return [g.to_dict() for g in self._active_goals]
+
+    def remove_goal(self, index: int) -> bool:
+        """Remove a goal by index."""
+
+        if index < 0 or index >= len(self._active_goals):
+            return False
+        del self._active_goals[index]
+        self.jarvis.memory.remember(
+            "goals.active", [g.to_dict() for g in self._active_goals], category="goals"
+        )
+        if self._active_goals:
+            self.jarvis.memory.remember(
+                "goals.current", self._active_goals[0].to_dict(), category="goals"
+            )
+        else:
+            self.jarvis.memory.forget("goals.current")
+        return True
