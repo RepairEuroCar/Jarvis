@@ -103,6 +103,13 @@ DEVEL_COMMANDS = [
         usage="self_update <commit|pull> ...",
         aliases=[],
     ),
+    CommandInfo(
+        name="run_with_retry",
+        description="Run a script with syntax check and retry",
+        category=CommandCategory.DEVELOPMENT,
+        usage="run_with_retry <script.py>",
+        aliases=[],
+    ),
 ]
 
 UTILITY_COMMANDS = [

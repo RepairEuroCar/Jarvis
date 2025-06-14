@@ -326,6 +326,47 @@ class Jarvis:
 
         return "Usage: self_update <commit|pull> ..."
 
+    async def run_with_retry_command(self, event: UserEvent):
+        """Run a Python script using scripts/run_with_retry.py."""
+        import shlex
+        import sys
+        import time
+
+        parts = shlex.split(event.text)
+        if len(parts) < 2:
+            return "Usage: run_with_retry <script.py>"
+
+        script = parts[1]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "scripts/run_with_retry.py",
+                script,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await proc.communicate()
+            out = stdout.decode().strip()
+            err = stderr.decode().strip()
+            rc = proc.returncode
+        except FileNotFoundError as e:
+            out = ""
+            err = str(e)
+            rc = 1
+
+        record = {
+            "script": script,
+            "stdout": out,
+            "stderr": err,
+            "returncode": rc,
+            "timestamp": time.time(),
+        }
+        history = self.memory.recall("commands_history") or []
+        history.append(record)
+        self.memory.remember("commands_history", history, category="system")
+
+        return out if rc == 0 else f"Error: {err}"
+
     async def repl_command(self, event: UserEvent):
         """Запуск интерактивного Python REPL."""
         banner = "Jarvis Python REPL. Type exit() or Ctrl-D to exit."
