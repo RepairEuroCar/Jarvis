@@ -61,7 +61,16 @@ Jarvis exposes asynchronous helpers for several security utilities through
 | `mitmproxy` | Intercept HTTP/S traffic | new wrapper |
 
 The newest additions include wrappers for `john`, `hashcat`, `crunch`, `yara`,
-`volatility` and `mitmproxy`.
+`volatility` and `mitmproxy`. These helpers assume the underlying binaries are
+installed. `yara` enables signature-based heuristics scanning, `volatility`
+provides memory dump analysis and `mitmproxy` lets you intercept traffic for
+training or inspection.
+
+```python
+await kali_tools.run_yara("rules.yar", "suspect.bin")
+await kali_tools.run_volatility("mem.img", "pslist")
+await kali_tools.run_mitmproxy("-p 8080")
+```
 
 To inspect the full JSON schema of available settings, run:
 
@@ -135,6 +144,9 @@ Install the optional packages if you plan to use these capabilities:
 ```bash
 pip install aioredis docker
 ```
+
+Some wrappers require extra security tools. Install `yara`, `volatility` and
+`mitmproxy` if you intend to use their helpers.
 
 
 ## Learning from mistakes
