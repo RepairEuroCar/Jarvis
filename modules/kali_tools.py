@@ -27,11 +27,14 @@ def _target_ip(value: str):
 
 
 def _is_allowed(target: str) -> bool:
-    return True
+    ip = _target_ip(target)
+    if ip is None:
+        return False
+    return any(ip in net for net in ALLOWED_NETWORKS)
 
 
 def _is_safe(value: str) -> bool:
-    return True
+    return bool(SAFE_PATTERN.fullmatch(value))
 
 
 async def _run_command(command: List[str]) -> Tuple[str, str, int]:
@@ -55,7 +58,8 @@ async def _run_command(command: List[str]) -> Tuple[str, str, int]:
 
 async def run_nmap(target: str, options: str = "") -> str:
     """Run nmap against the specified target."""
-    # Security checks removed
+    if not _is_allowed(target) or not _is_safe(options):
+        return "Target not allowed or unsafe options."
     cmd = ["nmap"] + shlex.split(options) + [target]
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -65,7 +69,10 @@ async def run_hydra(
     service: str, target: str, userlist: str, passlist: str, options: str = ""
 ) -> str:
     """Run hydra against a service with given credential lists."""
-    # Security checks removed
+    if not _is_allowed(target) or not all(
+        _is_safe(v) for v in [service, userlist, passlist, options]
+    ):
+        return "Invalid arguments."
     cmd = (
         [
             "hydra",
@@ -90,7 +97,8 @@ async def bruteforce_ssh(
 
 async def run_sqlmap(target: str, options: str = "") -> str:
     """Run sqlmap for the given target URL."""
-    # Security checks removed
+    if not _is_allowed(target) or not _is_safe(target) or not _is_safe(options):
+        return "Invalid target or options."
     cmd = ["sqlmap"] + shlex.split(options) + ["-u", target]
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -98,7 +106,8 @@ async def run_sqlmap(target: str, options: str = "") -> str:
 
 async def run_msfconsole(resource_script: str = "") -> str:
     """Launch msfconsole optionally with a resource script."""
-    # Security checks removed
+    if resource_script and not _is_safe(resource_script):
+        return "Unsafe resource script."
     cmd = ["msfconsole", "-q"]
     if resource_script:
         cmd += ["-r", resource_script]
@@ -108,7 +117,8 @@ async def run_msfconsole(resource_script: str = "") -> str:
 
 async def run_burpsuite(options: str = "") -> str:
     """Start Burp Suite with optional parameters."""
-    # Security checks removed
+    if not _is_safe(options):
+        return "Unsafe options."
     cmd = ["burpsuite"] + shlex.split(options)
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -116,7 +126,8 @@ async def run_burpsuite(options: str = "") -> str:
 
 async def run_aircrack(capture_file: str, wordlist: str, options: str = "") -> str:
     """Run aircrack-ng on a capture file with the provided wordlist."""
-    # Security checks removed
+    if not all(_is_safe(v) for v in [capture_file, wordlist, options]):
+        return "Unsafe arguments."
     cmd = ["aircrack-ng", "-w", wordlist, capture_file] + shlex.split(options)
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -124,7 +135,8 @@ async def run_aircrack(capture_file: str, wordlist: str, options: str = "") -> s
 
 async def run_wireshark(options: str = "") -> str:
     """Launch Wireshark with optional parameters."""
-    # Security checks removed
+    if not _is_safe(options):
+        return "Unsafe options."
     cmd = ["wireshark"] + shlex.split(options)
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -132,7 +144,8 @@ async def run_wireshark(options: str = "") -> str:
 
 async def run_john(hash_file: str, options: str = "") -> str:
     """Run John the Ripper with a given hash file."""
-    # Security checks removed
+    if not all(_is_safe(v) for v in [hash_file, options]):
+        return "Unsafe arguments."
     cmd = ["john"] + shlex.split(options) + [hash_file]
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -140,7 +153,8 @@ async def run_john(hash_file: str, options: str = "") -> str:
 
 async def run_hashcat(hash_file: str, wordlist: str, options: str = "") -> str:
     """Run hashcat against the specified hashes and wordlist."""
-    # Security checks removed
+    if not all(_is_safe(v) for v in [hash_file, wordlist, options]):
+        return "Unsafe arguments."
     cmd = ["hashcat"] + shlex.split(options) + [hash_file, wordlist]
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -148,7 +162,8 @@ async def run_hashcat(hash_file: str, wordlist: str, options: str = "") -> str:
 
 async def run_crunch(min_len: int, max_len: int, options: str = "") -> str:
     """Run crunch to generate a wordlist."""
-    # Security checks removed
+    if not _is_safe(options):
+        return "Unsafe options."
     cmd = ["crunch", str(min_len), str(max_len)] + shlex.split(options)
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -156,7 +171,8 @@ async def run_crunch(min_len: int, max_len: int, options: str = "") -> str:
 
 async def run_yara(rule_file: str, target: str, options: str = "") -> str:
     """Run yara with the given rule file against a target."""
-    # Security checks removed
+    if not all(_is_safe(v) for v in [rule_file, target, options]):
+        return "Unsafe arguments."
     cmd = ["yara"] + shlex.split(options) + [rule_file, target]
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -164,7 +180,8 @@ async def run_yara(rule_file: str, target: str, options: str = "") -> str:
 
 async def run_volatility(memory_image: str, plugin: str, options: str = "") -> str:
     """Run Volatility on a memory image using the specified plugin."""
-    # Security checks removed
+    if not all(_is_safe(v) for v in [memory_image, plugin, options]):
+        return "Unsafe arguments."
     cmd = ["volatility", "-f", memory_image] + shlex.split(options) + [plugin]
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
@@ -172,7 +189,8 @@ async def run_volatility(memory_image: str, plugin: str, options: str = "") -> s
 
 async def run_mitmproxy(options: str = "") -> str:
     """Run mitmproxy with optional parameters."""
-    # Security checks removed
+    if not _is_safe(options):
+        return "Unsafe options."
     cmd = ["mitmproxy"] + shlex.split(options)
     stdout, stderr, rc = await _run_command(cmd)
     return stdout if rc == 0 else f"Error: {stderr}"
