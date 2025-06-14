@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
+from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 
 class EventQueue:

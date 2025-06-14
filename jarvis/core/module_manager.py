@@ -11,7 +11,7 @@ from functools import wraps
 from multiprocessing import Process, Queue
 from pathlib import Path
 from resource import RLIMIT_AS, RLIMIT_CPU, setrlimit
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ValidationError
 
@@ -77,7 +77,10 @@ def module_error_handler(func):
         except ValidationError as e:
             logger.error(f"Config error in {module_name}: {e}")
         except Exception as e:
-            logger.exception(f"Unexpected error in {func.__name__} for {module_name}")
+            logger.exception(
+                f"Unexpected error in {func.__name__} for {module_name}",
+                exc_info=e,
+            )
         return False
 
     return wrapper
