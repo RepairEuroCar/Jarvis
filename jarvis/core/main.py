@@ -18,6 +18,8 @@ from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
 from jarvis.voice.interface import VoiceInterface
+from jarvis.event_queue import EventQueue
+from jarvis.core.sensor_manager import SensorManager
 from utils.linter import AstLinter
 
 logger = logging.getLogger("Jarvis.Core")
@@ -98,6 +100,8 @@ class Jarvis:
         self.nlu = NLUProcessor()
         self.brain = Brain(self)
         self.goals = GoalManager(self)
+        self.event_queue = EventQueue()
+        self.sensor_manager = SensorManager(self, self.event_queue
         self.agent_loop = None
         # Initialize per-instance cache for input parsing
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
@@ -147,9 +151,13 @@ class Jarvis:
                 )
 
     async def initialize(self):
-        """Инициализация голосового интерфейса"""
+        """Start subsystems like voice interface and sensors."""
         if self.voice_interface:
             self.voice_interface.start()
+        await self.event_queue.start()
+        self.event_queue.subscribe("voice_command", self._on_voice_command)
+        self.event_queue.subscribe("scheduled_tick", self._on_scheduled_tick)
+        await self.sensor_manager.start()
 
     async def handle_command(self, command_text: str, is_voice: bool = False):
         """Обработка команд с поддержкой голоса"""
@@ -195,6 +203,13 @@ class Jarvis:
         if is_voice and self.voice_interface:
             await self.voice_interface.say_async(response)
         return response
+
+    async def _on_voice_command(self, text: str) -> None:
+        await self.handle_command(text, is_voice=True)
+
+    async def _on_scheduled_tick(self) -> None:
+        # Placeholder for future scheduled tasks
+        pass
 
     # Пример команды
     async def help_command(self, event: UserEvent):
