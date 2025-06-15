@@ -1,3 +1,19 @@
+"""Command metadata and registration helpers.
+
+Modules should expose a ``register_commands(dispatcher)`` function that
+adds their handlers to a :class:`~command_dispatcher.CommandDispatcher`.
+Importing a module should not register commands by itself so applications
+can decide when to enable them.
+
+Example::
+
+    from command_dispatcher import default_dispatcher
+    from modules import ml_trainer
+
+    ml_trainer.register_commands(default_dispatcher)
+
+"""
+
 from dataclasses import dataclass
 from enum import Enum, auto
 
