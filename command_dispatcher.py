@@ -1,7 +1,33 @@
 import asyncio
 import logging
 import shlex
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Type
+
+from pydantic import BaseModel, ValidationError
+
+
+class HelpParams(BaseModel):
+    command: Optional[str] = None
+
+    class Config:
+        extra = "forbid"
+
+
+class ExitParams(BaseModel):
+    class Config:
+        extra = "forbid"
+
+
+class ListCommandsParams(BaseModel):
+    class Config:
+        extra = "forbid"
+
+
+class ReloadParams(BaseModel):
+    module: Optional[str] = None
+
+    class Config:
+        extra = "forbid"
 
 
 class CommandError(Exception):
@@ -21,22 +47,34 @@ class CommandDispatcher:
         self.jarvis = jarvis
         self.logger = logging.getLogger("CommandDispatcher")
         self._handlers: Dict[str, Dict[Optional[str], Callable[..., Any]]] = {}
+        self._param_models: Dict[str, Dict[Optional[str], Type[BaseModel]]] = {}
         self._register_builtin_commands()
 
     # ------------------------------------------------------------------
     # Registration utilities
     # ------------------------------------------------------------------
     def register_command_handler(
-        self, module: str, action: Optional[str], handler: Callable[..., Any]
+        self,
+        module: str,
+        action: Optional[str],
+        handler: Callable[..., Any],
+        param_model: Type[BaseModel] | None = None,
     ) -> None:
         """Register a handler for ``module action``."""
         self._handlers.setdefault(module, {})[action] = handler
+        if param_model:
+            self._param_models.setdefault(module, {})[action] = param_model
 
-    def command(self, module: str, action: Optional[str]):
+    def command(
+        self,
+        module: str,
+        action: Optional[str],
+        param_model: Type[BaseModel] | None = None,
+    ):
         """Decorator for registering command handlers."""
 
         def decorator(func: Callable[..., Any]):
-            self.register_command_handler(module, action, func)
+            self.register_command_handler(module, action, func, param_model)
             return func
 
         return decorator
@@ -82,6 +120,12 @@ class CommandDispatcher:
         handler = self._handlers.get(module, {}).get(action)
         if not handler:
             return None
+        model = self._param_models.get(module, {}).get(action)
+        if model:
+            try:
+                params = model(**params).dict()
+            except ValidationError as exc:
+                raise InvalidCommandError(str(exc)) from exc
         self.logger.info("Invoking %s %s with %s", module, action, params)
         if asyncio.iscoroutinefunction(handler):
             return await handler(**params)
@@ -91,10 +135,12 @@ class CommandDispatcher:
     # Built-in commands
     # ------------------------------------------------------------------
     def _register_builtin_commands(self) -> None:
-        self.register_command_handler("help", None, self._help)
-        self.register_command_handler("exit", None, self._exit)
-        self.register_command_handler("list_commands", None, self._list_commands)
-        self.register_command_handler("reload", None, self._reload)
+        self.register_command_handler("help", None, self._help, HelpParams)
+        self.register_command_handler("exit", None, self._exit, ExitParams)
+        self.register_command_handler(
+            "list_commands", None, self._list_commands, ListCommandsParams
+        )
+        self.register_command_handler("reload", None, self._reload, ReloadParams)
 
     def _list_commands(self, **_: str) -> str:
         lines = []

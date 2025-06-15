@@ -123,6 +123,18 @@ default_dispatcher.register_command_handler("git", "push", push)
 - `git.commit --message="Initial commit" --repo=project`
 - `git.push --remote=origin --branch=main --repo=project`
 
+### Built-in commands
+
+The dispatcher itself exposes a few built-in utilities. Their parameters are
+validated using small Pydantic models:
+
+| Command | Parameters | Description |
+|---------|------------|-------------|
+| `list_commands` | *(none)* | Show all registered commands |
+| `help` | `--command=<module action>` | Display handler documentation |
+| `exit` | *(none)* | Return the `CommandDispatcher.EXIT` sentinel |
+| `reload` | `--module=<name>` | Reload a Jarvis module |
+
 ### Code formatting
 
 Run the formatting tools with:
