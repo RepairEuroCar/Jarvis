@@ -13,6 +13,17 @@ _settings = Settings.load("config/config.yaml")
 ALLOWED_NETWORKS = [ip_network(n) for n in _settings.allowed_networks]
 
 
+def reload_allowed_networks(settings: Settings | None = None, config_path: str = "config/config.yaml") -> None:
+    """Reload ``ALLOWED_NETWORKS`` from Jarvis settings.
+
+    If ``settings`` is not provided, the configuration is loaded from
+    ``config_path`` using :class:`jarvis.core.main.Settings`.
+    """
+    global _settings, ALLOWED_NETWORKS
+    _settings = settings or Settings.load(config_path)
+    ALLOWED_NETWORKS = [ip_network(n) for n in _settings.allowed_networks]
+
+
 def _target_ip(value: str):
     try:
         return ip_address(value)
@@ -197,6 +208,7 @@ async def run_mitmproxy(options: str = "") -> str:
 
 
 __all__ = [
+    "reload_allowed_networks",
     "run_nmap",
     "bruteforce_ssh",
     "run_hydra",

@@ -35,3 +35,16 @@ Available functions:
   ```python
   await run_mitmproxy("-p 8080")
   ```
+
+## Updating allowed networks
+
+Allowed target networks are read from `config/config.yaml` when the module is
+imported. To apply changes without restarting Jarvis simply call:
+
+```python
+from modules import kali_tools
+kali_tools.reload_allowed_networks()
+```
+
+The function reloads the CIDR list from the configuration or the
+`JARVIS_ALLOWED_NETWORKS` environment variable.
