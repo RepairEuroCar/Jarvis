@@ -12,7 +12,17 @@ Alternatively you can launch Jarvis in autonomous voice mode using:
 python scripts/autonomous.py
 ```
 
-Ensure required dependencies are installed using `requirements.txt`.
+Install runtime dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
+
+For development and testing install the additional tools from `dev-requirements.txt`:
+
+```bash
+pip install -r dev-requirements.txt
+```
 
 ## Configuration
 
@@ -158,7 +168,7 @@ Run the formatting tools with:
 ```
 
 `flake8` reads its configuration from `pyproject.toml` via the
-`flake8-pyproject` plugin installed with the development requirements.
+`flake8-pyproject` plugin installed with the tools from `dev-requirements.txt`.
 
 Use `--check` to verify formatting in CI or before committing changes.
 
