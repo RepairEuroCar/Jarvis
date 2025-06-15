@@ -211,6 +211,20 @@ def register(jarvis):
     )
 ```
 
+## Project generation plugin
+
+The optional `project_generator` plugin demonstrates automatic code creation
+from a technical brief. After placing `plugins/project_generator.py` in the
+plugin directory Jarvis loads a new command `generate_project`:
+
+```bash
+generate_project spec.txt my_project
+```
+
+`spec.txt` should contain bullet points such as `- создай функцию foo`.
+Each line becomes a Python module inside `my_project` and required imports are
+added automatically.
+
 ## Python reference
 
 For a refresher on Python basics see [docs/python_overview.md](docs/python_overview.md).
