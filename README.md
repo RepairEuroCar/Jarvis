@@ -210,3 +210,8 @@ def register(jarvis):
         handler=hello,
     )
 ```
+
+## Python reference
+
+For a refresher on Python basics see [docs/python_overview.md](docs/python_overview.md).
+
