@@ -1,6 +1,6 @@
 import pytest
 
-from command_dispatcher import CommandDispatcher
+from command_dispatcher import CommandDispatcher, InvalidCommandError
 
 
 @pytest.mark.asyncio
@@ -50,3 +50,11 @@ async def test_dynamic_module_registration():
 
     commands = await dispatcher.dispatch("list_commands")
     assert "newmod foo" in commands.splitlines()
+
+
+def test_parse_invalid_command():
+    dispatcher = CommandDispatcher()
+    with pytest.raises(InvalidCommandError):
+        dispatcher.parse("")
+    with pytest.raises(InvalidCommandError):
+        dispatcher.parse("foo bar --badparam")

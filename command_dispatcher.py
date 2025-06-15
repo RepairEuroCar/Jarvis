@@ -4,6 +4,14 @@ import shlex
 from typing import Any, Callable, Dict, Optional
 
 
+class CommandError(Exception):
+    """Base error raised by :class:`CommandDispatcher`."""
+
+
+class InvalidCommandError(CommandError):
+    """Raised when the input command cannot be parsed."""
+
+
 class CommandDispatcher:
     """Simple command dispatcher parsing ``module action --param=value`` input."""
 
@@ -36,11 +44,16 @@ class CommandDispatcher:
     # ------------------------------------------------------------------
     # Parsing
     # ------------------------------------------------------------------
-    def parse(self, text: str) -> Optional[tuple[str, Optional[str], Dict[str, str]]]:
+    def parse(self, text: str) -> tuple[str, Optional[str], Dict[str, str]]:
         """Parse ``text`` into module, action and ``--key=value`` pairs."""
-        tokens = shlex.split(text)
+        try:
+            tokens = shlex.split(text)
+        except ValueError as exc:  # unmatched quotes etc
+            raise InvalidCommandError(str(exc)) from exc
+
         if not tokens:
-            return None
+            raise InvalidCommandError("No command provided")
+
         module = tokens[0]
         action: Optional[str] = None
         params_tokens = tokens[1:]
@@ -49,19 +62,23 @@ class CommandDispatcher:
             params_tokens = params_tokens[1:]
         params: Dict[str, str] = {}
         for token in params_tokens:
-            if token.startswith("--") and "=" in token:
-                key, val = token[2:].split("=", 1)
-                params[key] = val
+            if (
+                not token.startswith("--")
+                or "=" not in token
+                or token.startswith("--=")
+            ):
+                raise InvalidCommandError(f"Malformed parameter: {token}")
+            key, val = token[2:].split("=", 1)
+            if not key:
+                raise InvalidCommandError(f"Malformed parameter: {token}")
+            params[key] = val
         return module, action, params
 
     # ------------------------------------------------------------------
     # Dispatch
     # ------------------------------------------------------------------
     async def dispatch(self, text: str) -> Any:
-        parsed = self.parse(text)
-        if not parsed:
-            return None
-        module, action, params = parsed
+        module, action, params = self.parse(text)
         handler = self._handlers.get(module, {}).get(action)
         if not handler:
             return None

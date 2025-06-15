@@ -6,7 +6,7 @@ import logging
 import platform
 import sys
 
-from command_dispatcher import CommandDispatcher
+from command_dispatcher import CommandDispatcher, InvalidCommandError
 from jarvis.core.main import Jarvis
 
 logger = logging.getLogger("Jarvis.CLI")
@@ -30,7 +30,11 @@ async def run():
             if not text:
                 continue
 
-            result = await dispatcher.dispatch(text)
+            try:
+                result = await dispatcher.dispatch(text)
+            except InvalidCommandError as e:
+                print(f"Invalid command: {e}")
+                continue
             if result is CommandDispatcher.EXIT:
                 print("Exiting Jarvis...")
                 break
