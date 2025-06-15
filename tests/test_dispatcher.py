@@ -57,7 +57,20 @@ def test_parse_invalid_command():
     with pytest.raises(InvalidCommandError):
         dispatcher.parse("")
     with pytest.raises(InvalidCommandError):
-        dispatcher.parse("foo bar --badparam")
+        dispatcher.parse("foo bar --=oops")
+
+
+def test_parse_flags_and_short_options():
+    dispatcher = CommandDispatcher()
+    module, action, params = dispatcher.parse(
+        "foo bar --flag -v -k value --name=Jarvis"
+    )
+    assert module == "foo"
+    assert action == "bar"
+    assert params["flag"] == "true"
+    assert params["v"] == "true"
+    assert params["k"] == "value"
+    assert params["name"] == "Jarvis"
 
 
 @pytest.mark.asyncio

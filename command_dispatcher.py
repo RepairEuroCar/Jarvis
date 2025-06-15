@@ -39,7 +39,12 @@ class InvalidCommandError(CommandError):
 
 
 class CommandDispatcher:
-    """Simple command dispatcher parsing ``module action --param=value`` input."""
+    """Simple command dispatcher parsing ``module action --param=value`` style
+    commands.
+
+    Parameters can be provided as ``--key=value``, ``--flag`` for booleans or
+    short options like ``-k value`` and ``-v``.
+    """
 
     EXIT = object()
 
@@ -83,7 +88,15 @@ class CommandDispatcher:
     # Parsing
     # ------------------------------------------------------------------
     def parse(self, text: str) -> tuple[str, Optional[str], Dict[str, str]]:
-        """Parse ``text`` into module, action and ``--key=value`` pairs."""
+        """Parse ``text`` into module, action and parameter key/value pairs.
+
+        Supported parameter syntaxes are::
+
+            --key=value  # key/value pair
+            --flag       # boolean flag ("true")
+            -k value     # short option with separate value
+            -v           # short boolean flag
+        """
         try:
             tokens = shlex.split(text)
         except ValueError as exc:  # unmatched quotes etc
@@ -94,22 +107,38 @@ class CommandDispatcher:
 
         module = tokens[0]
         action: Optional[str] = None
-        params_tokens = tokens[1:]
-        if params_tokens and not params_tokens[0].startswith("--"):
-            action = params_tokens[0]
-            params_tokens = params_tokens[1:]
+        idx = 1
+        if idx < len(tokens) and not tokens[idx].startswith("-"):
+            action = tokens[idx]
+            idx += 1
+
         params: Dict[str, str] = {}
-        for token in params_tokens:
-            if (
-                not token.startswith("--")
-                or "=" not in token
-                or token.startswith("--=")
-            ):
+        while idx < len(tokens):
+            token = tokens[idx]
+            if token.startswith("--"):
+                if "=" in token:
+                    key, val = token[2:].split("=", 1)
+                    if not key:
+                        raise InvalidCommandError(f"Malformed parameter: {token}")
+                    params[key] = val
+                else:
+                    key = token[2:]
+                    if not key:
+                        raise InvalidCommandError(f"Malformed parameter: {token}")
+                    params[key] = "true"
+            elif token.startswith("-") and len(token) > 1:
+                key = token[1:]
+                if not key:
+                    raise InvalidCommandError(f"Malformed parameter: {token}")
+                if idx + 1 < len(tokens) and not tokens[idx + 1].startswith("-"):
+                    idx += 1
+                    params[key] = tokens[idx]
+                else:
+                    params[key] = "true"
+            else:
                 raise InvalidCommandError(f"Malformed parameter: {token}")
-            key, val = token[2:].split("=", 1)
-            if not key:
-                raise InvalidCommandError(f"Malformed parameter: {token}")
-            params[key] = val
+            idx += 1
+
         return module, action, params
 
     # ------------------------------------------------------------------
@@ -155,7 +184,7 @@ class CommandDispatcher:
     def _help(self, command: str | None = None, **_: str) -> str:
         if not command:
             return (
-                "Enter <module> <action> [--param=value]..."
+                "Enter <module> <action> [--param=value|--flag|-k value]..."
                 "\nAvailable commands:\n" + self._list_commands()
             )
         tokens = command.split()
