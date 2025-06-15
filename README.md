@@ -227,12 +227,14 @@ write_code(task)
 ## Developing plugins
 
 Jarvis can load additional functionality from Python modules located in the
-directory defined by the `plugin_dir` setting (default: `plugins`). Every module
-found there is imported on startup and, if it exposes a `register(jarvis)`
-function, that function is called with the running `Jarvis` instance. Use it to
-register new commands or initialise background tasks.
+directory defined by the `plugin_dir` setting (default: `plugins`). The
+convention is to place modules in the top-level `plugins/` directory so they are
+automatically discovered. Every module found there is imported on startup and,
+if it exposes a `register(jarvis)` function, that function is called with the
+running `Jarvis` instance. Use it to register new commands or initialise
+background tasks.
 
-An example plugin that adds a simple command:
+Create a file `plugins/hello.py` with a simple command:
 
 ```python
 from jarvis.core.main import RegisteredCommand, CommandInfo
@@ -246,6 +248,21 @@ def register(jarvis):
         handler=hello,
     )
 ```
+
+After restarting Jarvis you can invoke the command by typing `hello`.
+
+### Common pitfalls
+
+- Plugin file not placed inside `plugins/` or missing the `.py` extension.
+- Forgetting to define `register()` in the module.
+- Import errors caused by missing dependencies.
+
+### Troubleshooting plugin import errors
+
+If a plugin fails to load you will see warnings such as `Failed loading plugin`
+in the console output. Ensure the plugin has no syntax errors and that all
+required packages are installed. When creating a package directory, include an
+`__init__.py` file so the loader can detect it.
 
 ## Project generation plugin
 
