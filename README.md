@@ -92,14 +92,14 @@ python -m jarvis.core.main --schema
 
 Jarvis includes a lightweight command dispatcher that lets modules expose
 additional CLI actions. Commands are written in the form
-`<module>.<action> [--param=value]` and are resolved at runtime.
+`<module>.<action> [--key=value|--flag|-k value]` and are resolved at runtime.
 
 Use `list_commands` to print every registered command or `help <module> <action>`
 to display the handler's documentation. The dispatcher prints a short usage
 message when no command is specified:
 
 ```text
-Enter <module> <action> [--param=value]...
+Enter <module> <action> [--param=value|--flag|-k value]...
 ```
 
 Modules register handlers by calling
@@ -120,8 +120,8 @@ default_dispatcher.register_command_handler("git", "push", push)
 
 - `ml.train --config=training.json`
 - `ml.evaluate --config=eval.json --checkpoint=model.pt`
-- `git.commit --message="Initial commit" --repo=project`
-- `git.push --remote=origin --branch=main --repo=project`
+- `git.commit -m "Initial commit" --repo=project --sign`
+- `git.push --remote=origin --branch=main -f`
 
 ### Built-in commands
 
