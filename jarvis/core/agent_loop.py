@@ -1,10 +1,10 @@
 import asyncio
-import logging
 from typing import Any, Dict
 
 from jarvis.event_queue import EventQueue
+from utils.logger import get_logger
 
-logger = logging.getLogger("Jarvis.AgentLoop")
+logger = get_logger().getChild("AgentLoop")
 
 
 class AgentLoop:

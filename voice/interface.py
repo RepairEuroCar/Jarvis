@@ -1,12 +1,12 @@
 import asyncio
-import logging
 import threading
 from typing import Any, Optional
 
 import pyttsx3
 import speech_recognition as sr
+from utils.logger import get_logger
 
-logger = logging.getLogger("Jarvis.Voice")
+logger = get_logger().getChild("Voice")
 
 
 class VoiceInterface:

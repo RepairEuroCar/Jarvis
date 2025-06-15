@@ -6,6 +6,9 @@ import subprocess  # Keep for GitManager._run_git_command (uses asyncio.create_s
 from urllib.parse import urlparse
 
 import aiohttp
+from utils.logger import get_logger
+
+logger = get_logger().getChild("git_manager")
 
 
 class GitManager:
@@ -61,10 +64,10 @@ class GitManager:
                 process.returncode,
             )
         except FileNotFoundError:
-            logging.warning("git executable not found")
+            logger.warning("git executable not found")
             return "", "git executable not found", 1
         except Exception as e:
-            logging.warning("git command failed: %s", e)
+            logger.warning("git command failed: %s", e)
             return "", f"Exception while running git: {e}", 1
 
     async def init(self, jarvis_instance, repo_path_str=None):

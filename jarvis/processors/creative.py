@@ -2,11 +2,11 @@
 # jarvis/processors/creative.py
 # -----------------------------
 import asyncio
-import logging
 
 from .base import BaseThoughtProcessor
+from utils.logger import get_logger
 
-logger = logging.getLogger("Jarvis.Processor.Creative")
+logger = get_logger().getChild("Processor.Creative")
 
 
 class CreativeThoughtProcessor(BaseThoughtProcessor):

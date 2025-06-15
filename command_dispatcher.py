@@ -1,9 +1,9 @@
 import asyncio
-import logging
 import shlex
 from typing import Any, Callable, Dict, Optional, Type
 
 from pydantic import BaseModel, ValidationError
+from utils.logger import get_logger
 
 
 class HelpParams(BaseModel):
@@ -50,7 +50,7 @@ class CommandDispatcher:
 
     def __init__(self, jarvis: Optional[Any] = None) -> None:
         self.jarvis = jarvis
-        self.logger = logging.getLogger("CommandDispatcher")
+        self.logger = get_logger().getChild("CommandDispatcher")
         self._handlers: Dict[str, Dict[Optional[str], Callable[..., Any]]] = {}
         self._param_models: Dict[str, Dict[Optional[str], Type[BaseModel]]] = {}
         self._register_builtin_commands()

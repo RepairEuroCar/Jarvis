@@ -2,14 +2,14 @@
 # jarvis/cli.py
 # -----------------------------
 import asyncio
-import logging
 import platform
 import sys
 
 from command_dispatcher import CommandDispatcher, InvalidCommandError
 from jarvis.core.main import Jarvis
+from utils.logger import get_logger
 
-logger = logging.getLogger("Jarvis.CLI")
+logger = get_logger().getChild("CLI")
 
 
 async def run():

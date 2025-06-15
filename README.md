@@ -39,6 +39,20 @@ operations against any address, which could be unsafe in untrusted
 environments. Provide a restricted list in `config/config.yaml`
 to limit network commands to known networks.
 
+### Logging
+
+Logging is initialised by calling `utils.logger.setup_logging()` which is
+invoked by the core on startup. The log level defaults to the value of the
+`JARVIS_LOG_LEVEL` environment variable. You can adjust verbosity in your own
+scripts:
+
+```python
+import logging
+from utils.logger import setup_logging
+
+setup_logging(level=logging.DEBUG)
+```
+
 ## Security tool wrappers
 
 Jarvis exposes asynchronous helpers for several security utilities through

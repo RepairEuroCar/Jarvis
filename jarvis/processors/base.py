@@ -1,8 +1,8 @@
 import asyncio
-import logging
 from typing import Any, Dict
+from utils.logger import get_logger
 
-logger = logging.getLogger("Jarvis.Processor.Base")
+logger = get_logger().getChild("Processor.Base")
 
 
 class BaseThoughtProcessor:
