@@ -2,7 +2,10 @@
 # jarvis/cli.py
 # -----------------------------
 import asyncio
+import atexit
+import os
 import platform
+import readline
 import sys
 
 from command_dispatcher import CommandDispatcher, InvalidCommandError
@@ -16,6 +19,28 @@ async def run():
     jarvis = Jarvis()
     dispatcher = CommandDispatcher(jarvis)
     await jarvis.initialize()
+
+    # -----------------------------
+    # Setup readline history and completion
+    # -----------------------------
+    commands: list[str] = []
+    for mod, actions in dispatcher._handlers.items():
+        for act in actions:
+            commands.append(f"{mod} {act}" if act is not None else mod)
+
+    def completer(text: str, state: int) -> str | None:
+        matches = [c for c in commands if c.startswith(text)]
+        return matches[state] if state < len(matches) else None
+
+    readline.set_completer(completer)
+    readline.parse_and_bind("tab: complete")
+
+    histfile = os.path.expanduser("~/.jarvis_cli_history")
+    try:
+        readline.read_history_file(histfile)
+    except FileNotFoundError:
+        pass
+    atexit.register(lambda: readline.write_history_file(histfile))
     print(f"Jarvis CLI (Python {platform.python_version()})")
     print(f"User: {jarvis.user_name}\n")
     print("Type 'help' for commands. Type 'exit' to quit.\n")
@@ -23,9 +48,7 @@ async def run():
     while True:
         try:
             prompt = f"[{jarvis.user_name}]> "
-            sys.stdout.write(prompt)
-            sys.stdout.flush()
-            line = await asyncio.to_thread(sys.stdin.readline)
+            line = await asyncio.to_thread(input, prompt)
             text = line.strip()
             if not text:
                 continue
