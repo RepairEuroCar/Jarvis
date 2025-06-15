@@ -1,11 +1,12 @@
 import importlib.util
-import logging
 import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Iterable
 
-logger = logging.getLogger(__name__)
+from utils.logger import get_logger
+
+logger = get_logger().getChild("plugins")
 
 
 def _iter_module_files(directory: Path) -> Iterable[Path]:

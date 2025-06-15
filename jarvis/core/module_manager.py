@@ -1,7 +1,6 @@
 import asyncio
 import hashlib
 import importlib
-import logging
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -12,8 +11,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ValidationError
+from utils.logger import get_logger
 
-logger = logging.getLogger("Jarvis.ModuleManager")
+logger = get_logger().getChild("ModuleManager")
 
 # ========================
 # ВСПОМОГАТЕЛЬНЫЕ КЛАССЫ

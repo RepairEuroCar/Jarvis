@@ -2,13 +2,13 @@
 # jarvis/processors/analytical.py
 # -----------------------------
 import asyncio
-import logging
 import re
 from typing import Any, Dict, List, Union
 
 from .base import BaseThoughtProcessor
+from utils.logger import get_logger
 
-logger = logging.getLogger("Jarvis.Processor.Analytical")
+logger = get_logger().getChild("Processor.Analytical")
 
 
 class AnalyticalThoughtProcessor(BaseThoughtProcessor):

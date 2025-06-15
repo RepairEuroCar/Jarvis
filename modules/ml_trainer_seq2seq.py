@@ -1,7 +1,6 @@
 # modules/ml_trainer_seq2seq.py
 import asyncio
 import json
-import logging
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -21,8 +20,9 @@ from transformers import (
 
 # Command metadata used by Jarvis
 from commands.registry import CommandCategory, CommandInfo
+from utils.logger import get_logger
 
-logger = logging.getLogger(__name__)  # Логгер для модуля
+logger = get_logger().getChild("ml_trainer_seq2seq")
 
 MODULE_METADATA = {
     "name": "Seq2Seq_ML_Trainer",

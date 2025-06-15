@@ -1,11 +1,11 @@
 import json
-import logging
 import os
 import shutil
 import time
 from typing import Any, Dict, Optional
+from utils.logger import get_logger
 
-logger = logging.getLogger("Jarvis.Memory")
+logger = get_logger().getChild("Memory")
 
 
 class MemoryManager:

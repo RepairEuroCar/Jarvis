@@ -3,7 +3,6 @@
 # -----------------------------
 import asyncio
 import difflib
-import logging
 import re
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -12,13 +11,14 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from ..commands.registry import CommandCategory
+from utils.logger import get_logger
 
 # TODO: Развитие интеллекта задач
 #  - Распознавание семантики задач: генерация, анализ, перевод, диагностика
 #  - Автоопределение intent + confidence
 #  - Ответ на естественные вопросы: «Как ты решил это?»
 
-logger = logging.getLogger("Jarvis.NLU")
+logger = get_logger().getChild("NLU")
 
 
 class EntityExtractionMode(Enum):

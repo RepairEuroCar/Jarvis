@@ -13,7 +13,6 @@
 
 import ast
 import difflib
-import logging
 import os
 import tempfile
 import time
@@ -27,6 +26,7 @@ from typing import Any, Dict, Type
 from utils.code_rating import rate_code
 from utils.linter import AstLinter
 from utils.solution_compare import structural_diff
+from utils.logger import get_logger
 
 from .processors import (
     AnalyticalThoughtProcessor,
@@ -38,7 +38,7 @@ from .processors import (
     TestGeneratorProcessor,
 )
 
-logger = logging.getLogger("Jarvis.Brain")
+logger = get_logger().getChild("Brain")
 
 
 class ThoughtProcessorFactory:

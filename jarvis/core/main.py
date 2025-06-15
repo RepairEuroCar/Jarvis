@@ -23,8 +23,9 @@ from jarvis.plugins import load_plugins
 from jarvis.voice.interface import VoiceInterface
 from modules.git_manager import GitManager
 from utils.linter import AstLinter
+from utils.logger import get_logger, setup_logging
 
-logger = logging.getLogger("Jarvis.Core")
+logger = get_logger().getChild("Core")
 
 
 class UserEvent(BaseModel):
@@ -114,7 +115,8 @@ class Jarvis:
         load_plugins(self, self.settings.plugin_dir)
 
     def _setup_logging(self):
-        logging.basicConfig(level=self.settings.log_level)
+        level = getattr(logging, str(self.settings.log_level).upper(), logging.INFO)
+        setup_logging(level=level)
 
     def _setup_state_machine(self):
         self.machine = Machine(model=self, states=self.states, initial="idle")

@@ -6,7 +6,6 @@ import hashlib
 import importlib
 import inspect
 import json
-import logging
 import os
 import platform
 import shutil
@@ -35,8 +34,9 @@ from prompt_toolkit import prompt
 from prompt_toolkit.completion import PathCompleter
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+from utils.logger import get_logger
 
-logger = logging.getLogger("Jarvis.ProjectManager")
+logger = get_logger().getChild("ProjectManager")
 
 
 class ProjectLifecycleException(Exception):
