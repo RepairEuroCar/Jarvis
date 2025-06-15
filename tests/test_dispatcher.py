@@ -58,3 +58,23 @@ def test_parse_invalid_command():
         dispatcher.parse("")
     with pytest.raises(InvalidCommandError):
         dispatcher.parse("foo bar --badparam")
+
+
+@pytest.mark.asyncio
+async def test_builtin_param_validation():
+    dispatcher = CommandDispatcher()
+
+    with pytest.raises(InvalidCommandError):
+        await dispatcher.dispatch("list_commands --extra=1")
+
+    with pytest.raises(InvalidCommandError):
+        await dispatcher.dispatch("help --bad=1")
+
+    with pytest.raises(InvalidCommandError):
+        await dispatcher.dispatch("exit --now=1")
+
+    with pytest.raises(InvalidCommandError):
+        await dispatcher.dispatch("reload --module=x --foo=bar")
+
+    result = await dispatcher.dispatch("reload --module=test")
+    assert "not supported" in result.lower()
