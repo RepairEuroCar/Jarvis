@@ -42,7 +42,8 @@ Default arguments and `*args`/`**kwargs` are supported. Document behaviour in th
 
 - `import module` or `from module import name` brings code from other files.
 - Packages are directories with an `__init__.py` file.
-- Add dependencies to `requirements.txt` or `pyproject.toml`.
+- Add runtime dependencies to `requirements.txt` and development tools to
+  `dev-requirements.txt` or `pyproject.toml`.
 
 ## Classes and Objects
 
