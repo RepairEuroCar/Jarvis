@@ -318,3 +318,29 @@ async def test_unsafe_inputs_blocked(monkeypatch):
     await kali_tools.run_wireshark("--cmd &&")
 
     assert len(called) == 0
+
+
+@pytest.mark.asyncio
+async def test_reload_updates_allowed_networks(monkeypatch, tmp_path):
+    calls = []
+
+    async def fake_run(cmd):
+        calls.append(cmd)
+        return "", "", 0
+
+    monkeypatch.setattr(kali_tools, "_run_command", fake_run)
+
+    cfg = tmp_path / "cfg.yaml"
+    cfg.write_text("allowed_networks:\n- '0.0.0.0/0'\n")
+    kali_tools.reload_allowed_networks(config_path=str(cfg))
+
+    await kali_tools.run_nmap("8.8.8.8")
+    assert calls
+
+    calls.clear()
+    cfg.write_text("allowed_networks:\n- '10.0.0.0/8'\n")
+    kali_tools.reload_allowed_networks(config_path=str(cfg))
+    result = await kali_tools.run_nmap("8.8.8.8")
+
+    assert not calls
+    assert "not allowed" in result.lower()

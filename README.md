@@ -47,7 +47,9 @@ Default values are:
 connect to or scan. Leaving the default `0.0.0.0/0` allows
 operations against any address, which could be unsafe in untrusted
 environments. Provide a restricted list in `config/config.yaml`
-to limit network commands to known networks.
+to limit network commands to known networks. After modifying the file or
+the `JARVIS_ALLOWED_NETWORKS` environment variable you can reload the
+values at runtime by calling `kali_tools.reload_allowed_networks()`.
 
 ### Logging
 
