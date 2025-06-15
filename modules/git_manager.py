@@ -6,6 +6,7 @@ import subprocess  # Keep for GitManager._run_git_command (uses asyncio.create_s
 from urllib.parse import urlparse
 
 import aiohttp
+
 from utils.logger import get_logger
 
 logger = get_logger().getChild("git_manager")
@@ -801,9 +802,15 @@ async def push(
     return await gm.push(None, remote_branch, repo)
 
 
-from command_dispatcher import default_dispatcher
+from command_dispatcher import CommandDispatcher, default_dispatcher
 
-default_dispatcher.register_command_handler("git", "commit", commit)
-default_dispatcher.register_command_handler("git", "push", push)
 
-__all__ = ["GitManager", "commit", "push"]
+def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> None:
+    """Register ``git`` commands with ``dispatcher``."""
+
+    dispatcher.register_command_handler("git", "commit", commit)
+    dispatcher.register_command_handler("git", "push", push)
+
+
+register_commands(default_dispatcher)
+__all__ = ["GitManager", "commit", "push", "register_commands"]

@@ -128,18 +128,15 @@ message when no command is specified:
 Enter <module> <action> [--param=value|--flag|-k value]...
 ```
 
-Modules register handlers by calling
-`default_dispatcher.register_command_handler()` during import. For example,
-`ml_trainer` and `git_manager` register their commands as shown below:
+Modules expose a ``register_commands(dispatcher)`` function that installs their
+handlers. This avoids side effects when importing the module. Example:
 
 ```python
-default_dispatcher.register_command_handler("ml", "train", train)
-default_dispatcher.register_command_handler("ml", "evaluate", evaluate)
-```
+from command_dispatcher import default_dispatcher
+from modules import ml_trainer, git_manager
 
-```python
-default_dispatcher.register_command_handler("git", "commit", commit)
-default_dispatcher.register_command_handler("git", "push", push)
+ml_trainer.register_commands(default_dispatcher)
+git_manager.register_commands(default_dispatcher)
 ```
 
 ### Examples

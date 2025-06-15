@@ -1,7 +1,7 @@
 import json
 import os
 
-from command_dispatcher import default_dispatcher
+from command_dispatcher import CommandDispatcher, default_dispatcher
 
 from .ml_trainer_seq2seq import Seq2SeqTrainer
 
@@ -37,8 +37,13 @@ async def evaluate(config: str, checkpoint: str) -> str:
     return json.dumps(result)
 
 
-# Register handlers with the global dispatcher on import
-default_dispatcher.register_command_handler("ml", "train", train)
-default_dispatcher.register_command_handler("ml", "evaluate", evaluate)
+def register_commands(dispatcher: "CommandDispatcher" = default_dispatcher) -> None:
+    """Register ``ml`` commands with ``dispatcher``."""
 
-__all__ = ["train", "evaluate", "Seq2SeqTrainer"]
+    dispatcher.register_command_handler("ml", "train", train)
+    dispatcher.register_command_handler("ml", "evaluate", evaluate)
+
+
+# Keep backward compatibility by registering on import using the global dispatcher
+register_commands(default_dispatcher)
+__all__ = ["train", "evaluate", "Seq2SeqTrainer", "register_commands"]
