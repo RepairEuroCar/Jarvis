@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     allowed_networks: List[str] = ["0.0.0.0/0"]
     plugin_dir: str = "plugins"
     intent_model_path: str = "models/intent"
+    clarify_threshold: float = 0.5
 
     class Config:
         env_file = ".env"
@@ -108,6 +109,7 @@ class Jarvis:
         self.event_queue = EventQueue()
         self.sensor_manager = SensorManager(self, self.event_queue)
         self.agent_loop = None
+        self._pending_question: Optional[str] = None
         # Initialize per-instance cache for input parsing
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
             self._parse_input_uncached
@@ -144,6 +146,11 @@ class Jarvis:
         name = self.memory.recall("user_info.name")
         return name or self.settings.default_user
 
+    @property
+    def pending_question(self) -> Optional[str]:
+        """Return the last question awaiting user clarification."""
+        return self._pending_question
+
     def _register_commands(self):
         for cmd_info in ALL_COMMANDS:
             if not hasattr(self, f"{cmd_info.name}_command"):
@@ -174,6 +181,17 @@ class Jarvis:
             for part in [p.strip() for p in command_text.split("&&") if p.strip()]:
                 results.append(await self.handle_command(part, is_voice))
             return results[-1] if results else None
+
+        nlu_result = await self.nlu.process(command_text)
+        if nlu_result.get("confidence", 0.0) < self.settings.clarify_threshold:
+            self._pending_question = command_text
+            self.memory.remember(
+                "system.pending_question", command_text, category="system"
+            )
+            clarification = f"Вы имели в виду '{nlu_result.get('intent')}'?"
+            if is_voice and self.voice_interface:
+                await self.voice_interface.say_async(clarification)
+            return clarification
 
         parsed = self.parse_input(command_text)
         if not parsed:
