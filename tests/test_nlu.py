@@ -88,6 +88,39 @@ async def test_learn_correction(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_learn_correction_dataset_and_update(monkeypatch, tmp_path):
+    dataset = tmp_path / "dataset.jsonl"
+    mem_file = tmp_path / "mem.json"
+    mem = MemoryManager(str(mem_file))
+
+    calls = []
+
+    def fake_init(self, model_path):
+        pass
+
+    def fake_update(self, text, intent):
+        calls.append((text, intent))
+
+    monkeypatch.setattr("jarvis.nlp.intent_model.IntentModel.__init__", fake_init)
+    monkeypatch.setattr("jarvis.nlp.intent_model.IntentModel.update_model", fake_update)
+
+    nlu = NLUProcessor(
+        memory_manager=mem,
+        model_path="dummy",
+        intent_dataset_path=str(dataset),
+    )
+
+    nlu.learn_correction("helo", "exit", persist=True)
+    nlu.learn_correction("bye", "exit", persist=True)
+
+    with open(dataset, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    assert len(lines) == 2
+    assert calls == [("helo", "exit"), ("bye", "exit")]
+
+
+@pytest.mark.asyncio
 async def test_intent_model_prediction(monkeypatch):
     calls = {}
 

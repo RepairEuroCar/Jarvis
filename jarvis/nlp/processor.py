@@ -3,6 +3,7 @@
 # -----------------------------
 import asyncio
 import difflib
+import json
 import re
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -70,6 +71,7 @@ class NLUProcessor:
         max_history_size: int = 100,
         model_path: Optional[str] = None,
         ner_model_name: Optional[str] = None,
+        intent_dataset_path: Optional[str] = None,
     ):
         self.memory_manager = memory_manager
         self.intent_model: Optional[IntentModel] = None
@@ -90,6 +92,11 @@ class NLUProcessor:
         self.synonyms: Dict[str, str] = self._load_synonyms()
         self.context: Dict[str, Any] = {}
         self.history: deque[ProcessingResult] = deque(maxlen=max_history_size)
+        self.intent_dataset_path = (
+            Path(intent_dataset_path)
+            if intent_dataset_path
+            else Path(__file__).with_name("intent_dataset.jsonl")
+        )
         self.entity_patterns: Dict[str, str] = {
             "path_entity": r"(?:[a-zA-Z]:)?(?:[/\\][^/\\]*)+/?",
             "module_name_entity": r"[a-zA-Z_][a-zA-Z0-9_]*",
@@ -386,9 +393,25 @@ class NLUProcessor:
     ) -> None:
         """Запоминает исправление неверно распознанной команды."""
         self.learned_corrections[wrong_text.lower()] = intent
-        if persist and self.memory_manager:
-            self.memory_manager.remember("nlu.corrections", self.learned_corrections)
-            self.memory_manager.save()
+        if persist:
+            if self.memory_manager:
+                self.memory_manager.remember(
+                    "nlu.corrections", self.learned_corrections
+                )
+                self.memory_manager.save()
+            try:
+                with open(self.intent_dataset_path, "a", encoding="utf-8") as f:
+                    json.dump(
+                        {"text": wrong_text, "intent": intent}, f, ensure_ascii=False
+                    )
+                    f.write("\n")
+            except Exception as e:  # pragma: no cover - logging only
+                logger.warning(f"Failed to append to intent dataset: {e}")
+            if self.intent_model:
+                try:
+                    self.intent_model.update_model(wrong_text, intent)
+                except Exception as e:  # pragma: no cover - logging only
+                    logger.warning(f"Failed to update intent model: {e}")
 
     def _load_custom_patterns(self) -> None:
         """Загружает сохраненные пользователем шаблоны из памяти."""
