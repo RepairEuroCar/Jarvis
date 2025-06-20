@@ -73,3 +73,26 @@ async def test_learn_correction(tmp_path):
     nlu2 = NLUProcessor(memory_manager=MemoryManager(str(mem_file)))
     result = await nlu2.process("helo")
     assert result["intent"] == "exit"
+
+
+@pytest.mark.asyncio
+async def test_intent_model_prediction(monkeypatch):
+    calls = {}
+
+    def fake_init(self, model_path):
+        calls["init"] = model_path
+
+    def fake_predict(self, text, context=None):
+        calls["predict"] = (text, context)
+        return {"intent": "greet", "confidence": 0.95}
+
+    monkeypatch.setattr("jarvis.nlp.intent_model.IntentModel.__init__", fake_init)
+    monkeypatch.setattr("jarvis.nlp.intent_model.IntentModel.predict", fake_predict)
+
+    nlu = NLUProcessor(model_path="dummy")
+    await nlu.process("выйти")
+    result = await nlu.process("приветики")
+
+    assert result["intent"] == "greet"
+    assert calls["predict"][0] == "приветики"
+    assert "exit" in calls["predict"][1]

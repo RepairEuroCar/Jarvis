@@ -12,6 +12,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from ..commands.registry import CommandCategory
 from utils.logger import get_logger
+from .intent_model import IntentModel
 
 # TODO: Развитие интеллекта задач
 #  - Распознавание семантики задач: генерация, анализ, перевод, диагностика
@@ -60,9 +61,18 @@ class ProcessingResult:
 
 class NLUProcessor:
     def __init__(
-        self, memory_manager: Optional[Any] = None, max_history_size: int = 100
+        self,
+        memory_manager: Optional[Any] = None,
+        max_history_size: int = 100,
+        model_path: Optional[str] = None,
     ):
         self.memory_manager = memory_manager
+        self.intent_model: Optional[IntentModel] = None
+        if model_path:
+            try:
+                self.intent_model = IntentModel(model_path)
+            except Exception as e:  # pragma: no cover - logging only
+                logger.warning(f"Failed to load intent model: {e}")
         self.command_patterns: List[CommandPattern] = (
             self._initialize_command_patterns()
         )
@@ -167,6 +177,18 @@ class NLUProcessor:
             result = self._handle_repeat_command()
         else:
             result = await self._process_text(text_original, text_lower)
+        if isinstance(result, ProcessingResult) and self.intent_model:
+            low_conf = result.confidence < 0.6 or result.metadata.get("is_fallback")
+            if low_conf:
+                context_cmds = [r.intent for r in list(self.history)[-3:]]
+                try:
+                    pred = self.intent_model.predict(text_original, context_cmds)
+                    result.intent = pred.get("intent", result.intent)
+                    result.confidence = pred.get("confidence", result.confidence)
+                    result.metadata["predicted_by_model"] = True
+                    self.history[-1] = result
+                except Exception as e:  # pragma: no cover - logging only
+                    logger.warning(f"Intent model prediction failed: {e}")
         if isinstance(result, ProcessingResult):
             return result.__dict__
         return result
