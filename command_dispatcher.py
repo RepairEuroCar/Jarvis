@@ -160,6 +160,16 @@ class CommandDispatcher:
             return await handler(**params)
         return handler(**params)
 
+    async def dispatch_chain(self, texts: list[str]) -> list[Any]:
+        """Sequentially dispatch multiple command strings."""
+        results: list[Any] = []
+        for text in texts:
+            result = await self.dispatch(text)
+            results.append(result)
+            if result is self.EXIT:
+                break
+        return results
+
     # ------------------------------------------------------------------
     # Built-in commands
     # ------------------------------------------------------------------

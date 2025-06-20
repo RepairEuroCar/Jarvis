@@ -169,6 +169,12 @@ class Jarvis:
 
     async def handle_command(self, command_text: str, is_voice: bool = False):
         """Обработка команд с поддержкой голоса"""
+        if "&&" in command_text:
+            results = []
+            for part in [p.strip() for p in command_text.split("&&") if p.strip()]:
+                results.append(await self.handle_command(part, is_voice))
+            return results[-1] if results else None
+
         parsed = self.parse_input(command_text)
         if not parsed:
             return await self.unknown_command(command_text, is_voice)

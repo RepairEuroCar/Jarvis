@@ -91,3 +91,25 @@ async def test_builtin_param_validation():
 
     result = await dispatcher.dispatch("reload --module=test")
     assert "not supported" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_chain():
+    dispatcher = CommandDispatcher()
+
+    calls: list[str] = []
+
+    def first() -> str:
+        calls.append("a")
+        return "first"
+
+    def second() -> str:
+        calls.append("b")
+        return "second"
+
+    dispatcher.register_command_handler("mod", "a", first)
+    dispatcher.register_command_handler("mod", "b", second)
+
+    results = await dispatcher.dispatch_chain(["mod a", "mod b"])
+    assert results == ["first", "second"]
+    assert calls == ["a", "b"]

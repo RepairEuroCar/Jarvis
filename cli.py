@@ -53,6 +53,34 @@ async def run():
             if not text:
                 continue
 
+            chain = [t.strip() for t in text.split("&&") if t.strip()]
+            if len(chain) > 1:
+                results = await dispatcher.dispatch_chain(chain)
+                exit_seen = False
+                for cmd_text, result in zip(chain, results):
+                    if result is CommandDispatcher.EXIT:
+                        print("Exiting Jarvis...")
+                        exit_seen = True
+                        break
+                    if result is not None:
+                        print(result)
+                        continue
+                    parsed = await jarvis.nlu.process(cmd_text)
+                    cmd = parsed.get("intent")
+                    handler_tuple = jarvis.commands.get(cmd)
+                    if handler_tuple:
+                        cmd_info, handler = handler_tuple
+                        args = parsed.get("entities", {}).get("raw_args", "")
+                        output = (
+                            await handler(args) if cmd_info.is_async else handler(args)
+                        )
+                        print(output)
+                    else:
+                        print(f"Unknown command: {cmd}")
+                if exit_seen:
+                    break
+                continue
+
             try:
                 result = await dispatcher.dispatch(text)
             except InvalidCommandError as e:
