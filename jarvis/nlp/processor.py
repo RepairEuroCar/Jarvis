@@ -13,6 +13,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from ..commands.registry import CommandCategory
 from utils.logger import get_logger
 from .intent_model import IntentModel
+from .ner_model import NERModel
 
 # TODO: Развитие интеллекта задач
 #  - Распознавание семантики задач: генерация, анализ, перевод, диагностика
@@ -65,14 +66,21 @@ class NLUProcessor:
         memory_manager: Optional[Any] = None,
         max_history_size: int = 100,
         model_path: Optional[str] = None,
+        ner_model_name: Optional[str] = None,
     ):
         self.memory_manager = memory_manager
         self.intent_model: Optional[IntentModel] = None
+        self.ner_model: Optional[NERModel] = None
         if model_path:
             try:
                 self.intent_model = IntentModel(model_path)
             except Exception as e:  # pragma: no cover - logging only
                 logger.warning(f"Failed to load intent model: {e}")
+        if ner_model_name:
+            try:
+                self.ner_model = NERModel(ner_model_name)
+            except Exception as e:  # pragma: no cover - logging only
+                logger.warning(f"Failed to load NER model: {e}")
         self.command_patterns: List[CommandPattern] = (
             self._initialize_command_patterns()
         )
@@ -243,6 +251,16 @@ class NLUProcessor:
         if pattern.entity_extraction_mode == EntityExtractionMode.ALL_AFTER_TRIGGER:
             if pattern.entity_names:
                 entities[pattern.entity_names[0]] = args_part
+        elif pattern.entity_extraction_mode == EntityExtractionMode.NAMED_ENTITIES:
+            if self.ner_model is None:
+                raise RuntimeError("Named entity extraction requires NERModel")
+            spans = self.ner_model.extract_entities(args_part)
+            for span in spans:
+                label = span.get("label", "")
+                value = span.get("text", "")
+                if not label:
+                    continue
+                entities.setdefault(label, []).append(value)
 
         return ProcessingResult(
             intent=pattern.intent,
