@@ -4,7 +4,12 @@
 import pytest
 
 from jarvis.memory.manager import MemoryManager
-from jarvis.nlp.processor import NLUProcessor, TaskSemantics
+from jarvis.nlp.processor import (
+    NLUProcessor,
+    TaskSemantics,
+    CommandPattern,
+    EntityExtractionMode,
+)
 
 
 @pytest.fixture
@@ -96,3 +101,40 @@ async def test_intent_model_prediction(monkeypatch):
     assert result["intent"] == "greet"
     assert calls["predict"][0] == "приветики"
     assert "exit" in calls["predict"][1]
+
+
+@pytest.mark.asyncio
+async def test_named_entity_extraction(monkeypatch):
+    calls = {}
+
+    def fake_init(self, model_name=None):
+        calls["ner_init"] = model_name
+
+    def fake_extract(self, text):
+        calls["extract"] = text
+        return [
+            {"text": "Alice", "label": "PERSON"},
+            {"text": "Google", "label": "ORG"},
+            {"text": "London", "label": "LOC"},
+        ]
+
+    monkeypatch.setattr("jarvis.nlp.ner_model.NERModel.__init__", fake_init)
+    monkeypatch.setattr("jarvis.nlp.ner_model.NERModel.extract_entities", fake_extract)
+
+    nlu = NLUProcessor(ner_model_name="dummy")
+    nlu.command_patterns.insert(
+        0,
+        CommandPattern(
+            intent="who",
+            triggers=["show"],
+            entity_extraction_mode=EntityExtractionMode.NAMED_ENTITIES,
+        ),
+    )
+
+    result = await nlu.process("show Alice works at Google in London")
+
+    assert result["intent"] == "who"
+    assert calls["extract"] == "Alice works at Google in London"
+    assert result["entities"]["PERSON"] == ["Alice"]
+    assert result["entities"]["ORG"] == ["Google"]
+    assert result["entities"]["LOC"] == ["London"]
