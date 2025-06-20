@@ -10,17 +10,21 @@ from typing import Any
 import asyncpg
 
 DATABASE_DSN = "postgresql://localhost/jarvis"
-SCHEMA_FILE = Path("docs/jarvis_users_pg.sql")
+SCHEMA_FILES = [
+    Path("docs/jarvis_users_pg.sql"),
+    Path("docs/jarvis_topics_pg.sql"),
+]
 
 
 async def load_module(jarvis_instance: Any, dsn: str = DATABASE_DSN) -> None:
     """Initialise a connection pool and ensure the schema exists."""
 
     jarvis_instance.pg_pool = await asyncpg.create_pool(dsn)
-    if SCHEMA_FILE.exists():
-        sql = SCHEMA_FILE.read_text()
-        async with jarvis_instance.pg_pool.acquire() as conn:
-            await conn.execute(sql)
+    for path in SCHEMA_FILES:
+        if path.exists():
+            sql = path.read_text()
+            async with jarvis_instance.pg_pool.acquire() as conn:
+                await conn.execute(sql)
 
     jarvis_instance.commands["list_pg_users"] = list_users_async
 
