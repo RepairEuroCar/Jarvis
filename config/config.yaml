@@ -5,6 +5,7 @@
 # voice_enabled: false
 
 plugin_dir: plugins
+intent_model_path: models/intent
 
 # Limit network operations to these CIDR ranges
 allowed_networks:

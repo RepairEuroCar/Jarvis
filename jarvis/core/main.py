@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     voice_volume: float = 0.9
     allowed_networks: List[str] = ["0.0.0.0/0"]
     plugin_dir: str = "plugins"
+    intent_model_path: str = "models/intent"
 
     class Config:
         env_file = ".env"
@@ -101,7 +102,7 @@ class Jarvis:
         self._voice_interface = None
         self._register_commands()
         self.memory  # initialize memory
-        self.nlu = NLUProcessor()
+        self.nlu = NLUProcessor(model_path=self.settings.intent_model_path)
         self.brain = Brain(self)
         self.goals = GoalManager(self)
         self.event_queue = EventQueue()
