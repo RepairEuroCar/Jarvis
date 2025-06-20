@@ -182,6 +182,10 @@ pip install aioredis docker
 
 Some wrappers require extra security tools. Install `yara`, `volatility` and
 `mitmproxy` if you intend to use their helpers.
+### PostgreSQL support
+
+An optional module allows Jarvis to use a PostgreSQL database. Initialise the schema using `docs/jarvis_users_pg.sql` and install `asyncpg` from `requirements.txt`. Load the module via `postgres_interface.load_module` to enable the `list_pg_users` command.
+
 
 
 ## Learning from mistakes
