@@ -74,6 +74,13 @@ VOICE_COMMANDS = [
         usage="change_voice [скорость] [громкость]",
         aliases=["измени голос"],
     ),
+    CommandInfo(
+        name="set_language",
+        description="Change voice recognition and synthesis language",
+        category=CommandCategory.VOICE,
+        usage="set_language <code>",
+        aliases=[],
+    ),
 ]
 
 DEVEL_COMMANDS = [

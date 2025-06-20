@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     voice_activation_phrase: str = "джарвис"
     voice_rate: int = 180
     voice_volume: float = 0.9
+    recognition_language: str = "ru-RU"
+    tts_language: str = "ru"
     allowed_networks: List[str] = ["0.0.0.0/0"]
     plugin_dir: str = "plugins"
     intent_model_path: str = "models/intent"
@@ -442,6 +444,18 @@ class Jarvis:
             self._voice_interface.engine.setProperty("rate", rate)
             self._voice_interface.engine.setProperty("volume", volume)
         return f"Голос обновлён: скорость {rate}, громкость {volume}"
+
+    async def set_language_command(self, event: UserEvent):
+        """Change recognition and synthesis language."""
+        parts = event.text.split()
+        if len(parts) < 2:
+            return "Usage: set_language <code>"
+        code = parts[1]
+        self.settings.recognition_language = code
+        self.settings.tts_language = code
+        if self._voice_interface:
+            self._voice_interface.update_language()
+        return f"Language set to {code}"
 
     async def set_goal_command(self, event: UserEvent):
         """Set a goal and optional motivation."""

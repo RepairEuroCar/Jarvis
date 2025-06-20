@@ -6,6 +6,8 @@
 
 plugin_dir: plugins
 intent_model_path: models/intent
+recognition_language: ru-RU
+tts_language: ru
 
 # Limit network operations to these CIDR ranges
 allowed_networks:
