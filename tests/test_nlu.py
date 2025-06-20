@@ -5,10 +5,10 @@ import pytest
 
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import (
-    NLUProcessor,
-    TaskSemantics,
     CommandPattern,
     EntityExtractionMode,
+    NLUProcessor,
+    TaskSemantics,
 )
 
 
@@ -32,6 +32,13 @@ async def test_exit_intent(nlu):
         result = await nlu.process(variant)
         assert result["intent"] == "exit"
         assert result["entities"] == {"raw_args": ""}
+
+
+@pytest.mark.asyncio
+async def test_synonym_resolution(nlu):
+    for variant in ["leave", "bye", "прекрати"]:
+        result = await nlu.process(variant)
+        assert result["intent"] == "exit"
 
 
 @pytest.mark.asyncio
