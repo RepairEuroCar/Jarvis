@@ -10,8 +10,11 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from ..commands.registry import CommandCategory
+import yaml
+
 from utils.logger import get_logger
+
+from ..commands.registry import CommandCategory
 from .intent_model import IntentModel
 from .ner_model import NERModel
 
@@ -84,6 +87,7 @@ class NLUProcessor:
         self.command_patterns: List[CommandPattern] = (
             self._initialize_command_patterns()
         )
+        self.synonyms: Dict[str, str] = self._load_synonyms()
         self.context: Dict[str, Any] = {}
         self.history: deque[ProcessingResult] = deque(maxlen=max_history_size)
         self.entity_patterns: Dict[str, str] = {
@@ -114,6 +118,24 @@ class NLUProcessor:
             self.learned_corrections = (
                 self.memory_manager.recall("nlu.corrections") or {}
             )
+
+    def _load_synonyms(self) -> Dict[str, str]:
+        """Load synonyms mapping from a YAML file located next to this module."""
+        path = Path(__file__).with_name("synonyms.yaml")
+        if not path.exists():
+            return {}
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+            return {str(k).lower(): str(v).lower() for k, v in data.items()}
+        except Exception as e:  # pragma: no cover - logging only
+            logger.warning(f"Failed to load synonyms: {e}")
+            return {}
+
+    def _normalize_text_with_synonyms(self, text: str) -> str:
+        """Replace words in text according to the synonyms map."""
+        tokens = [self.synonyms.get(t, t) for t in text.split()]
+        return " ".join(tokens)
 
     def _detect_task_semantics(self, text_lower: str) -> TaskSemantics:
         for sem, words in self.semantics_keywords.items():
@@ -229,12 +251,16 @@ class NLUProcessor:
         self, pattern: CommandPattern, text_original: str, text_lower: str
     ) -> Optional[ProcessingResult]:
         """Пытается сопоставить текст с конкретным шаблоном команды."""
+        normalized_text = self._normalize_text_with_synonyms(text_lower)
         for trigger in pattern.triggers:
-            if text_lower.startswith(trigger.lower()):
+            normalized_trigger = self._normalize_text_with_synonyms(trigger.lower())
+            if normalized_text.startswith(normalized_trigger):
                 return await self._extract_entities(
                     pattern, text_original, trigger, 1.0
                 )
-            ratio = difflib.SequenceMatcher(None, text_lower, trigger.lower()).ratio()
+            ratio = difflib.SequenceMatcher(
+                None, normalized_text, normalized_trigger
+            ).ratio()
             if ratio > 0.75:
                 return await self._extract_entities(
                     pattern, text_original, trigger, ratio
@@ -245,7 +271,9 @@ class NLUProcessor:
         self, pattern: CommandPattern, text: str, trigger: str, confidence: float
     ) -> ProcessingResult:
         """Извлекает сущности из текста в соответствии с шаблоном."""
-        args_part = text[len(trigger) :].strip()
+        trigger_words = trigger.split()
+        text_words = text.split()
+        args_part = " ".join(text_words[len(trigger_words) :]).strip()
         entities = {"raw_args": args_part}
 
         if pattern.entity_extraction_mode == EntityExtractionMode.ALL_AFTER_TRIGGER:
