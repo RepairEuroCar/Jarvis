@@ -8,7 +8,8 @@ import os
 import threading
 
 import sounddevice as sd
-import vosk
+from voice.stub_vosk import Model, KaldiRecognizer
+#import vosk
 
 from .config import VoiceConfig
 
@@ -23,9 +24,9 @@ class VoiceInterface:
         if not os.path.exists(self.config.model_path):
             raise FileNotFoundError(f"Модель Vosk не найдена: {self.config.model_path}")
 
-        self.model = vosk.Model(self.config.model_path)
+        self.model = Model(self.config.model_path)
         context_json = json.dumps(self.config.context_phrases, ensure_ascii=False)
-        self.recognizer = vosk.KaldiRecognizer(
+        self.recognizer = KaldiRecognizer(
             self.model, self.config.samplerate, context_json
         )
 

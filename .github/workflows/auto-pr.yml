@@ -1,0 +1,26 @@
+name: Auto Approve & Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  auto-approve-and-merge:
+    if: github.actor == 'RepairEuroCar'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto approve PR
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto merge PR
+        uses: pascalgn/automerge-action@v0.15.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          mergeMethod: squash

@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 import yaml
-from pydantic import BaseModel, BaseSettings
+from pydantic import BaseModel
+from pydantic_settings import BaseSettings
 from transitions import Machine
 
 from jarvis.brain import Brain
