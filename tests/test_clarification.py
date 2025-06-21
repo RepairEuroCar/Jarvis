@@ -17,4 +17,3 @@ async def test_handle_command_clarification(monkeypatch):
     assert "Вы имели в виду" in resp
     assert jarvis.pending_question == "hlep"
     assert jarvis.memory.recall("system.pending_question") == "hlep"
-

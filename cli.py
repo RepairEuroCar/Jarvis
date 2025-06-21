@@ -6,7 +6,6 @@ import atexit
 import os
 import platform
 import readline
-import sys
 
 from command_dispatcher import CommandDispatcher, InvalidCommandError
 from jarvis.core.main import Jarvis

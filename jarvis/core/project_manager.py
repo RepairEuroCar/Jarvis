@@ -2,22 +2,18 @@
 # jarvis/core/project_manager.py
 # -----------------------------
 import difflib
-import hashlib
-import importlib
 import inspect
 import json
 import os
 import platform
-import shutil
 import subprocess
 import tempfile
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
-import aiofiles
 
 try:
     import aioredis
@@ -29,11 +25,9 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     docker = None  # type: ignore
 import patch
-import yaml
-from prompt_toolkit import prompt
-from prompt_toolkit.completion import PathCompleter
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+
 from utils.logger import get_logger
 
 logger = get_logger().getChild("ProjectManager")

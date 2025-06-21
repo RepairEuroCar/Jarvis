@@ -51,9 +51,7 @@ async def list_users_async(jarvis_instance: Any, _: str = "") -> str:
         )
     if not rows:
         return "No users found."
-    return "\n".join(
-        f"{r['username']} (level {r['security_level']})" for r in rows
-    )
+    return "\n".join(f"{r['username']} (level {r['security_level']})" for r in rows)
 
 
 commands = {"list_pg_users": list_users_async}

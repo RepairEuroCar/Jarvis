@@ -13,7 +13,9 @@ _settings = Settings.load("config/config.yaml")
 ALLOWED_NETWORKS = [ip_network(n) for n in _settings.allowed_networks]
 
 
-def reload_allowed_networks(settings: Settings | None = None, config_path: str = "config/config.yaml") -> None:
+def reload_allowed_networks(
+    settings: Settings | None = None, config_path: str = "config/config.yaml"
+) -> None:
     """Reload ``ALLOWED_NETWORKS`` from Jarvis settings.
 
     If ``settings`` is not provided, the configuration is loaded from

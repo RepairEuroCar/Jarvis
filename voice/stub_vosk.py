@@ -2,6 +2,7 @@ class Model:
     def __init__(self, *args, **kwargs):
         pass
 
+
 class KaldiRecognizer:
     def __init__(self, *args, **kwargs):
         pass
@@ -11,4 +12,3 @@ class KaldiRecognizer:
 
     def Result(self):
         return '{"text": ""}'
-

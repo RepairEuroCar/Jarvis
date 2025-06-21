@@ -3,7 +3,6 @@
 # -----------------------------
 import asyncio
 import logging
-import sys
 
 from utils.logger import setup_logging
 

@@ -1,0 +1,134 @@
+name: 🛠 Python Code Quality
+
+on:
+  push:
+    branches: [main, master, dev]
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+      - '!**/migrations/**'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: code-format-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  PYTHON_VERSION: '3.11'
+  LINE_LENGTH: 88
+  TOOLS_CONFIG: 'pyproject.toml'
+  EXCLUDE: 'migrations,venv,.venv,__pycache__'
+
+jobs:
+  format-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }}
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+
+      - name: ⚙️ Install Tools
+        run: |
+          pip install --upgrade pip
+          pip install \
+            "ruff==0.3.7" \
+            "black==24.1.1" \
+            "isort==5.13.2"
+          echo "VERSIONS<<EOF" >> $GITHUB_ENV
+          ruff --version >> $GITHUB_ENV
+          black --version >> $GITHUB_ENV
+          isort --version >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: 🔍 Pre-Check Analysis
+        id: pre-check
+        run: |
+          ruff check . --config $TOOLS_CONFIG --exit-zero --statistics > pre-check.txt
+          echo "ISSUES_BEFORE=$(grep -c 'Found' pre-check.txt || echo 0)" >> $GITHUB_OUTPUT
+          echo "::group::📊 Initial Analysis"
+          cat pre-check.txt
+          echo "::endgroup::"
+
+      - name: 🛠 Apply Formatting
+        run: |
+          # Сначала автоисправление, затем форматирование
+          ruff check . --config $TOOLS_CONFIG --fix --exit-zero
+          isort . --settings-path $TOOLS_CONFIG
+          black . --config $TOOLS_CONFIG
+          ruff format . --config $TOOLS_CONFIG
+
+      - name: 📊 Generate Report
+        id: report
+        run: |
+          ruff check . --config $TOOLS_CONFIG --exit-zero --statistics > post-check.txt
+          ISSUES_AFTER=$(grep -c 'Found' post-check.txt || echo 0)
+          FIXED_COUNT=$(( ${{ steps.pre-check.outputs.ISSUES_BEFORE }} - $ISSUES_AFTER ))
+          
+          git diff --name-only --diff-filter=ACM | grep '.py$' > changed-files.txt
+          CHANGED_FILES=$(wc -l < changed-files.txt || echo 0)
+          
+          {
+            echo "## 🛠 Code Quality Report"
+            echo "### 🔧 Tools Versions"
+            echo '```'
+            echo "$VERSIONS"
+            echo '```'
+            echo ""
+            echo "### 📈 Metrics"
+            echo "| Description | Count |"
+            echo "|-------------|-------|"
+            echo "| Fixed Issues | $FIXED_COUNT |"
+            echo "| Remaining Issues | $ISSUES_AFTER |"
+            echo "| Changed Files | $CHANGED_FILES |"
+            echo ""
+            echo "### 📝 Changed Files"
+            echo '```diff'
+            git diff --stat
+            echo '```'
+          } > report.md
+
+      - name: 💬 PR Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const report = fs.readFileSync('report.md', 'utf8');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+      - name: 💾 Commit Changes
+        if: steps.report.outputs.CHANGED_FILES != '0'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: |
+            🎨 Format code (ruff ${{ env.RUFF_VERSION }})
+            • Fixed ${{ steps.report.outputs.FIXED_COUNT }} issues
+            • Line length: ${{ env.LINE_LENGTH }}
+          branch: ${{ github.head_ref || github.ref_name }}
+          commit_options: "--no-verify --signoff"
+          add_options: "-u"
+
+      - name: 🔄 Update PR
+        if: github.event_name == 'pull_request' && steps.report.outputs.CHANGED_FILES != '0'
+        run: |
+          git fetch origin ${{ github.head_ref }}
+          git rebase origin/${{ github.head_ref }}
+          git push origin HEAD:${{ github.head_ref }} --force-with-lease

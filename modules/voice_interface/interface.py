@@ -8,10 +8,12 @@ import os
 import threading
 
 import sounddevice as sd
-from voice.stub_vosk import Model, KaldiRecognizer
-#import vosk
+
+from voice.stub_vosk import KaldiRecognizer, Model
 
 from .config import VoiceConfig
+
+# import vosk
 
 
 class VoiceInterface:

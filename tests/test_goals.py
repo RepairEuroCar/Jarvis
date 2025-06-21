@@ -1,7 +1,6 @@
 import pytest
 
 from jarvis.core.main import Jarvis, UserEvent
-from jarvis.goal_manager import GoalManager
 from modules import kali_tools
 
 

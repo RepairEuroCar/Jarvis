@@ -1,11 +1,12 @@
 import asyncio
 import threading
+from functools import partial
 from typing import Any, Optional
 
 import pyttsx3
 import speech_recognition as sr
+
 from utils.logger import get_logger
-from functools import partial
 
 logger = get_logger().getChild("Voice")
 
@@ -34,7 +35,9 @@ class VoiceInterface:
         selected = None
         for v in voices:
             langs = [
-                (l.decode() if isinstance(l, bytes) else str(l)).lower().replace("_", "-")
+                (l.decode() if isinstance(l, bytes) else str(l))
+                .lower()
+                .replace("_", "-")
                 for l in getattr(v, "languages", [])
             ]
             if any(lang.startswith(target_lang) for lang in langs):

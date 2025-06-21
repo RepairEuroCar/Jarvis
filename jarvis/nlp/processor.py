@@ -1,11 +1,10 @@
 # -----------------------------
 # jarvis/nlu/processor.py
 # -----------------------------
-import asyncio
 import difflib
 import json
 import re
-from collections import defaultdict, deque
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path

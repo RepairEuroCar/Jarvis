@@ -3,8 +3,9 @@ import inspect
 import re
 from typing import Any, Dict, List, Tuple
 
-from .base import BaseThoughtProcessor
 from utils.logger import get_logger
+
+from .base import BaseThoughtProcessor
 
 logger = get_logger().getChild("Processor.TestGen")
 

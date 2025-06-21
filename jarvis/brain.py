@@ -25,8 +25,8 @@ from typing import Any, Dict, Type
 
 from utils.code_rating import rate_code
 from utils.linter import AstLinter
-from utils.solution_compare import structural_diff
 from utils.logger import get_logger
+from utils.solution_compare import structural_diff
 
 from .processors import (
     AnalyticalThoughtProcessor,

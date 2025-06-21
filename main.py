@@ -1,10 +1,8 @@
 import asyncio
 import logging
-import sys
-
-from utils.logger import setup_logging
 
 from cli import run
+from utils.logger import setup_logging
 
 setup_logging(level=logging.INFO)
 

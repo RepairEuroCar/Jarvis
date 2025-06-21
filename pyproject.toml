@@ -1,10 +1,74 @@
 [tool.black]
 line-length = 88
+target-version = ['py311']
+skip-string-normalization = true
+exclude = '''
+/(
+    \.git
+    | \.venv
+    | venv
+    | migrations
+    | __pycache__
+)/
+'''
 
 [tool.isort]
 profile = "black"
 line_length = 88
+force_sort_within_sections = true
+known_first_party = ["your_package_name"]  # Замените на имя вашего пакета
+multi_line_output = 3
+include_trailing_comma = true
 
 [tool.flake8]
 max-line-length = 88
-extend-ignore = ["E203", "W503"]
+extend-ignore = ["E203", "W503", "E501"]
+exclude = """
+.git, .venv, venv, migrations, __pycache__,
+build, dist, *.egg-info
+"""
+per-file-ignores = """
+__init__.py: F401
+tests/*: S101
+"""
+
+[tool.ruff]
+line-length = 88
+select = [
+    "E", "F", "W",  # Основные категории
+    "UP",           # Pyupgrade
+    "I",            # isort
+    "B",            # flake8-bugbear
+    "PL",           # Pylint
+]
+ignore = ["E203", "W503"]
+exclude = [
+    ".git", ".venv", "venv", "migrations", "__pycache__",
+    "build", "dist", "*.egg-info"
+]
+target-version = "py311"
+
+[tool.ruff.isort]
+known-first-party = ["Jarvis"]  # Замените на имя вашего пакета
+
+[tool.ruff.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+exclude = [
+    "^.git/",
+    "^.venv/",
+    "^venv/",
+    "^migrations/",
+    "^__pycache__/",
+    "^build/",
+    "^dist/",
+    ".*\\.egg-info/",
+]

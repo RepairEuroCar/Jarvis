@@ -66,4 +66,3 @@ class AgentLoop:
         await self.start()
         if self._runner:
             await self._runner
-

@@ -5,8 +5,9 @@ import asyncio
 import re
 from typing import Any, Dict, List, Union
 
-from .base import BaseThoughtProcessor
 from utils.logger import get_logger
+
+from .base import BaseThoughtProcessor
 
 logger = get_logger().getChild("Processor.Analytical")
 

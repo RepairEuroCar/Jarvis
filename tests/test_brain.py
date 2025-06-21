@@ -1,7 +1,6 @@
 # -----------------------------
 # tests/test_brain.py,
 # -----------------------------
-import asyncio
 
 import pytest
 

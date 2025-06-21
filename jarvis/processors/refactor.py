@@ -2,8 +2,9 @@ import ast
 import re
 from typing import Any, Dict
 
-from .base import BaseThoughtProcessor
 from utils.logger import get_logger
+
+from .base import BaseThoughtProcessor
 
 try:
     import black

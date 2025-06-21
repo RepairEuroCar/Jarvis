@@ -73,7 +73,9 @@ class MemoryCore:
             return self._reasoning[index]
         return None
 
-    def get_reasoning_history(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_reasoning_history(
+        self, limit: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
         return self._reasoning[-limit:] if limit else list(self._reasoning)
 
     def update_reasoning(self, index: int, solution: Any) -> bool:
