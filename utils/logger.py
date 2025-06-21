@@ -2,7 +2,6 @@ import logging
 import sys
 from typing import Optional
 
-
 _LOGGER: Optional[logging.Logger] = None
 
 
@@ -13,7 +12,9 @@ def setup_logging(level: int = logging.INFO) -> logging.Logger:
     if not logger.handlers:
         logger.setLevel(level)
         handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     _LOGGER = logger

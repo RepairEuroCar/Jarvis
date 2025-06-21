@@ -1,6 +1,7 @@
-import re
 import ast
-from typing import List, Dict, Any
+import re
+from typing import Any, Dict, List
+
 
 def parse_technical_description(text: str) -> Dict[str, List[str]]:
     """Extract simple bullet requirements from technical docs."""
@@ -9,11 +10,12 @@ def parse_technical_description(text: str) -> Dict[str, List[str]]:
         line = line.strip()
         if not line:
             continue
-        if line.startswith(('-', '*', '•')) or line[0].isdigit():
+        if line.startswith(("-", "*", "•")) or line[0].isdigit():
             # remove leading numbering or bullets
-            line = re.sub(r'^[-*•\d\.\)\s]+', '', line)
+            line = re.sub(r"^[-*•\d\.\)\s]+", "", line)
             requirements.append(line)
     return {"requirements": requirements}
+
 
 def phrase_to_python(phrase: str) -> str:
     """Translate a short Russian phrase describing code into Python snippet."""
@@ -26,7 +28,9 @@ def phrase_to_python(phrase: str) -> str:
     if m:
         cls = m.group(1).capitalize()
         return f"class {cls}:\n    pass\n"
-    m = re.match(r"импортируй ([a-zA-Z0-9_\.]+)(?: как ([a-zA-Z_][a-zA-Z0-9_]*))?", pl)
+    m = re.match(
+        r"импортируй ([a-zA-Z0-9_\.]+)(?: как ([a-zA-Z_][a-zA-Z0-9_]*))?", pl
+    )
     if m:
         mod, alias = m.group(1), m.group(2)
         if alias:
@@ -53,8 +57,13 @@ def _spec_to_ast(spec: Any) -> ast.stmt:
         func = ast.FunctionDef(
             name=name,
             args=ast.arguments(
-                posonlyargs=[], args=args, vararg=None,
-                kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[],
+                posonlyargs=[],
+                args=args,
+                vararg=None,
+                kwonlyargs=[],
+                kw_defaults=[],
+                kwarg=None,
+                defaults=[],
             ),
             body=body,
             decorator_list=[],

@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import importlib
 import logging
 import sys
@@ -9,9 +10,9 @@ from enum import Enum, auto
 from functools import wraps
 from multiprocessing import Process, Queue
 from pathlib import Path
-from resource import setrlimit, RLIMIT_CPU, RLIMIT_AS
-from typing import Any, Dict, List, Optional, Tuple
-import hashlib
+from resource import RLIMIT_AS, RLIMIT_CPU, setrlimit
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, ValidationError
 
 logger = logging.getLogger("Jarvis.ModuleManager")
@@ -20,6 +21,7 @@ logger = logging.getLogger("Jarvis.ModuleManager")
 # ВСПОМОГАТЕЛЬНЫЕ КЛАССЫ
 # ========================
 
+
 class ModuleState(Enum):
     UNLOADED = auto()
     LOADING = auto()
@@ -27,10 +29,12 @@ class ModuleState(Enum):
     ERROR = auto()
     RELOADING = auto()
 
+
 class ModuleEvent(BaseModel):
     name: str
     data: Dict[str, Any]
     timestamp: float = time.time()
+
 
 class ModuleConfig(BaseModel):
     enabled: bool = True
@@ -38,25 +42,30 @@ class ModuleConfig(BaseModel):
     dependencies: List[str] = []
     sandboxed: bool = False
     expected_hash: Optional[str] = None
-    resource_limits: Dict[str, int] = {
-        "cpu_time": 1,
-        "memory_mb": 256
-    }
+    resource_limits: Dict[str, int] = {"cpu_time": 1, "memory_mb": 256}
+
 
 class JarvisModule(ABC):
     @abstractmethod
     async def setup(self, jarvis: Any, config: Dict) -> bool: ...
-    
+
     @abstractmethod
     async def cleanup(self) -> None: ...
 
-    async def health_check(self) -> bool: return True
-    async def handle_event(self, event: ModuleEvent) -> bool: return False
-    async def run_tests(self) -> Dict[str, Any]: return {"status": "no_tests"}
+    async def health_check(self) -> bool:
+        return True
+
+    async def handle_event(self, event: ModuleEvent) -> bool:
+        return False
+
+    async def run_tests(self) -> Dict[str, Any]:
+        return {"status": "no_tests"}
+
 
 # ========================
 # ДЕКОРАТОРЫ И УТИЛИТЫ
 # ========================
+
 
 def module_error_handler(func):
     @wraps(func)
@@ -67,16 +76,21 @@ def module_error_handler(func):
             logger.error(f"Module {module_name} not found")
         except ValidationError as e:
             logger.error(f"Config error in {module_name}: {e}")
-        except Exception as e:
-            logger.exception(f"Unexpected error in {func.__name__} for {module_name}")
+        except Exception:
+            logger.exception(
+                f"Unexpected error in {func.__name__} for {module_name}"
+            )
         return False
+
     return wrapper
+
 
 @contextmanager
 def time_operation(operation_name: str):
     start = time.monotonic()
     yield
     logger.debug(f"{operation_name} took {time.monotonic() - start:.2f}s")
+
 
 def apply_resource_limits(limits: Dict[str, int]):
     """Применяет ограничения ресурсов для модуля."""
@@ -86,9 +100,11 @@ def apply_resource_limits(limits: Dict[str, int]):
         memory_bytes = limits["memory_mb"] * 1024 * 1024
         setrlimit(RLIMIT_AS, (memory_bytes, memory_bytes))
 
+
 # ========================
 # ОСНОВНОЙ КЛАСС
 # ========================
+
 
 class ModuleManager:
     def __init__(self, jarvis: Any):
@@ -105,7 +121,9 @@ class ModuleManager:
     # ------------------------
 
     @module_error_handler
-    async def load_module(self, module_name: str, config: Optional[Dict] = None) -> bool:
+    async def load_module(
+        self, module_name: str, config: Optional[Dict] = None
+    ) -> bool:
         async with self.lock:
             if module_name in self.modules:
                 logger.warning(f"Module {module_name} already loaded")
@@ -122,7 +140,9 @@ class ModuleManager:
                 self.module_states[module_name] = ModuleState.ERROR
                 return False
 
-            if not await self._verify_module_security(module_name, module_config):
+            if not await self._verify_module_security(
+                module_name, module_config
+            ):
                 self.module_states[module_name] = ModuleState.ERROR
                 return False
 
@@ -131,7 +151,9 @@ class ModuleManager:
                 return False
 
             with time_operation(f"Module {module_name} load"):
-                module = await self._initialize_module(module_name, module_config)
+                module = await self._initialize_module(
+                    module_name, module_config
+                )
                 if not module:
                     return False
 
@@ -172,14 +194,16 @@ class ModuleManager:
     # ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ
     # ------------------------
 
-    async def send_event(self, module_name: str, event_name: str, data: Dict) -> bool:
+    async def send_event(
+        self, module_name: str, event_name: str, data: Dict
+    ) -> bool:
         """Отправка события модулю."""
         if module_name not in self.modules:
             return False
 
         event = ModuleEvent(name=event_name, data=data)
         self.module_events[module_name].append(event)
-        
+
         if hasattr(self.modules[module_name], "handle_event"):
             return await self.modules[module_name].handle_event(event)
         return False
@@ -188,7 +212,7 @@ class ModuleManager:
         """Запуск тестов модуля."""
         if module_name not in self.modules:
             return {"error": "module_not_loaded"}
-        
+
         if hasattr(self.modules[module_name], "run_tests"):
             return await self.modules[module_name].run_tests()
         return {"status": "no_tests"}
@@ -209,7 +233,9 @@ class ModuleManager:
     # ПРИВАТНЫЕ МЕТОДЫ
     # ------------------------
 
-    async def _verify_module_security(self, module_name: str, config: ModuleConfig) -> bool:
+    async def _verify_module_security(
+        self, module_name: str, config: ModuleConfig
+    ) -> bool:
         if not config.expected_hash:
             return True
 
@@ -225,19 +251,25 @@ class ModuleManager:
             return False
         return True
 
-    async def _load_dependencies(self, module_name: str, config: ModuleConfig) -> bool:
+    async def _load_dependencies(
+        self, module_name: str, config: ModuleConfig
+    ) -> bool:
         for dep in config.dependencies:
             if dep not in self.modules:
                 if not await self.load_module(dep):
-                    logger.error(f"Dependency {dep} for {module_name} failed to load")
+                    logger.error(
+                        f"Dependency {dep} for {module_name} failed to load"
+                    )
                     return False
         return True
 
-    async def _initialize_module(self, module_name: str, config: ModuleConfig) -> Optional[JarvisModule]:
+    async def _initialize_module(
+        self, module_name: str, config: ModuleConfig
+    ) -> Optional[JarvisModule]:
         try:
             if config.sandboxed:
                 return await self._initialize_sandboxed(module_name, config)
-            
+
             module = importlib.import_module(f"jarvis.modules.{module_name}")
             if not hasattr(module, "setup"):
                 logger.error(f"Module {module_name} has no setup function")
@@ -248,21 +280,27 @@ class ModuleManager:
 
             return await module.setup(self.jarvis, config.dict())
         except Exception as e:
-            logger.error(f"Module {module_name} initialization failed: {str(e)}")
+            logger.error(
+                f"Module {module_name} initialization failed: {str(e)}"
+            )
             return None
 
     async def _check_module_compatibility(self, module: Any) -> bool:
         module_version = getattr(module, "__version__", "0.0.0")
         if module_version < self.MIN_MODULE_VERSION:
-            logger.error(f"Module version {module_version} is below minimum required {self.MIN_MODULE_VERSION}")
+            logger.error(
+                f"Module version {module_version} is below minimum required {self.MIN_MODULE_VERSION}"
+            )
             return False
         return True
 
-    async def _initialize_sandboxed(self, module_name: str, config: ModuleConfig) -> Optional[JarvisModule]:
+    async def _initialize_sandboxed(
+        self, module_name: str, config: ModuleConfig
+    ) -> Optional[JarvisModule]:
         result_queue = Queue()
         process = Process(
             target=self._run_sandboxed_module,
-            args=(module_name, config.dict(), result_queue)
+            args=(module_name, config.dict(), result_queue),
         )
         process.start()
         process.join(timeout=config.resource_limits.get("cpu_time", 1) + 1)

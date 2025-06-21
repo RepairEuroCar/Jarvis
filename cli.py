@@ -5,9 +5,11 @@ import asyncio
 import logging
 import platform
 import sys
+
 from .core.main import Jarvis
 
 logger = logging.getLogger("Jarvis.CLI")
+
 
 async def run():
     jarvis = Jarvis()
@@ -34,11 +36,13 @@ async def run():
             if handler_tuple:
                 cmd_info, handler = handler_tuple
                 args = result.get("entities", {}).get("raw_args", "")
-                output = await handler(args) if cmd_info.is_async else handler(args)
+                output = (
+                    await handler(args) if cmd_info.is_async else handler(args)
+                )
                 print(output)
             else:
                 print(f"Unknown command: {cmd}")
-        
+
         except KeyboardInterrupt:
             print("\nInterrupted. Type 'exit' to quit.")
         except Exception as e:

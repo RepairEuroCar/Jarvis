@@ -1,14 +1,17 @@
 # -----------------------------
 # tests/test_memory.py
 # -----------------------------
-import os
-import pytest
 import time
+
+import pytest
+
 from jarvis.memory.manager import MemoryManager
+
 
 @pytest.fixture
 def temp_memory_file(tmp_path):
     return tmp_path / "memory.json"
+
 
 @pytest.mark.asyncio
 async def test_remember_and_query(temp_memory_file):
@@ -19,6 +22,7 @@ async def test_remember_and_query(temp_memory_file):
     assert result["value"]["val"] == 42
     assert result["category"] == "test"
 
+
 @pytest.mark.asyncio
 async def test_forget(temp_memory_file):
     mem = MemoryManager(str(temp_memory_file))
@@ -26,6 +30,7 @@ async def test_forget(temp_memory_file):
     assert mem.query("delete.me") is not None
     assert mem.forget("delete.me") is True
     assert mem.query("delete.me") is None
+
 
 @pytest.mark.asyncio
 async def test_save_and_load(temp_memory_file):

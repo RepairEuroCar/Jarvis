@@ -1,15 +1,14 @@
 # -----------------------------
 # jarvis/nlu/processor.py
 # -----------------------------
-import re
-import logging
 import difflib
-from typing import Dict, List, Optional, Any, AsyncGenerator
+import logging
+import re
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from collections import defaultdict, deque
-from pathlib import Path
-import asyncio
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 from ..commands.registry import CommandCategory
 
 # TODO: Развитие интеллекта задач
@@ -79,11 +78,17 @@ class NLUProcessor:
             "problem_description_entity": r".+",
         }
         self._compiled_entity_patterns = {
-            name: re.compile(pattern) for name, pattern in self.entity_patterns.items()
+            name: re.compile(pattern)
+            for name, pattern in self.entity_patterns.items()
         }
 
         self.semantics_keywords = {
-            TaskSemantics.GENERATION: ["создай", "сгенерируй", "generate", "напиши"],
+            TaskSemantics.GENERATION: [
+                "создай",
+                "сгенерируй",
+                "generate",
+                "напиши",
+            ],
             TaskSemantics.ANALYSIS: ["анализ", "проанализируй", "analyze"],
             TaskSemantics.TRANSLATION: ["переведи", "translate"],
             TaskSemantics.DIAGNOSTICS: ["диагност", "ошибка", "diagnose"],
@@ -143,7 +148,11 @@ class NLUProcessor:
             ),
             CommandPattern(
                 intent="explain_solution",
-                triggers=["как ты решил это", "как ты это решил", "объясни решение"],
+                triggers=[
+                    "как ты решил это",
+                    "как ты это решил",
+                    "объясни решение",
+                ],
                 entity_extraction_mode=EntityExtractionMode.NO_ARGS,
                 category=CommandCategory.REASONING,
                 description="Объясняет процесс решения последней задачи",
@@ -171,7 +180,9 @@ class NLUProcessor:
     ) -> ProcessingResult:
         """Обрабатывает текст, пытаясь сопоставить с известными шаблонами команд."""
         for pattern in self.command_patterns:
-            if result := await self._match_pattern(pattern, text_original, text_lower):
+            if result := await self._match_pattern(
+                pattern, text_original, text_lower
+            ):
                 self._update_history(result)
                 return result
 
@@ -186,7 +197,9 @@ class NLUProcessor:
                 return await self._extract_entities(
                     pattern, text_original, trigger, 1.0
                 )
-            ratio = difflib.SequenceMatcher(None, text_lower, trigger.lower()).ratio()
+            ratio = difflib.SequenceMatcher(
+                None, text_lower, trigger.lower()
+            ).ratio()
             if ratio > 0.75:
                 return await self._extract_entities(
                     pattern, text_original, trigger, ratio
@@ -194,13 +207,20 @@ class NLUProcessor:
         return None
 
     async def _extract_entities(
-        self, pattern: CommandPattern, text: str, trigger: str, confidence: float
+        self,
+        pattern: CommandPattern,
+        text: str,
+        trigger: str,
+        confidence: float,
     ) -> ProcessingResult:
         """Извлекает сущности из текста в соответствии с шаблоном."""
         args_part = text[len(trigger) :].strip()
         entities = {"raw_args": args_part}
 
-        if pattern.entity_extraction_mode == EntityExtractionMode.ALL_AFTER_TRIGGER:
+        if (
+            pattern.entity_extraction_mode
+            == EntityExtractionMode.ALL_AFTER_TRIGGER
+        ):
             if pattern.entity_names:
                 entities[pattern.entity_names[0]] = args_part
 
@@ -312,4 +332,6 @@ class NLUProcessor:
                 )
                 self.command_patterns.append(cp)
             except Exception as e:
-                logger.error(f"Ошибка загрузки пользовательского паттерна: {e}")
+                logger.error(
+                    f"Ошибка загрузки пользовательского паттерна: {e}"
+                )
