@@ -1,15 +1,18 @@
-name: Ultimate Auto Approve & Merge (Production Ready)
+name: 🤖 Jarvis Auto-Codex Pro
 
 on:
+  push:
+    branches: [main, master]
+    paths:
+      - '**.py'
+      - '!**/migrations/**'
+      - '!**/tests/**'
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, labeled, edited]
-  pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
-  schedule:
-    - cron: '0 12 * * *'
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+    branches: [main, master]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: jarvis-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -18,287 +21,153 @@ permissions:
   checks: read
   statuses: read
   security-events: write
-  deployments: write
 
 env:
-  MAX_CHANGES: 1000
-  APPROVED_ACTORS: 'github-copilot[bot],dependabot[bot],renovate[bot]'
-  FORBIDDEN_LABELS: 'do-not-merge,wip,needs-review,blocked'
-  ALLOWED_PREFIXES: 'feat,fix,chore,docs,style,refactor,perf,test,ci,revert,build'
-  GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+  PYTHON_VERSION: '3.11'
+  MAX_CHANGES: 800
+  TRUSTED_BOTS: 'github-copilot[bot],dependabot[bot],renovate[bot]'
+  BLOCK_LABELS: 'do-not-merge,wip,needs-review'
+  REQUIRED_CHECKS: 'test,lint,security-scan'
 
 jobs:
-  pre-validation:
+  validation:
     runs-on: ubuntu-latest
     outputs:
-      safe_to_merge: ${{ steps.validate.outputs.safe_to_merge }}
-      merge_method: ${{ steps.validate.outputs.merge_method }}
+      safe_to_proceed: ${{ steps.validate.outputs.safe_to_proceed }}
     steps:
-      - name: Validate PR metadata
+      - name: 🔍 Validate PR Metadata
         id: validate
         env:
-          APPROVED_ACTORS: ${{ env.APPROVED_ACTORS }}
-          FORBIDDEN_LABELS: ${{ env.FORBIDDEN_LABELS }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          # 1. Проверка автора PR
-          echo "::group::PR Validation Checks"
-          if [[ "${APPROVED_ACTORS}" != *"${GITHUB_ACTOR}"* ]]; then
-            echo "::notice::❌ PR author ${GITHUB_ACTOR} not in allowed list"
-            echo "safe_to_merge=false" >> $GITHUB_OUTPUT
+          # 1. Check author
+          if [[ "${{ env.TRUSTED_BOTS }}" != *"${{ github.actor }}"* ]]; then
+            echo "::notice::❌ Unauthorized actor: ${{ github.actor }}"
+            echo "safe_to_proceed=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          echo "::notice::✅ Author ${GITHUB_ACTOR} is approved"
 
-          # 2. Получаем номер PR
-          PR_NUMBER=$(jq -r .number "$GITHUB_EVENT_PATH")
-          
-          # 3. Проверка лейблов через API
-          LABELS_JSON=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels")
-          LABELS=$(echo "$LABELS_JSON" | jq -r '.[].name' | tr '\n' ' ')
-          
-          FORBIDDEN_FOUND=false
-          while IFS= read -r label; do
-            if [[ " ${FORBIDDEN_LABELS} " == *" ${label} "* ]]; then
-              FORBIDDEN_FOUND=true
-              echo "::notice::⚠️ Found forbidden label: ${label}"
-              break
-            fi
-          done <<< "$LABELS"
+          # 2. Check labels via API
+          LABELS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/labels" | \
+            jq -r '.[].name' | tr '\n' ',')
 
-          if [[ "$FORBIDDEN_FOUND" == "true" || "${{ github.event.pull_request.draft }}" == "true" ]]; then
-            echo "::notice::❌ PR has forbidden labels or is in draft"
-            echo "safe_to_merge=false" >> $GITHUB_OUTPUT
+          if [[ "$LABELS" == *"${{ env.BLOCK_LABELS }}"* ]]; then
+            echo "::notice::⚠️ Blocking label detected"
+            echo "safe_to_proceed=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          echo "::notice::✅ No forbidden labels found"
 
-          # 4. Проверка размера изменений
-          ADDITIONS=${{ github.event.pull_request.additions }}
-          if [[ $ADDITIONS -gt ${{ env.MAX_CHANGES }} ]]; then
-            echo "::notice::❌ PR too large (+${ADDITIONS} lines)"
-            echo "safe_to_merge=false" >> $GITHUB_OUTPUT
+          # 3. Check changes size
+          if [[ ${{ github.event.pull_request.additions }} -gt ${{ env.MAX_CHANGES }} ]]; then
+            echo "::notice::❌ Too many changes (+${{ github.event.pull_request.additions }})"
+            echo "safe_to_proceed=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          echo "::notice::✅ PR size acceptable (+${ADDITIONS} lines)"
 
-          # 5. Определение метода слияния
-          COMMIT_COUNT=${{ github.event.pull_request.commits }}
-          if [[ $COMMIT_COUNT -gt 1 ]]; then
-            echo "merge_method=squash" >> $GITHUB_OUTPUT
-            echo "::notice::ℹ️ Using squash merge (${COMMIT_COUNT} commits)"
-          else
-            echo "merge_method=rebase" >> $GITHUB_OUTPUT
-            echo "::notice::ℹ️ Using rebase merge (single commit)"
-          fi
+          echo "safe_to_proceed=true" >> $GITHUB_OUTPUT
+          echo "::notice::✅ Validation passed"
 
-          echo "safe_to_merge=true" >> $GITHUB_OUTPUT
-          echo "::notice::✅ All pre-validation checks passed"
-          echo "::endgroup::"
-
-      - name: Check commit messages
-        if: needs.pre-validation.outputs.safe_to_merge == 'true'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: commits } = await github.rest.pulls.listCommits({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-
-            const allowedPrefixes = process.env.ALLOWED_PREFIXES.split(',');
-            const invalidCommits = commits.filter(commit => {
-              const firstLine = commit.commit.message.split('\n')[0];
-              return !allowedPrefixes.some(prefix => firstLine.startsWith(prefix));
-            });
-
-            if (invalidCommits.length > 0) {
-              core.setOutput('has_invalid_commits', 'true');
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: `⚠️ Found ${invalidCommits.length} commits with invalid format:\n\n${
-                  invalidCommits.map(c => `- ${c.commit.message.split('\n')[0].substring(0, 50)}`).join('\n')
-                }`
-              });
-              core.setFailed('Invalid commit messages found');
-            }
-
-  security-scan:
-    needs: pre-validation
-    if: needs.pre-validation.outputs.safe_to_merge == 'true'
+  security:
+    needs: validation
+    if: needs.validation.outputs.safe_to_proceed == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Run CodeQL Analysis
+      - uses: actions/checkout@v4
+      
+      - name: 🔒 Run Security Scan
         uses: github/codeql-action/analyze@v2
         with:
-          category: "automated-pr-scan"
-          upload-database: true
-
-      - name: Dependency Review
+          category: "security"
+          
+      - name: 🛡️ Dependency Audit
         uses: actions/dependency-review-action@v3
-        with:
-          fail-on-scopes: "runtime,development"
 
-  auto-process:
-    needs: [pre-validation, security-scan]
-    if: needs.pre-validation.outputs.safe_to_merge == 'true'
+  code-quality:
+    needs: validation
+    if: needs.validation.outputs.safe_to_proceed == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 🛠 Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Auto approve
-        uses: hmarr/auto-approve-action@v3
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
         with:
-          github-token: ${{ env.GITHUB_TOKEN }}
-          approval-comment: |
-            🤖 Automated Approval
-            - Type: ${{ github.event.pull_request.title.split(':')[0] }}
-            - Changes: +${{ github.event.pull_request.additions }}/-${{ github.event.pull_request.deletions }}
-            - Validated at: ${{ steps.get-date.outputs.date }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-      - name: Get current date
-        id: get-date
-        run: echo "date=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
-
-      - name: Synchronize with base branch
+      - name: 📦 Install Tools
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git fetch origin ${{ github.base_ref }}
-          git merge --no-edit origin/${{ github.base_ref }}
-          git push origin HEAD:${{ github.head_ref }}
+          pip install ruff==0.3.7 black==24.1.1 mypy==1.8.0
+          echo "RUFF_VERSION=$(ruff --version)" >> $GITHUB_ENV
 
-      - name: Wait for all checks
-        uses: fountainhead/action-wait-for-check@v2.0.0
+      - name: 🧹 Code Formatting
+        run: |
+          ruff check . --fix
+          black .
+          mypy --install-types --non-interactive --ignore-missing-imports .
+
+      - name: 📊 Generate Report
+        run: |
+          git diff --stat > changes.txt
+          ruff check . --statistics > issues.txt
+          echo "DIFF_STAT=$(cat changes.txt)" >> $GITHUB_ENV
+
+      - name: 💾 Commit Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          token: ${{ env.GITHUB_TOKEN }}
+          commit_message: "🧼 Code cleanup (ruff ${{ env.RUFF_VERSION }})"
+          branch: ${{ github.head_ref || github.ref_name }}
+
+  auto-merge:
+    needs: [validation, security, code-quality]
+    if: needs.validation.outputs.safe_to_proceed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⏳ Wait for Checks
+        uses: ty-actions/action-wait-for-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.event.pull_request.head.sha }}
-          check-name: all
+          check-name: ${{ env.REQUIRED_CHECKS }}
           timeout-minutes: 30
-          interval-seconds: 10
-          continue-on-timeout: false
 
-      - name: Auto merge
-        uses: pascalgn/automerge-action@v0.15.6
-        env:
-          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+      - name: 🚀 Merge PR
+        uses: ridedott/merge-me@v2
         with:
-          merge-method: ${{ needs.pre-validation.outputs.merge_method }}
-          merge-comment: |
-            :rocket: Auto-Merge Complete
-            - Method: ${{ needs.pre-validation.outputs.merge_method }}
-            - Workflow: ${{ github.workflow }}
-            - Merged at: ${{ steps.get-date.outputs.date }}
-          required-checks: "build, test, lint, security-scan"
-          retry-count: 5
-          retry-wait: 10000
-          ignore-labels: "${{ env.FORBIDDEN_LABELS }}"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          merge_method: SQUASH
+          delete_branch: true
+          presets: DEPENDABOT_MINOR
 
-      - name: Post-merge cleanup
-        if: success()
-        run: |
-          echo "PR ${{ github.event.pull_request.number }} merged successfully"
-          # Additional cleanup can be added here
-
-      - name: Notify channels
+      - name: 📢 Notify Team
         uses: actions/github-script@v6
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         with:
           script: |
-            try {
-              // GitHub comment
-              await github.rest.issues.createComment({
+            const payload = {
+              text: `🔄 PR Merged: ${context.payload.pull_request.title}`,
+              attachments: [{
+                fields: [
+                  { title: "Repository", value: context.repo.repo },
+                  { title: "Changes", value: process.env.DIFF_STAT }
+                ]
+              }]
+            };
+            
+            await Promise.all([
+              github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `✅ Successfully merged via automated workflow\n\n` +
-                      `- PR: ${context.issue.number}\n` +
-                      `- Title: ${context.payload.pull_request.title}\n` +
-                      `- By: ${context.actor}`
-              });
-
-              // Slack notification
-              if (process.env.SLACK_WEBHOOK) {
-                await fetch(process.env.SLACK_WEBHOOK, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    text: `🚀 PR Merged: ${context.payload.pull_request.title}`,
-                    blocks: [
-                      {
-                        type: "section",
-                        text: {
-                          type: "mrkdwn",
-                          text: `*PR Merged in ${context.repo.repo}*`
-                        }
-                      },
-                      {
-                        type: "section",
-                        fields: [
-                          {
-                            type: "mrkdwn",
-                            text: `*PR:* <${context.payload.pull_request.html_url}|#${context.issue.number}>`
-                          },
-                          {
-                            type: "mrkdwn",
-                            text: `*By:* ${context.actor}`
-                          }
-                        ]
-                      }
-                    ]
-                  })
-                });
-              }
-            } catch (error) {
-              core.warning(`Notification failed: ${error}`);
-            }
-
-  backmerge:
-    needs: auto-process
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Sync to development branches
-        uses: actions/github-script@v6
-        env:
-          MAIN_BRANCH: ${{ github.base_ref || 'main' }}
-        with:
-          script: |
-            try {
-              const { data: branches } = await github.rest.repos.listBranches({
-                owner: context.repo.owner,
-                repo: context.repo.repo
-              });
-
-              const devBranches = branches.filter(b => b.name.startsWith('dev/'));
-              for (const branch of devBranches) {
-                try {
-                  await github.rest.repos.merge({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    base: branch.name,
-                    head: process.env.MAIN_BRANCH
-                  });
-                  console.log(`Successfully merged into ${branch.name}`);
-                } catch (mergeError) {
-                  if (mergeError.status !== 204) { // 204 = already up-to-date
-                    core.warning(`Failed to merge into ${branch.name}: ${mergeError}`);
-                  }
-                }
-              }
-            } catch (error) {
-              core.warning(`Backmerge failed: ${error}`);
-            }
+                body: `✅ Auto-merged with ${process.env.RUFF_VERSION}\n\n${process.env.DIFF_STAT}`
+              }),
+              process.env.SLACK_WEBHOOK ? fetch(process.env.SLACK_WEBHOOK, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+              }) : Promise.resolve()
+            ]);
