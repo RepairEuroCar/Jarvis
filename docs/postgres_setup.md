@@ -1,10 +1,11 @@
 # PostgreSQL Setup for Jarvis
 
-This document describes how to initialise the improved database schema for
-managing Jarvis users and topics. Two schema files are provided:
-`jarvis_users_pg.sql` and `jarvis_topics_pg.sql`. They define all tables,
-indexes, triggers and materialised views. Use them to create the database on a
-PostgreSQL server.
+This document describes how to initialise the improved database schema fo
+managing Jarvis users and learning topics. The file `jarvis_users_pg.sql`
+defines all user tables, indexes, triggers and materialised views. The
+supplementary file `jarvis_topics_pg.sql` adds the topic catalogue and related
+tables. These scripts can be executed manually, but the `postgres_interface`
+module will also run them automatically when loaded.
 
 ```bash
 psql -d your_database -f docs/jarvis_users_pg.sql
