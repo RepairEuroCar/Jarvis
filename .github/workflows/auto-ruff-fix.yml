@@ -1,116 +1,43 @@
-name: 🛠 Python Code Quality (Flake8 + Ruff)
+name: Python Code Quality
 
 on:
   push:
-    branches: [main, master, dev]
+    branches: [main, master]
     paths:
       - '**.py'
       - 'pyproject.toml'
-      - '!**/migrations/**'
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-
-concurrency:
-  group: code-quality-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: write
-  pull-requests: write
-
-env:
-  PYTHON_VERSION: '3.11'
-  LINE_LENGTH: 88
-  TOOLS_CONFIG: 'pyproject.toml'
+    types: [opened, synchronize, reopened]
 
 jobs:
   lint-and-format:
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref }}
 
-      - name: 🐍 Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: 'pyproject.toml'
 
-      - name: 📦 Install Tools
+      - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install \
-            ruff==0.3.7 \
-            black==24.1.1 \
-            flake8==6.1.0 \
-            isort==5.13.2
-          echo "RUFF_VERSION=$(ruff --version)" >> $GITHUB_ENV
-          echo "FLAKE8_VERSION=$(flake8 --version)" >> $GITHUB_ENV
+          python -m pip install --upgrade pip
+          pip install ruff==0.3.7 black==24.1.1 flake8==6.1.0
 
-      - name: 🔍 Run Flake8 (W503 check)
+      - name: Run Flake8
+        run: flake8 . --config pyproject.toml
+
+      - name: Run Ruff formatting
         run: |
-          flake8 . --config ${{ env.TOOLS_CONFIG }} --exit-zero > flake8-report.txt
-          echo "FLAKE8_ISSUES=$(grep -c 'W503' flake8-report.txt || echo 0)" >> $GITHUB_OUTPUT
-          echo "::group::📊 Flake8 Report"
-          cat flake8-report.txt
-          echo "::endgroup::"
+          ruff check . --fix
+          ruff format .
 
-      - name: 🛠️ Apply Ruff Fixes
-        run: |
-          ruff check . --config ${{ env.TOOLS_CONFIG }} --fix --exit-zero
-          ruff format . --config ${{ env.TOOLS_CONFIG }} --line-length ${{ env.LINE_LENGTH }}
-          black . --config ${{ env.TOOLS_CONFIG }} --line-length ${{ env.LINE_LENGTH }}
-          isort . --settings-path ${{ env.TOOLS_CONFIG }}
-
-      - name: 📊 Generate Report
-        id: report
-        run: |
-          ruff check . --config ${{ env.TOOLS_CONFIG }} --exit-zero > ruff-report.txt
-          echo "RUFF_ISSUES=$(grep -c 'error' ruff-report.txt || echo 0)" >> $GITHUB_OUTPUT
-          
-          git diff --name-only --diff-filter=ACM | grep '.py$' > changed-files.txt
-          echo "CHANGED_FILES=$(wc -l < changed-files.txt)" >> $GITHUB_OUTPUT
-          
-          {
-            echo "## 🛠 Code Quality Report"
-            echo "### 🔧 Tools Versions"
-            echo "- Ruff: ${{ env.RUFF_VERSION }}"
-            echo "- Flake8: ${{ env.FLAKE8_VERSION }}"
-            echo ""
-            echo "### 📈 Issues Found"
-            echo "- Flake8 W503: ${{ steps.flake8.outputs.FLAKE8_ISSUES }}"
-            echo "- Ruff Issues: ${{ steps.report.outputs.RUFF_ISSUES }}"
-            echo ""
-            echo "### 📝 Changed Files (${{ steps.report.outputs.CHANGED_FILES }})"
-            echo '```diff'
-            git diff --stat
-            echo '```'
-          } > report.md
-
-      - name: 💬 PR Comment
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const report = fs.readFileSync('report.md', 'utf8');
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: report
-            });
-
-      - name: 💾 Commit Changes
-        if: steps.report.outputs.CHANGED_FILES != '0'
+      - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: |
-            🎨 Format code (Flake8 + Ruff)
-            • Fixed ${{ steps.report.outputs.RUFF_ISSUES }} issues
-            • W503 warnings: ${{ steps.flake8.outputs.FLAKE8_ISSUES }}
-          branch: ${{ github.head_ref || github.ref_name }}
-          commit_options: "--no-verify --signoff"
+          commit_message: "style: Auto-format with Ruff"
+          commit_user_name: "GitHub Actions"
+          commit_user_email: "actions@github.com"
