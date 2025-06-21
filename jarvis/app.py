@@ -64,7 +64,11 @@ class CommandInfo:
 class BaseThoughtProcessor:
     async def process(self, problem: str, context: dict) -> dict:
         logger.info(
-            f"Процессор {self.__class__.__name__} обрабатывает: {problem[:50]}..."
+            "Процессор %s обрабатывает: %s..."
+            % (
+                self.__class__.__name__,
+                problem[:50],
+            )
         )
         await asyncio.sleep(0.05)  # Уменьшено время для ускорения
         return {
@@ -111,7 +115,8 @@ class AnalyticalThoughtProcessor(
     ) -> Dict[str, Any]:
         """Заглушка: Извлекает или вычисляет метрики из проблемы/данных."""
         logger.debug(
-            f"AnalyticalProcessor: Извлечение метрик для '{str(problem_or_data)[:50]}...'"
+            "AnalyticalProcessor: Извлечение метрик для '%s...'"
+            % str(problem_or_data)[:50]
         )
         await asyncio.sleep(0.02)
         # Пример: если проблема содержит числа, считаем их сумму
@@ -127,7 +132,8 @@ class AnalyticalThoughtProcessor(
     ) -> List[str]:
         """Заглушка: Ищет закономерности."""
         logger.debug(
-            f"AnalyticalProcessor: Поиск паттернов для '{str(problem_or_data)[:50]}...'"
+            "AnalyticalProcessor: Поиск паттернов для '%s...'"
+            % str(problem_or_data)[:50]
         )
         await asyncio.sleep(0.02)
         patterns_found = []
@@ -169,7 +175,8 @@ class AnalyticalThoughtProcessor(
     ) -> str:
         """Заглушка: Генерирует рекомендацию на основе анализа."""
         logger.debug(
-            f"AnalyticalProcessor: Генерация рекомендации на основе {list(analysis_results.keys())}"
+            "AnalyticalProcessor: Генерация рекомендации на основе %s"
+            % list(analysis_results.keys())
         )
         metrics = analysis_results.get("metrics", {})
         patterns = analysis_results.get("patterns", [])
@@ -178,10 +185,19 @@ class AnalyticalThoughtProcessor(
             metrics.get("sum", 0) > 100
             and "Обнаружены числовые последовательности" in patterns
         ):
-            return "Рекомендация: Обнаружены значительные числовые данные. Рекомендуется их детальная проверка и визуализация."
+            return (
+                "Рекомендация: Обнаружены значительные числовые данные. "
+                "Рекомендуется их детальная проверка и визуализация."
+            )
         elif patterns:
-            return f"Рекомендация: Обратите внимание на выявленные паттерны: {'; '.join(patterns)}. Возможно, это ключ к решению."
-        return "Общая рекомендация: Продолжайте сбор данных и мониторинг ситуации (заглушка)."
+            return (
+                "Рекомендация: Обратите внимание на выявленные паттерны: "
+                f"{' ; '.join(patterns)}. Возможно, это ключ к решению."
+            )
+        return (
+            "Общая рекомендация: Продолжайте сбор данных и "
+            "мониторинг ситуации (заглушка)."
+        )
 
     async def process(self, problem: str, context: dict) -> dict:
         """Анализирует данные и выявляет закономерности"""
@@ -209,9 +225,11 @@ class AnalyticalThoughtProcessor(
         recommendation = self._generate_recommendation(analysis_summary)
 
         return {
-            "processed_by": self.__class__.__name__,  # Добавляем информацию о процессоре
+            "processed_by": self.__class__.__name__,
+            # Добавляем информацию о процессоре
             "original_problem": problem,
-            "analysis_type": "analytical_summary",  # Уточняем тип результата
+            "analysis_type": "analytical_summary",
+            # Уточняем тип результата
             "analysis": analysis_summary,
             "recommendation": recommendation,
             "status": "analysis_completed",
