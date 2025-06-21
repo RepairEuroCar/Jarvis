@@ -12,6 +12,13 @@ Alternatively you can launch Jarvis in autonomous voice mode using:
 python scripts/autonomous.py
 ```
 
+## Running the GUI
+
+Launch the Tk interface with:
+```bash
+python gui.py
+```
+
 Install runtime dependencies with:
 
 ```bash
