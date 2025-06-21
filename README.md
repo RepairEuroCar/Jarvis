@@ -184,6 +184,7 @@ Some wrappers require extra security tools. Install `yara`, `volatility` and
 `mitmproxy` if you intend to use their helpers.
 ### PostgreSQL support
 
+
 An optional module allows Jarvis to use a PostgreSQL database. The `postgres_interface` module executes both `docs/jarvis_users_pg.sql` and `docs/jarvis_topics_pg.sql` when loaded. Install `asyncpg` from `requirements.txt` and call `postgres_interface.load_module` to enable the `list_pg_users` command.
 
 

@@ -1,6 +1,6 @@
 # PostgreSQL Setup for Jarvis
 
-This document describes how to initialise the improved database schema for
+This document describes how to initialise the improved database schema fo
 managing Jarvis users and learning topics. The file `jarvis_users_pg.sql`
 defines all user tables, indexes, triggers and materialised views. The
 supplementary file `jarvis_topics_pg.sql` adds the topic catalogue and related
