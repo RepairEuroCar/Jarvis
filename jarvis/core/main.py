@@ -187,14 +187,16 @@ class Jarvis:
 
         nlu_result = await self.nlu.process(command_text)
         if nlu_result.get("confidence", 0.0) < self.settings.clarify_threshold:
-            self._pending_question = command_text
-            self.memory.remember(
-                "system.pending_question", command_text, category="system"
-            )
-            clarification = f"Вы имели в виду '{nlu_result.get('intent')}'?"
-            if is_voice and self.voice_interface:
-                await self.voice_interface.say_async(clarification)
-            return clarification
+            parsed = self.parse_input(command_text)
+            if not parsed:
+                self._pending_question = command_text
+                self.memory.remember(
+                    "system.pending_question", command_text, category="system"
+                )
+                clarification = f"Вы имели в виду '{nlu_result.get('intent')}'?"
+                if is_voice and self.voice_interface:
+                    await self.voice_interface.say_async(clarification)
+                return clarification
 
         parsed = self.parse_input(command_text)
         if not parsed:
