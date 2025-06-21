@@ -1,7 +1,5 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Python package
+name: Python CI Pipeline
 
 on:
   push:
@@ -11,29 +9,53 @@ on:
 
 jobs:
   build:
-
+    name: Test on Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.10", "3.11"]
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: ⬇️ Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+
+    - name: 💾 Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 black isort pytest
+        pip install flake8 black isort pytest coverage pytest-asyncio
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Check formatting and lint
+
+    - name: 🔍 Code format and lint check
       run: |
-        ./scripts/format.sh --check
-    - name: Test with coverage
+        echo "🔎 Running black, isort, flake8 checks..."
+        black . --check --diff || exit 1
+        isort . --check-only || exit 1
+        flake8 . || exit 1
+
+    - name: 🧪 Run tests with coverage
       run: |
-        pip install coverage pytest-asyncio
+        echo "🧪 Running tests..."
         coverage run -m pytest
         coverage report --fail-under=80
+        coverage xml
+
+    - name: 📤 Upload coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage.xml
