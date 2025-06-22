@@ -2,7 +2,10 @@
 
 import ast
 import os
+from pathlib import Path
 from typing import Iterable, List
+
+import yaml
 
 
 def _generate_docstring(node: ast.AST | None, style: str, kind: str) -> str:
@@ -44,8 +47,26 @@ def _indent_lines(text: str, indent: str) -> List[str]:
     return [f"{indent}{line}" if line else indent for line in text.splitlines()]
 
 
-def process_file(path: str, style: str = "google") -> bool:
+def _load_style(policy_path: str | os.PathLike[str]) -> str:
+    path = Path(policy_path)
+    if not path.is_file():
+        return "google"
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            cfg = yaml.safe_load(fh) or {}
+            return cfg.get("docstring", {}).get("style", "google")
+    except Exception:
+        return "google"
+
+
+def process_file(
+    path: str,
+    style: str | None = None,
+    policy_path: str | os.PathLike[str] = "train/coding_policy.yaml",
+) -> bool:
     """Insert placeholder docstrings into ``path`` if they are missing."""
+    if style is None:
+        style = _load_style(policy_path)
     with open(path, "r", encoding="utf-8") as f:
         source = f.read()
     tree = ast.parse(source, filename=path)
@@ -91,7 +112,11 @@ def process_file(path: str, style: str = "google") -> bool:
     return True
 
 
-def process_paths(paths: Iterable[str], style: str = "google") -> List[str]:
+def process_paths(
+    paths: Iterable[str],
+    style: str | None = None,
+    policy_path: str | os.PathLike[str] = "train/coding_policy.yaml",
+) -> List[str]:
     """Process multiple file or directory paths."""
     changed: List[str] = []
     for p in paths:
@@ -100,10 +125,10 @@ def process_paths(paths: Iterable[str], style: str = "google") -> List[str]:
                 for fname in files:
                     if fname.endswith(".py"):
                         fpath = os.path.join(root, fname)
-                        if process_file(fpath, style):
+                        if process_file(fpath, style, policy_path):
                             changed.append(fpath)
         else:
-            if process_file(p, style):
+            if process_file(p, style, policy_path):
                 changed.append(p)
     return changed
 
@@ -113,9 +138,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Insert template docstrings.")
     parser.add_argument("paths", nargs="+", help="Files or directories to process")
-    parser.add_argument("--style", choices=["google", "sphinx"], default="google")
+    parser.add_argument("--style", choices=["google", "sphinx"], help="Docstring style")
+    parser.add_argument(
+        "--policy",
+        type=str,
+        default="train/coding_policy.yaml",
+        help="Path to coding policy YAML file",
+    )
     args = parser.parse_args()
 
-    modified = process_paths(args.paths, style=args.style)
+    modified = process_paths(args.paths, style=args.style, policy_path=args.policy)
     for m in modified:
         print(f"Updated {m}")

@@ -3,7 +3,10 @@
 import ast
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable, List
+
+import yaml
 
 
 @dataclass
@@ -16,16 +19,44 @@ class LintError:
 
 
 class AstLinter:
-    """Simple AST-based linter."""
+    """Simple AST-based linter that can load settings from a policy file."""
 
-    def __init__(self, max_function_lines: int = 50):
+    def __init__(
+        self,
+        max_function_lines: int | None = None,
+        policy_path: str | os.PathLike[str] = "train/coding_policy.yaml",
+    ) -> None:
         """Initialize the linter.
 
-        Args:
-            max_function_lines (int):
-                Maximum allowed length of a function body in lines.
+        Parameters
+        ----------
+        max_function_lines:
+            Maximum allowed length of a function body. If ``None``, the value
+            will be loaded from ``policy_path`` or default to ``50``.
+        policy_path:
+            Path to the coding policy YAML file.
         """
-        self.max_function_lines = max_function_lines
+
+        self._config = self._load_policy(Path(policy_path))
+        self.max_function_lines = (
+            max_function_lines
+            if max_function_lines is not None
+            else self._config.get("linting", {}).get("max_function_lines", 50)
+        )
+        lint_cfg = self._config.get("linting", {})
+        self.disallow_globals = lint_cfg.get("disallow_globals", True)
+        self.disallow_top_level_calls = lint_cfg.get("disallow_top_level_calls", True)
+        self.check_eval_exec = lint_cfg.get("check_eval_exec", True)
+
+    @staticmethod
+    def _load_policy(path: Path) -> dict:
+        if not path.is_file():
+            return {}
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                return yaml.safe_load(fh) or {}
+        except Exception:
+            return {}
 
     def _lint_source(self, source: str, path: str) -> List[LintError]:
         """Run lint checks on given source code."""
@@ -33,7 +64,10 @@ class AstLinter:
         tree = ast.parse(source, filename=path)
 
         for node in tree.body:
-            if isinstance(node, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
+            if (
+                self.disallow_globals
+                and isinstance(node, (ast.Assign, ast.AugAssign, ast.AnnAssign))
+            ):
                 errors.append(
                     LintError(
                         path,
@@ -41,7 +75,11 @@ class AstLinter:
                         "Global variable assignment not allowed",
                     )
                 )
-            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+            if (
+                self.disallow_top_level_calls
+                and isinstance(node, ast.Expr)
+                and isinstance(node.value, ast.Call)
+            ):
                 errors.append(
                     LintError(
                         path,
@@ -66,7 +104,7 @@ class AstLinter:
                             msg,
                         )
                     )
-            if isinstance(node, ast.Call):
+            if isinstance(node, ast.Call) and self.check_eval_exec:
                 func = node.func
                 if isinstance(func, ast.Name) and func.id in {"eval", "exec"}:
                     errors.append(
@@ -142,12 +180,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-lines",
         type=int,
-        default=50,
-        help="Maximum allowed function body length",
+        help="Maximum allowed function body length (overrides policy)",
+    )
+    parser.add_argument(
+        "--policy",
+        type=str,
+        default="train/coding_policy.yaml",
+        help="Path to coding policy YAML file",
     )
     args = parser.parse_args()
 
-    linter = AstLinter(max_function_lines=args.max_lines)
+    linter = AstLinter(
+        max_function_lines=args.max_lines,
+        policy_path=args.policy,
+    )
     errors = linter.lint_paths(args.paths)
     for err in errors:
         print(f"{err.filepath}:{err.lineno}: {err.message}")

@@ -1,0 +1,9 @@
+formatting:
+  max_line_length: 88
+linting:
+  max_function_lines: 50
+  disallow_globals: true
+  disallow_top_level_calls: true
+  check_eval_exec: true
+docstring:
+  style: google
