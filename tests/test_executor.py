@@ -65,6 +65,39 @@ async def test_executor_run_ast_fallback(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_executor_records_traceback(monkeypatch):
+    async def fake_exec(*args, **kwargs):
+        if "pytest" in args:
+
+            class Proc:
+                returncode = 1
+
+                async def communicate(self):
+                    tb = (
+                        "Traceback (most recent call last):\n"
+                        "  File \"t.py\", line 1, in <module>\n"
+                        "    foo()\n"
+                        "NameError: name 'foo' is not defined\n"
+                        "1 failed\n"
+                    )
+                    return tb.encode(), b""
+
+            return Proc()
+        raise FileNotFoundError
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+    def fake_lint(self, paths):
+        return []
+
+    monkeypatch.setattr(AstLinter, "lint_paths", fake_lint)
+
+    result = await executor.run(".")
+    assert result["tests"]["failed"] == 1
+    assert result["errors"]
+
+
+@pytest.mark.asyncio
 async def test_executor_command_registered(monkeypatch):
     async def fake_exec(*args, **kwargs):
         class Proc:
