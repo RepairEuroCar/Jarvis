@@ -15,12 +15,22 @@ class VoiceInterface:
     def __init__(self, jarvis: Any):
         self.jarvis = jarvis
         self.recognizer = sr.Recognizer()
-        self.microphone = sr.Microphone()
-        self.engine = pyttsx3.init()
+        try:
+            self.microphone = sr.Microphone()
+        except Exception as e:  # Missing PyAudio or no device
+            logger.error(f"Microphone init failed: {e}")
+            self.microphone = None
+        try:
+            self.engine = pyttsx3.init()
+        except Exception as e:
+            logger.error(f"TTS engine init failed: {e}")
+            self.engine = None
         self.is_active = False
 
-        self._configure_voice()
-        self._calibrate_microphone()
+        if self.engine:
+            self._configure_voice()
+        if self.microphone:
+            self._calibrate_microphone()
 
     def update_language(self):
         """Reconfigure voice with current settings."""
@@ -50,12 +60,17 @@ class VoiceInterface:
 
     def _calibrate_microphone(self):
         """Калибровка микрофона"""
+        if not self.microphone:
+            return
         with self.microphone as source:
             self.recognizer.adjust_for_ambient_noise(source, duration=1)
             logger.info("Микрофон откалиброван")
 
     async def listen(self) -> Optional[str]:
         """Асинхронное распознавание речи"""
+        if not self.microphone:
+            logger.error("Microphone not available")
+            return None
         with self.microphone as source:
             logger.info("Слушаю...")
             try:
@@ -78,6 +93,9 @@ class VoiceInterface:
 
     def say(self, text: str):
         """Синхронное воспроизведение речи"""
+        if not self.engine:
+            logger.info(f"TTS disabled. Would say: {text}")
+            return
         logger.info(f"Озвучиваю: {text}")
         self.engine.say(text)
         self.engine.runAndWait()
@@ -100,7 +118,7 @@ class VoiceInterface:
 
     def start(self):
         """Запуск фонового прослушивания"""
-        if self.is_active:
+        if self.is_active or not self.microphone:
             return
         self._listen_thread = threading.Thread(
             target=lambda: asyncio.run(self._listen_loop()), daemon=True
@@ -116,7 +134,8 @@ class VoiceInterface:
         if hasattr(self, "_listen_thread"):
             self._listen_thread.join(timeout=1.0)
         try:
-            self.engine.stop()
+            if self.engine:
+                self.engine.stop()
         except Exception as e:
             logger.warning(f"Ошибка остановки движка: {e}")
         logger.info("Голосовой интерфейс остановлен")
