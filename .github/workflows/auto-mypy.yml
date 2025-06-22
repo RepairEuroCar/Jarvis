@@ -1,0 +1,73 @@
+name: 🔍 Mypy Type Checking
+
+on:
+  push:
+    branches: [main, master, dev]
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+      - '!**/migrations/**'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: mypy-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+
+      - name: 📦 Install Mypy
+        run: |
+          pip install --upgrade pip
+          pip install "mypy==1.8.0"
+          echo "MYPY_VERSION=$(mypy --version)" >> $GITHUB_ENV
+
+      - name: 🔍 Run Type Check
+        run: |
+          mypy \
+            --config-file pyproject.toml \
+            --ignore-missing-imports \
+            --show-error-codes \
+            --strict \
+            .
+
+      - name: 📊 Generate Report
+        if: always()
+        run: |
+          {
+            echo "## 🔍 Mypy Type Check Report"
+            echo "**Version:** $MYPY_VERSION"
+            echo "**Config:** pyproject.toml"
+            echo ""
+            echo "### 🧪 Type Check Summary"
+            echo '```'
+            mypy --config-file pyproject.toml --ignore-missing-imports --strict --pretty . || true
+            echo '```'
+          } > report.md
+
+      - name: 💬 PR Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const report = fs.readFileSync('report.md', 'utf8');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });

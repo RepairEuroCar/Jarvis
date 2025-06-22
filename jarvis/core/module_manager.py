@@ -1,21 +1,25 @@
 import asyncio
 import hashlib
 import importlib
-import logging
 import sys
 import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from enum import Enum, auto
 from functools import wraps
+<<<<<<< HEAD
 from multiprocessing import Process, Queue
 from pathlib import Path
 from resource import RLIMIT_AS, RLIMIT_CPU, setrlimit
+=======
+>>>>>>> main
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ValidationError
 
-logger = logging.getLogger("Jarvis.ModuleManager")
+from utils.logger import get_logger
+
+logger = get_logger().getChild("ModuleManager")
 
 # ========================
 # ВСПОМОГАТЕЛЬНЫЕ КЛАССЫ
@@ -76,9 +80,16 @@ def module_error_handler(func):
             logger.error(f"Module {module_name} not found")
         except ValidationError as e:
             logger.error(f"Config error in {module_name}: {e}")
+<<<<<<< HEAD
         except Exception:
             logger.exception(
                 f"Unexpected error in {func.__name__} for {module_name}"
+=======
+        except Exception as e:
+            logger.exception(
+                f"Unexpected error in {func.__name__} for {module_name}",
+                exc_info=e,
+>>>>>>> main
             )
         return False
 
@@ -93,12 +104,9 @@ def time_operation(operation_name: str):
 
 
 def apply_resource_limits(limits: Dict[str, int]):
-    """Применяет ограничения ресурсов для модуля."""
-    if "cpu_time" in limits:
-        setrlimit(RLIMIT_CPU, (limits["cpu_time"], limits["cpu_time"]))
-    if "memory_mb" in limits:
-        memory_bytes = limits["memory_mb"] * 1024 * 1024
-        setrlimit(RLIMIT_AS, (memory_bytes, memory_bytes))
+    """No-op after removing sandbox limits."""
+    return
+
 
 
 # ========================
@@ -236,6 +244,7 @@ class ModuleManager:
     async def _verify_module_security(
         self, module_name: str, config: ModuleConfig
     ) -> bool:
+<<<<<<< HEAD
         if not config.expected_hash:
             return True
 
@@ -249,6 +258,8 @@ class ModuleManager:
         if file_hash != config.expected_hash:
             logger.error(f"Security hash mismatch for {module_name}")
             return False
+=======
+>>>>>>> main
         return True
 
     async def _load_dependencies(
@@ -267,9 +278,12 @@ class ModuleManager:
         self, module_name: str, config: ModuleConfig
     ) -> Optional[JarvisModule]:
         try:
+<<<<<<< HEAD
             if config.sandboxed:
                 return await self._initialize_sandboxed(module_name, config)
 
+=======
+>>>>>>> main
             module = importlib.import_module(f"jarvis.modules.{module_name}")
             if not hasattr(module, "setup"):
                 logger.error(f"Module {module_name} has no setup function")
@@ -293,6 +307,7 @@ class ModuleManager:
             )
             return False
         return True
+<<<<<<< HEAD
 
     async def _initialize_sandboxed(
         self, module_name: str, config: ModuleConfig
@@ -322,3 +337,5 @@ class ModuleManager:
         except Exception as e:
             logger.error(f"Sandbox error in {module_name}: {str(e)}")
             queue.put(None)
+=======
+>>>>>>> main

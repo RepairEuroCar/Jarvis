@@ -13,7 +13,12 @@
 
 import ast
 import difflib
+<<<<<<< HEAD
 import logging
+=======
+import os
+import tempfile
+>>>>>>> main
 import time
 import uuid
 
@@ -22,6 +27,14 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Type
 
+<<<<<<< HEAD
+=======
+from utils.code_rating import rate_code
+from utils.linter import AstLinter
+from utils.logger import get_logger
+from utils.solution_compare import structural_diff
+
+>>>>>>> main
 from .processors import (
     AnalyticalThoughtProcessor,
     APIBuilderProcessor,
@@ -32,7 +45,11 @@ from .processors import (
     TestGeneratorProcessor,
 )
 
+<<<<<<< HEAD
 logger = logging.getLogger("Jarvis.Brain")
+=======
+logger = get_logger().getChild("Brain")
+>>>>>>> main
 
 
 class ThoughtProcessorFactory:
@@ -126,14 +143,25 @@ class Brain:
         return context.get("preferred_processor", "logical")
 
     def _update_long_term_memory(self, problem, solution):
+<<<<<<< HEAD
         memory_key = (
             f"brain.thoughts.{uuid.uuid5(uuid.NAMESPACE_DNS, problem).hex}"
         )
+=======
+        memory_key = f"brain.thoughts.{uuid.uuid5(uuid.NAMESPACE_DNS, problem).hex}"
+        rating = None
+        code = solution.get("generated_code")
+        if code is not None:
+            rating = rate_code(code)
+>>>>>>> main
         record = {
             "problem": problem,
             "solution": solution,
             "timestamp": time.time(),
         }
+        if rating is not None:
+            record["rating"] = rating
+            solution["rating"] = rating
         self.jarvis.memory.remember(memory_key, record, category="reasoning")
         history = self.jarvis.memory.recall("brain.reasoning_history") or []
         history.append(record)
@@ -165,6 +193,49 @@ class Brain:
     def get_chain_of_thought(self, limit: int = 10) -> list[Dict[str, Any]]:
         """Return recent reasoning records."""
         return list(self.reasoning_history)[-limit:]
+
+    def summarize_recent_thoughts(self, limit: int = 5) -> str:
+        """Return a text summary of recent reasoning steps."""
+        summaries = []
+        for entry in self.get_chain_of_thought(limit=limit):
+            problem = entry.get("problem", "")
+            status = entry.get("solution", {}).get("status", "unknown")
+            summaries.append(f"{problem[:50]} -> {status}")
+        return "\n".join(summaries)
+
+    def find_similar_solution(
+        self, problem: str, threshold: float = 0.5
+    ) -> Dict[str, Any] | None:
+        """Return a stored solution for a similar problem if found.
+
+        The method uses a very naive token overlap metric: the ratio of
+        overlapping tokens to all unique tokens across the problems. If the
+        best match score meets ``threshold`` the associated solution is
+        returned, otherwise ``None`` is returned.
+        """
+
+        thoughts = self.jarvis.memory.query("brain.thoughts") or {}
+
+        problem_tokens = set(problem.lower().split())
+        best_score = 0.0
+        best_record: Dict[str, Any] | None = None
+
+        for entry in thoughts.values():
+            record = entry.get("value") if isinstance(entry, dict) else entry
+            stored_problem = str(record.get("problem", "")).lower()
+            tokens = set(stored_problem.split())
+            if not tokens:
+                continue
+            overlap = problem_tokens & tokens
+            union = problem_tokens | tokens
+            score = len(overlap) / len(union)
+            if score > best_score:
+                best_score = score
+                best_record = record
+
+        if best_record and best_score >= threshold:
+            return best_record.get("solution")
+        return None
 
     async def self_evolve(self, directory: str = ".") -> Dict[str, Any]:
         """Analyze and refactor Python files within a directory."""
@@ -210,3 +281,68 @@ class Brain:
             results[str(file_path)] = {"analysis": analysis, "diff": diff}
 
         return results
+
+    def self_review(self) -> Dict[str, Any]:
+        """Lint recently generated code and return warnings.
+
+        Additionally compares the structure of the latest code with any previous
+        versions stored in ``reasoning_history`` and includes a structural diff
+        when available.
+        """
+        linter = AstLinter()
+        review: Dict[str, Any] = {}
+        history = self.get_chain_of_thought(limit=5)
+        for entry in history:
+            code = entry.get("solution", {}).get("generated_code")
+            if not code:
+                continue
+            with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as tmp:
+                tmp.write(code)
+                tmp_path = tmp.name
+            try:
+                errors = linter.lint_file(tmp_path)
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+            if errors:
+                review[entry["problem"]] = {
+                    "warnings": [f"{e.lineno}: {e.message}" for e in errors]
+                }
+
+        diffs = self.compare_recent_code(limit=5)
+        for problem, diff in diffs.items():
+            review.setdefault(problem, {})["structural_diff"] = diff
+
+        return review
+
+    def compare_recent_code(self, limit: int = 5) -> Dict[str, str]:
+        """Compare recent generated code snippets with past versions.
+
+        The function searches the ``reasoning_history`` for earlier records of
+        the same problem and returns unified diffs of the AST structures.
+        """
+        history = list(self.reasoning_history)
+        diffs: Dict[str, str] = {}
+
+        for idx in range(max(0, len(history) - limit), len(history)):
+            entry = history[idx]
+            problem = entry.get("problem")
+            code = entry.get("solution", {}).get("generated_code")
+            if not problem or not code:
+                continue
+
+            prev_code = None
+            for past in reversed(history[:idx]):
+                if past.get("problem") == problem:
+                    prev_code = past.get("solution", {}).get("generated_code")
+                    if prev_code:
+                        break
+
+            if prev_code:
+                diff = structural_diff(prev_code, code)
+                if diff:
+                    diffs[problem] = diff
+
+        return diffs

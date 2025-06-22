@@ -1,10 +1,14 @@
-import logging
 import re
 from typing import Any, Dict, List, Tuple
+<<<<<<< HEAD
+=======
+
+from utils.logger import get_logger
+>>>>>>> main
 
 from .base import BaseThoughtProcessor
 
-logger = logging.getLogger("Jarvis.Processor.APIBuilder")
+logger = get_logger().getChild("Processor.APIBuilder")
 
 
 class APIBuilderProcessor(BaseThoughtProcessor):

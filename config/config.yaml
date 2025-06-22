@@ -4,3 +4,13 @@
 # log_level: DEBUG
 # voice_enabled: false
 
+plugin_dir: plugins
+intent_model_path: models/intent
+recognition_language: ru-RU
+tts_language: ru
+
+# Limit network operations to these CIDR ranges
+allowed_networks:
+  - "10.0.0.0/8"
+  - "192.168.0.0/16"
+

@@ -4,7 +4,16 @@
 import pytest
 
 from jarvis.memory.manager import MemoryManager
+<<<<<<< HEAD
 from jarvis.nlp.processor import NLUProcessor, TaskSemantics
+=======
+from jarvis.nlp.processor import (
+    CommandPattern,
+    EntityExtractionMode,
+    NLUProcessor,
+    TaskSemantics,
+)
+>>>>>>> main
 
 
 @pytest.fixture
@@ -27,6 +36,13 @@ async def test_exit_intent(nlu):
         result = await nlu.process(variant)
         assert result["intent"] == "exit"
         assert result["entities"] == {"raw_args": ""}
+
+
+@pytest.mark.asyncio
+async def test_synonym_resolution(nlu):
+    for variant in ["leave", "bye", "прекрати"]:
+        result = await nlu.process(variant)
+        assert result["intent"] == "exit"
 
 
 @pytest.mark.asyncio
@@ -60,3 +76,109 @@ async def test_custom_pattern_persistence(tmp_path):
     nlu2 = NLUProcessor(memory_manager=mem2)
     result = await nlu2.process("hi")
     assert result["intent"] == "greet"
+
+
+@pytest.mark.asyncio
+async def test_learn_correction(tmp_path):
+    mem_file = tmp_path / "mem.json"
+    mem = MemoryManager(str(mem_file))
+    nlu = NLUProcessor(memory_manager=mem)
+    nlu.learn_correction("helo", "exit", persist=True)
+    mem.save()
+
+    nlu2 = NLUProcessor(memory_manager=MemoryManager(str(mem_file)))
+    result = await nlu2.process("helo")
+    assert result["intent"] == "exit"
+
+
+@pytest.mark.asyncio
+async def test_learn_correction_dataset_and_update(monkeypatch, tmp_path):
+    dataset = tmp_path / "dataset.jsonl"
+    mem_file = tmp_path / "mem.json"
+    mem = MemoryManager(str(mem_file))
+
+    calls = []
+
+    def fake_init(self, model_path):
+        pass
+
+    def fake_update(self, text, intent):
+        calls.append((text, intent))
+
+    monkeypatch.setattr("jarvis.nlp.intent_model.IntentModel.__init__", fake_init)
+    monkeypatch.setattr("jarvis.nlp.intent_model.IntentModel.update_model", fake_update)
+
+    nlu = NLUProcessor(
+        memory_manager=mem,
+        model_path="dummy",
+        intent_dataset_path=str(dataset),
+    )
+
+    nlu.learn_correction("helo", "exit", persist=True)
+    nlu.learn_correction("bye", "exit", persist=True)
+
+    with open(dataset, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    assert len(lines) == 2
+    assert calls == [("helo", "exit"), ("bye", "exit")]
+
+
+@pytest.mark.asyncio
+async def test_intent_model_prediction(monkeypatch):
+    calls = {}
+
+    def fake_init(self, model_path):
+        calls["init"] = model_path
+
+    def fake_predict(self, text, context=None):
+        calls["predict"] = (text, context)
+        return {"intent": "greet", "confidence": 0.95}
+
+    monkeypatch.setattr("jarvis.nlp.intent_model.IntentModel.__init__", fake_init)
+    monkeypatch.setattr("jarvis.nlp.intent_model.IntentModel.predict", fake_predict)
+
+    nlu = NLUProcessor(model_path="dummy")
+    await nlu.process("выйти")
+    result = await nlu.process("приветики")
+
+    assert result["intent"] == "greet"
+    assert calls["predict"][0] == "приветики"
+    assert "exit" in calls["predict"][1]
+
+
+@pytest.mark.asyncio
+async def test_named_entity_extraction(monkeypatch):
+    calls = {}
+
+    def fake_init(self, model_name=None):
+        calls["ner_init"] = model_name
+
+    def fake_extract(self, text):
+        calls["extract"] = text
+        return [
+            {"text": "Alice", "label": "PERSON"},
+            {"text": "Google", "label": "ORG"},
+            {"text": "London", "label": "LOC"},
+        ]
+
+    monkeypatch.setattr("jarvis.nlp.ner_model.NERModel.__init__", fake_init)
+    monkeypatch.setattr("jarvis.nlp.ner_model.NERModel.extract_entities", fake_extract)
+
+    nlu = NLUProcessor(ner_model_name="dummy")
+    nlu.command_patterns.insert(
+        0,
+        CommandPattern(
+            intent="who",
+            triggers=["show"],
+            entity_extraction_mode=EntityExtractionMode.NAMED_ENTITIES,
+        ),
+    )
+
+    result = await nlu.process("show Alice works at Google in London")
+
+    assert result["intent"] == "who"
+    assert calls["extract"] == "Alice works at Google in London"
+    assert result["entities"]["PERSON"] == ["Alice"]
+    assert result["entities"]["ORG"] == ["Google"]
+    assert result["entities"]["LOC"] == ["London"]

@@ -3,6 +3,7 @@
 # -----------------------------
 import asyncio
 import logging
+<<<<<<< HEAD
 import sys
 
 from .cli import run
@@ -15,6 +16,14 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout),
     ],
 )
+=======
+
+from utils.logger import setup_logging
+
+from .cli import run
+
+setup_logging(level=logging.INFO)
+>>>>>>> main
 
 if __name__ == "__main__":
     try:

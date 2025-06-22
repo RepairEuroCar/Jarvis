@@ -2,13 +2,22 @@
 # jarvis/processors/analytical.py
 # -----------------------------
 import asyncio
+<<<<<<< HEAD
 import logging
 import re
 from typing import Any, Dict, List, Union
 
+=======
+import re
+from typing import Any, Dict, List, Union
+
+from utils.logger import get_logger
+
+>>>>>>> main
 from .base import BaseThoughtProcessor
 
-logger = logging.getLogger("Jarvis.Processor.Analytical")
+logger = get_logger().getChild("Processor.Analytical")
+
 
 
 class AnalyticalThoughtProcessor(BaseThoughtProcessor):
@@ -27,9 +36,13 @@ class AnalyticalThoughtProcessor(BaseThoughtProcessor):
         if "повтор" in str(data).lower():
             patterns.append("Обнаружен запрос на повторение.")
         if re.search(r"\d{4}", str(data)):
+<<<<<<< HEAD
             patterns.append(
                 "Обнаружены числовые последовательности (возможно, даты)."
             )
+=======
+            patterns.append("Обнаружены числовые последовательности (возможно, даты).")
+>>>>>>> main
         return patterns or ["Паттернов не найдено."]
 
     async def _make_comparisons(

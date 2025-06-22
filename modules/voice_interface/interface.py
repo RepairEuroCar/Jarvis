@@ -8,10 +8,16 @@ import os
 import threading
 
 import sounddevice as sd
-import vosk
+
+from voice.stub_vosk import KaldiRecognizer, Model
 
 from .config import VoiceConfig
 
+<<<<<<< HEAD
+=======
+# import vosk
+
+>>>>>>> main
 
 class VoiceInterface:
     def __init__(self, jarvis_instance, config: VoiceConfig = None):
@@ -25,11 +31,17 @@ class VoiceInterface:
                 f"Модель Vosk не найдена: {self.config.model_path}"
             )
 
+<<<<<<< HEAD
         self.model = vosk.Model(self.config.model_path)
         context_json = json.dumps(
             self.config.context_phrases, ensure_ascii=False
         )
         self.recognizer = vosk.KaldiRecognizer(
+=======
+        self.model = Model(self.config.model_path)
+        context_json = json.dumps(self.config.context_phrases, ensure_ascii=False)
+        self.recognizer = KaldiRecognizer(
+>>>>>>> main
             self.model, self.config.samplerate, context_json
         )
 

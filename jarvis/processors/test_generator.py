@@ -1,12 +1,13 @@
 import ast
 import inspect
-import logging
 import re
 from typing import Any, Dict, List, Tuple
 
+from utils.logger import get_logger
+
 from .base import BaseThoughtProcessor
 
-logger = logging.getLogger("Jarvis.Processor.TestGen")
+logger = get_logger().getChild("Processor.TestGen")
 
 
 class TestGeneratorProcessor(BaseThoughtProcessor):

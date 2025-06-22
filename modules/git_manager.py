@@ -1,14 +1,50 @@
 import asyncio
 import os
+<<<<<<< HEAD
 import subprocess  # Keep for GitManager._run_git_command (uses asyncio.create_subprocess_shell)
 
 import aiohttp
 
+=======
+import re
+import subprocess  # Keep for GitManager._run_git_command (uses asyncio.create_subprocess_shell)
+from urllib.parse import urlparse
+
+import aiohttp
+
+from utils.logger import get_logger
+
+logger = get_logger().getChild("git_manager")
+
+>>>>>>> main
 
 class GitManager:
     def __init__(self, base_dir=None):
         self.base_dir = base_dir if base_dir else os.getcwd()
         self.session = None  # aiohttp.ClientSession, initialized on demand
+<<<<<<< HEAD
+=======
+
+    INVALID_PATTERNS = [";", "&&", "\n"]
+
+    def _is_safe(self, value: str) -> bool:
+        return not any(p in value for p in self.INVALID_PATTERNS)
+
+    def _validate_repo_url(self, url: str) -> bool:
+        if not url or not self._is_safe(url):
+            return False
+        parsed = urlparse(url)
+        if parsed.scheme:
+            return parsed.scheme in {"http", "https", "ssh", "git", "file"} and bool(
+                parsed.netloc or parsed.path
+            )
+        return bool(re.match(r"^[\w.@:/+-]+$", url))
+
+    def _validate_branch_name(self, name: str) -> bool:
+        if not name or not self._is_safe(name):
+            return False
+        return re.match(r"^[A-Za-z0-9._/-]+$", name) is not None
+>>>>>>> main
 
     async def _get_session(self):
         if self.session is None or self.session.closed:
@@ -16,7 +52,11 @@ class GitManager:
         return self.session
 
     async def _run_git_command(self, command_args, cwd=None):
+<<<<<<< HEAD
         # command_args should be a list of arguments for git
+=======
+        """Run a git command and capture output with error handling."""
+>>>>>>> main
         git_executable = "git"  # Or allow configuration
         full_command = [git_executable] + command_args
 
@@ -28,6 +68,7 @@ class GitManager:
                 1,
             )
 
+<<<<<<< HEAD
         process = await asyncio.create_subprocess_exec(
             *full_command,  # Use create_subprocess_exec for list of args
             cwd=effective_cwd,
@@ -40,6 +81,27 @@ class GitManager:
             stderr.decode().strip(),
             process.returncode,
         )
+=======
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *full_command,
+                cwd=effective_cwd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            stdout, stderr = await process.communicate()
+            return (
+                stdout.decode().strip(),
+                stderr.decode().strip(),
+                process.returncode,
+            )
+        except FileNotFoundError:
+            logger.warning("git executable not found")
+            return "", "git executable not found", 1
+        except Exception as e:
+            logger.warning("git command failed: %s", e)
+            return "", f"Exception while running git: {e}", 1
+>>>>>>> main
 
     async def init(self, jarvis_instance, repo_path_str=None):
         """Initializes a new Git repository. [repo_subdir]"""
@@ -60,9 +122,18 @@ class GitManager:
 
     async def clone(self, jarvis_instance, repo_url, local_path_str=None):
         """Clones a repository. <repo_url> [local_subdir]"""
+        if not self._validate_repo_url(repo_url):
+            return "Invalid repository URL."
+
         # If local_path_str is provided, clone into a subdirectory of base_dir
         # If not, git clone will create a dir based on repo name in base_dir
         command = ["clone", repo_url]
+<<<<<<< HEAD
+=======
+        target_dir = (
+            self.base_dir
+        )  # Clone into base_dir (git creates subdir by default)
+>>>>>>> main
 
         if local_path_str:
             # If local_path_str is an absolute path, use it. Otherwise, join with base_dir.
@@ -82,7 +153,9 @@ class GitManager:
         )  # cwd is where git clone runs, not necessarily the final path
 
         if returncode == 0:
-            return f"Repository {repo_url} cloned to {clone_destination_display}\n{stdout}"
+            return (
+                f"Repository {repo_url} cloned to {clone_destination_display}\n{stdout}"
+            )
         else:
             return f"Error cloning {repo_url}:\n{stderr}"
 
@@ -93,9 +166,13 @@ class GitManager:
             if repo_path_str
             else self.base_dir
         )
+<<<<<<< HEAD
         stdout, stderr, returncode = await self._run_git_command(
             ["status"], cwd=path
         )
+=======
+        stdout, stderr, returncode = await self._run_git_command(["status"], cwd=path)
+>>>>>>> main
         if returncode == 0:
             return stdout if stdout else "No changes."
         else:
@@ -131,9 +208,13 @@ class GitManager:
         else:
             return f"Error during Git commit in {path}:\n{stderr}"
 
+<<<<<<< HEAD
     async def branch(
         self, jarvis_instance, branch_name_ops_str, repo_path_str=None
     ):
+=======
+    async def branch(self, jarvis_instance, branch_name_ops_str, repo_path_str=None):
+>>>>>>> main
         """Lists branches, creates a new branch, or deletes a branch. [-d <name>] [<new_branch_name>] [repo_subdir]"""
         path = (
             os.path.join(self.base_dir, repo_path_str)
@@ -148,9 +229,19 @@ class GitManager:
         if not branch_name_ops_str:  # List branches
             pass
         elif len(parts) == 1 and not parts[0].startswith("-"):  # Create branch
+<<<<<<< HEAD
             command.append(parts[0])
             action_msg = f"Creating branch '{parts[0]}'"
         elif len(parts) == 2 and parts[0] == "-d":  # Delete branch
+=======
+            if not self._validate_branch_name(parts[0]):
+                return "Invalid branch name."
+            command.append(parts[0])
+            action_msg = f"Creating branch '{parts[0]}'"
+        elif len(parts) == 2 and parts[0] == "-d":  # Delete branch
+            if not self._validate_branch_name(parts[1]):
+                return "Invalid branch name."
+>>>>>>> main
             command.extend(["-d", parts[1]])
             action_msg = f"Deleting branch '{parts[1]}'"
         else:
@@ -171,6 +262,11 @@ class GitManager:
             if repo_path_str
             else self.base_dir
         )
+<<<<<<< HEAD
+=======
+        if not self._validate_branch_name(branch_name):
+            return "Invalid branch name."
+>>>>>>> main
         stdout, stderr, returncode = await self._run_git_command(
             ["checkout", branch_name], cwd=path
         )
@@ -190,9 +286,16 @@ class GitManager:
         )
         parts = remote_branch_str.split()
         remote = parts[0] if len(parts) > 0 else "origin"
+<<<<<<< HEAD
         branch = (
             parts[1] if len(parts) > 1 else "main"
         )  # Or get current branch
+=======
+        branch = parts[1] if len(parts) > 1 else "main"  # Or get current branch
+
+        if not self._validate_branch_name(branch):
+            return "Invalid branch name."
+>>>>>>> main
 
         stdout, stderr, returncode = await self._run_git_command(
             ["push", remote, branch], cwd=path
@@ -215,10 +318,18 @@ class GitManager:
         )
         parts = remote_branch_str.split()
         remote = parts[0] if len(parts) > 0 else "origin"
+<<<<<<< HEAD
         branch = (
             parts[1] if len(parts) > 1 else "main"
         )  # Or get current branch
 
+=======
+        branch = parts[1] if len(parts) > 1 else "main"  # Or get current branch
+
+        if not self._validate_branch_name(branch):
+            return "Invalid branch name."
+
+>>>>>>> main
         stdout, stderr, returncode = await self._run_git_command(
             ["pull", remote, branch], cwd=path
         )
@@ -288,8 +399,13 @@ class GitManager:
             else self.base_dir
         )
 
+<<<<<<< HEAD
         stdout_fetch, stderr_fetch, returncode_fetch = (
             await self._run_git_command(["fetch", remote_str], cwd=path)
+=======
+        stdout_fetch, stderr_fetch, returncode_fetch = await self._run_git_command(
+            ["fetch", remote_str], cwd=path
+>>>>>>> main
         )
         if returncode_fetch == 0:
             stdout_branches, stderr_branches, _ = await self._run_git_command(
@@ -303,9 +419,13 @@ class GitManager:
 
     async def create_pull_request(self, jarvis_instance, pr_args_str):
         """Creates a GitHub Pull Request. <owner>/<repo> <base_branch> <head_branch> [title (in quotes if spaces)] [body (in quotes if spaces)]"""
+<<<<<<< HEAD
         parts = pr_args_str.split(
             maxsplit=4
         )  # Split up to 5 parts for title and body
+=======
+        parts = pr_args_str.split(maxsplit=4)  # Split up to 5 parts for title and body
+>>>>>>> main
 
         if len(parts) < 3:
             return 'Usage: git_create_pr <owner>/<repo> <base_branch> <head_branch> ["title"] ["body"]'
@@ -328,8 +448,12 @@ class GitManager:
                 f"Pull request body (for {head} -> {base}, leave empty for default):"
             )
             final_body = (
+<<<<<<< HEAD
                 user_body
                 or f"Automated PR: Request to merge {head} into {base}."
+=======
+                user_body or f"Automated PR: Request to merge {head} into {base}."
+>>>>>>> main
             )
 
         github_token = jarvis_instance.memory.get("github_token")
@@ -348,12 +472,16 @@ class GitManager:
             "Accept": "application/vnd.github.v3+json",
             "X-GitHub-Api-Version": "2022-11-28",
         }
+<<<<<<< HEAD
         payload = {
             "title": title,
             "body": final_body,
             "base": base,
             "head": head,
         }
+=======
+        payload = {"title": title, "body": final_body, "base": base, "head": head}
+>>>>>>> main
 
         try:
             async with session.post(
@@ -414,12 +542,22 @@ async def _git_add_cmd(jarvis_instance, args_string):
     else:
         files_to_add = parts[0]
 
+<<<<<<< HEAD
     if (
         len(parts) > 1 and files_to_add != "."
     ):  # If files_to_add is ".", the second part is likely repo_subdir
         parts[1]
     elif len(parts) > 1 and files_to_add == ".":  # if "git_add . my_repo"
         parts[1]
+=======
+    repo_subdir = None
+    if (
+        len(parts) > 1 and files_to_add != "."
+    ):  # If files_to_add is ".", the second part is likely repo_subdir
+        repo_subdir = parts[1]
+    elif len(parts) > 1 and files_to_add == ".":  # if "git_add . my_repo"
+        repo_subdir = parts[1]
+>>>>>>> main
     elif (
         len(parts) == 1 and files_to_add != "."
     ):  # if "git_add myfile" (files_to_add is "myfile", no repo_subdir)
@@ -472,8 +610,12 @@ async def _git_add_cmd(jarvis_instance, args_string):
             os.path.sep in split_args[-1]
             or os.path.exists(
                 os.path.join(
+<<<<<<< HEAD
                     jarvis_instance.git_manager_instance.base_dir,
                     split_args[-1],
+=======
+                    jarvis_instance.git_manager_instance.base_dir, split_args[-1]
+>>>>>>> main
                 )
             )
         ):
@@ -532,9 +674,13 @@ async def _git_branch_cmd(jarvis_instance, args_string):
     if len(parts) > 0 and (
         os.path.sep in parts[-1]
         or os.path.exists(
+<<<<<<< HEAD
             os.path.join(
                 jarvis_instance.git_manager_instance.base_dir, parts[-1]
             )
+=======
+            os.path.join(jarvis_instance.git_manager_instance.base_dir, parts[-1])
+>>>>>>> main
         )
     ):
         # Heuristic: if last part looks like a path, it's repo_subdir
@@ -558,8 +704,12 @@ async def _git_branch_cmd(jarvis_instance, args_string):
                 os.path.sep in split_args[-1]
                 or os.path.exists(
                     os.path.join(
+<<<<<<< HEAD
                         jarvis_instance.git_manager_instance.base_dir,
                         split_args[-1],
+=======
+                        jarvis_instance.git_manager_instance.base_dir, split_args[-1]
+>>>>>>> main
                     )
                 )
             ) and not (
@@ -600,9 +750,13 @@ async def _git_push_cmd(jarvis_instance, args_string):
     if len(parts) > 0 and (
         os.path.sep in parts[-1]
         or os.path.exists(
+<<<<<<< HEAD
             os.path.join(
                 jarvis_instance.git_manager_instance.base_dir, parts[-1]
             )
+=======
+            os.path.join(jarvis_instance.git_manager_instance.base_dir, parts[-1])
+>>>>>>> main
         )
     ):
         if len(parts) > 1:  # at least one git arg and a path
@@ -613,9 +767,13 @@ async def _git_push_cmd(jarvis_instance, args_string):
     if len(parts) >= 2 and (
         os.path.sep in parts[-1]
         or os.path.exists(
+<<<<<<< HEAD
             os.path.join(
                 jarvis_instance.git_manager_instance.base_dir, parts[-1]
             )
+=======
+            os.path.join(jarvis_instance.git_manager_instance.base_dir, parts[-1])
+>>>>>>> main
         )
     ):  # "origin main myrepo"
         repo_subdir = parts[-1]
@@ -623,16 +781,24 @@ async def _git_push_cmd(jarvis_instance, args_string):
     elif len(parts) == 1 and (
         os.path.sep in parts[0]
         or os.path.exists(
+<<<<<<< HEAD
             os.path.join(
                 jarvis_instance.git_manager_instance.base_dir, parts[0]
             )
+=======
+            os.path.join(jarvis_instance.git_manager_instance.base_dir, parts[0])
+>>>>>>> main
         )
     ):  # "myrepo" (ambiguous)
         # Assume default push, and this is repo_subdir
         repo_subdir = parts[0]
+<<<<<<< HEAD
         remote_branch_ops = (
             ""  # Defaults to "origin main" in GitManager method
         )
+=======
+        remote_branch_ops = ""  # Defaults to "origin main" in GitManager method
+>>>>>>> main
     else:  # "origin main" or "origin" or ""
         remote_branch_ops = args_string
 
@@ -650,9 +816,13 @@ async def _git_pull_cmd(jarvis_instance, args_string):
     if len(parts) >= 2 and (
         os.path.sep in parts[-1]
         or os.path.exists(
+<<<<<<< HEAD
             os.path.join(
                 jarvis_instance.git_manager_instance.base_dir, parts[-1]
             )
+=======
+            os.path.join(jarvis_instance.git_manager_instance.base_dir, parts[-1])
+>>>>>>> main
         )
     ):
         repo_subdir = parts[-1]
@@ -660,9 +830,13 @@ async def _git_pull_cmd(jarvis_instance, args_string):
     elif len(parts) == 1 and (
         os.path.sep in parts[0]
         or os.path.exists(
+<<<<<<< HEAD
             os.path.join(
                 jarvis_instance.git_manager_instance.base_dir, parts[0]
             )
+=======
+            os.path.join(jarvis_instance.git_manager_instance.base_dir, parts[0])
+>>>>>>> main
         )
     ):
         repo_subdir = parts[0]
@@ -711,9 +885,13 @@ async def _git_fetch_cmd(jarvis_instance, args_string):
         if not (
             os.path.sep in parts[0]
             or os.path.exists(
+<<<<<<< HEAD
                 os.path.join(
                     jarvis_instance.git_manager_instance.base_dir, parts[0]
                 )
+=======
+                os.path.join(jarvis_instance.git_manager_instance.base_dir, parts[0])
+>>>>>>> main
             )
         ):
             remote = parts[0]  # If it's not a path, assume it's remote name
@@ -779,3 +957,40 @@ async def close_module(jarvis_instance):
     ):
         await jarvis_instance.git_manager_instance.close_session()
     print("Git manager module resources closed.")
+<<<<<<< HEAD
+=======
+
+
+# ------------------------------------------------------
+# CommandDispatcher integration helpers
+# ------------------------------------------------------
+
+
+async def commit(message: str, repo: str | None = None) -> str:
+    """Commit staged changes with a message."""
+    gm = GitManager()
+    return await gm.commit(None, message, repo)
+
+
+async def push(
+    remote: str = "origin", branch: str = "main", repo: str | None = None
+) -> str:
+    """Push commits to the given remote and branch."""
+    gm = GitManager()
+    remote_branch = f"{remote} {branch}".strip()
+    return await gm.push(None, remote_branch, repo)
+
+
+from command_dispatcher import CommandDispatcher, default_dispatcher
+
+
+def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> None:
+    """Register ``git`` commands with ``dispatcher``."""
+
+    dispatcher.register_command_handler("git", "commit", commit)
+    dispatcher.register_command_handler("git", "push", push)
+
+
+register_commands(default_dispatcher)
+__all__ = ["GitManager", "commit", "push", "register_commands"]
+>>>>>>> main

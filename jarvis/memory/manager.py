@@ -1,16 +1,34 @@
 import json
+<<<<<<< HEAD
 import logging
+=======
+>>>>>>> main
 import os
 import shutil
 import time
 from typing import Any, Dict, Optional
 
-logger = logging.getLogger("Jarvis.Memory")
+from utils.logger import get_logger
+
+logger = get_logger().getChild("Memory")
+
 
 
 class MemoryManager:
-    def __init__(self, memory_file: str = "jarvis_memory.json"):
+    def __init__(
+        self, memory_file: str = "jarvis_memory.json", auto_save: bool = False
+    ):
+        """Initialize the memory manager.
+
+        Parameters
+        ----------
+        memory_file: str
+            Path to the JSON file used for persistence.
+        auto_save: bool
+            If True any modification will trigger :meth:`save` automatically.
+        """
         self.memory_file = memory_file
+        self.auto_save = auto_save
         self.memory = self._initialize_memory()
 
     def _initialize_memory(self) -> Dict[str, Any]:
@@ -57,6 +75,8 @@ class MemoryManager:
                 "timestamp": time.time(),
                 "category": category,
             }
+            if self.auto_save:
+                self.save()
             return True
         except Exception as e:
             logger.error(f"Ошибка сохранения: {e}")
@@ -96,6 +116,8 @@ class MemoryManager:
                 current = current[part]
             if parent and last_part in parent:
                 del parent[last_part]
+                if self.auto_save:
+                    self.save()
                 return True
             return False
         except Exception:
@@ -113,3 +135,22 @@ class MemoryManager:
             )
         except KeyError:
             return None
+
+    def search(self, query: str) -> Dict[str, Any]:
+        """Поиск значений по подстроке ключа."""
+
+        results: Dict[str, Any] = {}
+
+        def _search(obj: Any, path: str) -> None:
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    new_path = f"{path}.{k}" if path else k
+                    if query in k:
+                        results[new_path] = v
+                    _search(v, new_path)
+            elif isinstance(obj, list):
+                for i, item in enumerate(obj):
+                    _search(item, f"{path}[{i}]")
+
+        _search(self.memory, "")
+        return results

@@ -6,6 +6,7 @@ import ast
 import os
 from typing import Dict
 
+from utils.import_inference import infer_imports
 from utils.python_dsl import phrase_to_python
 
 
@@ -102,7 +103,8 @@ def write_code(task: Dict[str, str]) -> str:
     ----------
     task: Dict[str, str]
         Dictionary with keys ``dsl`` containing DSL text, ``category`` defining
-        template category and ``path`` with output file path.
+        template category, ``path`` with output file path and optional
+        ``description`` used for inferring imports.
 
     Returns
     -------
@@ -112,9 +114,15 @@ def write_code(task: Dict[str, str]) -> str:
     dsl_text = task.get("dsl", "")
     category = task.get("category", "utility")
     path = task.get("path", "generated.py")
+    description = task.get("description", "")
 
     python_code = dsl_to_python(dsl_text)
     final_code = generate_template(category, python_code)
+
+    if description:
+        imports = infer_imports(description)
+        if imports:
+            final_code = "\n".join(imports) + "\n\n" + final_code
 
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:

@@ -1,7 +1,11 @@
 import ast
-import logging
 import re
 from typing import Any, Dict
+<<<<<<< HEAD
+=======
+
+from utils.logger import get_logger
+>>>>>>> main
 
 from .base import BaseThoughtProcessor
 
@@ -10,7 +14,7 @@ try:
 except Exception:  # pragma: no cover - black might be missing in tests
     black = None
 
-logger = logging.getLogger("Jarvis.Processor.Refactor")
+logger = get_logger().getChild("Processor.Refactor")
 
 
 class RefactorProcessor(BaseThoughtProcessor):

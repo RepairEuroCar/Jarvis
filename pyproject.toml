@@ -1,4 +1,5 @@
 [tool.black]
+<<<<<<< HEAD
 line-length = 79
 
 [tool.isort]
@@ -8,3 +9,37 @@ line_length = 79
 [tool.flake8]
 max-line-length = 79
 extend-ignore = ["E203", "W503"]
+=======
+line-length = 88
+target-version = ['py311']
+exclude = '''
+/(
+    \.git
+    | \.venv
+    | venv
+    | migrations
+    | __pycache__
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["your_package_name"]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = "E203"
+extend-select = "W503"
+exclude = """
+.git, .venv, venv, migrations, __pycache__
+"""
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "B", "I", "UP"]
+ignore = ["E203"]
+exclude = [
+    ".git", ".venv", "venv", "migrations", "__pycache__"
+]
+>>>>>>> main

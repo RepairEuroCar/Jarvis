@@ -67,3 +67,50 @@ async def test_brain_self_evolve(tmp_path):
     result = await jarvis.brain.self_evolve(directory=tmp_path)
     assert str(f) in result
     assert "my_var" in result[str(f)]["diff"]
+
+
+def test_brain_self_review():
+    jarvis = Jarvis()
+    code = "x = 1\nprint('hi')\n"
+    jarvis.brain.log_thoughts("test", {"generated_code": code})
+    review = jarvis.brain.self_review()
+    assert review
+    warnings = list(review.values())[0]["warnings"]
+    assert any("Global variable" in w for w in warnings)
+
+
+def test_summarize_recent_thoughts():
+    jarvis = Jarvis()
+    jarvis.brain.log_thoughts("task one", {"status": "done"})
+    jarvis.brain.log_thoughts("task two", {"status": "failed"})
+    summary = jarvis.brain.summarize_recent_thoughts(limit=2)
+    assert "task one" in summary and "done" in summary
+    assert "task two" in summary and "failed" in summary
+
+
+def test_find_similar_solution():
+    jarvis = Jarvis()
+    jarvis.brain.log_thoughts(
+        "как приготовить борщ",
+        {"answer": "Используй свёклу", "status": "completed"},
+    )
+
+    result = jarvis.brain.find_similar_solution("как приготовить борщ быстро")
+    assert result is not None
+    assert result["answer"] == "Используй свёклу"
+
+
+def test_compare_recent_code_and_self_review_diff():
+    jarvis = Jarvis()
+    first = "x = 1\n"
+    second = "x = 2\n"
+    jarvis.brain.log_thoughts("repeat", {"generated_code": first})
+    jarvis.brain.log_thoughts("repeat", {"generated_code": second})
+
+    diffs = jarvis.brain.compare_recent_code(limit=2)
+    assert "repeat" in diffs
+    assert "value=Constant(value=1)" in diffs["repeat"]
+
+    review = jarvis.brain.self_review()
+    assert "repeat" in review
+    assert "structural_diff" in review["repeat"]

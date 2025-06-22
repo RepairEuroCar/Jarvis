@@ -1,27 +1,29 @@
 import asyncio
 import logging
+<<<<<<< HEAD
 import os
 import sys
 
 from jarvis.app import Jarvis
+=======
+>>>>>>> main
 
-# Определяем путь к лог-файлу относительно директории скрипта
-current_script_dir = os.path.dirname(os.path.abspath(__file__))
-log_path = os.path.join(current_script_dir, "jarvis.log")
+from cli import run
+from utils.logger import setup_logging
 
+<<<<<<< HEAD
 logging.basicConfig(
     filename=log_path,
     level=logging.INFO,  # Измените на logging.DEBUG, если хотите видеть debug сообщения
     format="%(asctime)s [%(levelname)s] - %(module)s:%(lineno)d - %(message)s",  # Добавил module и lineno для лучшей отладки
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+=======
+setup_logging(level=logging.INFO)
+>>>>>>> main
 
-# Добавление пути к скрипту в sys.path, если его там еще нет
-# current_script_path уже определен как current_script_dir, можно использовать его
-if current_script_dir not in sys.path:
-    sys.path.insert(0, current_script_dir)
-    logging.debug(f"Добавлен путь к sys.path: {current_script_dir}")
 
+<<<<<<< HEAD
 
 async def main():
     print("🔧 Запуск Jarvis...")
@@ -80,10 +82,23 @@ async def main():
 
         print("✅ Jarvis завершил работу.")
         logging.info("🔚 Jarvis полностью завершил работу.")
+=======
+async def main() -> None:
+    """Entry point that starts the command line interface."""
+    await run()
+
+>>>>>>> main
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     # Для Windows может потребоваться другая политика цикла событий asyncio, если возникают проблемы
     # if sys.platform == "win32":
     #    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     asyncio.run(main())
+=======
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nJarvis завершил работу.")
+>>>>>>> main

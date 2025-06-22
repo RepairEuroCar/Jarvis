@@ -1,7 +1,10 @@
 # modules/ml_trainer_seq2seq.py
 import asyncio
 import json
+<<<<<<< HEAD
 import logging
+=======
+>>>>>>> main
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -19,6 +22,7 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
+<<<<<<< HEAD
 # Предполагается, что CommandInfo и CommandCategory определены в основном файле Jarvis
 try:
     from jarvis.app import CommandCategory, CommandInfo
@@ -52,6 +56,13 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)  # Логгер для модуля
+=======
+# Command metadata used by Jarvis
+from commands.registry import CommandCategory, CommandInfo
+from utils.logger import get_logger
+
+logger = get_logger().getChild("ml_trainer_seq2seq")
+>>>>>>> main
 
 MODULE_METADATA = {
     "name": "Seq2Seq_ML_Trainer",
@@ -170,21 +181,30 @@ class Seq2SeqTrainer:
         logger.info(f"Инициализация Seq2SeqTrainer с конфигурацией: {config}")
 
         self.device = torch.device(
+<<<<<<< HEAD
             config.get(
                 "device", "cuda" if torch.cuda.is_available() else "cpu"
             )
+=======
+            config.get("device", "cuda" if torch.cuda.is_available() else "cpu")
+>>>>>>> main
         )
         logger.info(f"Используемое устройство: {self.device}")
 
         self.model_name = config.get("model_name_or_path", "t5-small")
+<<<<<<< HEAD
         self.tokenizer_name = config.get(
             "tokenizer_name_or_path", self.model_name
         )
+=======
+        self.tokenizer_name = config.get("tokenizer_name_or_path", self.model_name)
+>>>>>>> main
         self.source_prefix = config.get(
             "source_prefix", None
         )  # Например, "translate English to German: "
 
         try:
+<<<<<<< HEAD
             self.tokenizer: PreTrainedTokenizerFast = (
                 AutoTokenizer.from_pretrained(self.tokenizer_name)
             )
@@ -193,6 +213,14 @@ class Seq2SeqTrainer:
                     self.device
                 )
             )
+=======
+            self.tokenizer: PreTrainedTokenizerFast = AutoTokenizer.from_pretrained(
+                self.tokenizer_name
+            )
+            self.model: PreTrainedModel = AutoModelForSeq2SeqLM.from_pretrained(
+                self.model_name
+            ).to(self.device)
+>>>>>>> main
         except Exception as e:
             logger.error(
                 f"Ошибка загрузки модели или токенизатора ({self.model_name}): {e}"
@@ -208,9 +236,13 @@ class Seq2SeqTrainer:
         tensorboard_log_dir = config.get(
             "tensorboard_log_dir",
             os.path.join(
+<<<<<<< HEAD
                 self.checkpoint_dir,
                 "runs",
                 config.get("trainer_id", "default_trainer"),
+=======
+                self.checkpoint_dir, "runs", config.get("trainer_id", "default_trainer")
+>>>>>>> main
             ),
         )
         os.makedirs(tensorboard_log_dir, exist_ok=True)
@@ -281,9 +313,13 @@ class Seq2SeqTrainer:
             return DataLoader(
                 dataset,
                 batch_size=self.batch_size,
+<<<<<<< HEAD
                 shuffle=(
                     split == "train"
                 ),  # Перемешиваем только для обучающего набора
+=======
+                shuffle=(split == "train"),  # Перемешиваем только для обучающего набора
+>>>>>>> main
                 num_workers=self.dataloader_num_workers,
                 collate_fn=self.data_collator,  # Используем DataCollator
                 pin_memory=True if self.device.type == "cuda" else False,
@@ -348,19 +384,27 @@ class Seq2SeqTrainer:
         logger.info("Параметры оптимизации подготовлены.")
 
     def _create_checkpoint(self, epoch: int, val_loss: float):
+<<<<<<< HEAD
         if (
             self.model is None
             or self.optimizer is None
             or self.scheduler is None
         ):
+=======
+        if self.model is None or self.optimizer is None or self.scheduler is None:
+>>>>>>> main
             logger.error(
                 "Модель, оптимизатор или планировщик не инициализированы. Чекпоинт не создан."
             )
             return
 
         checkpoint_path = os.path.join(
+<<<<<<< HEAD
             self.checkpoint_dir,
             f"checkpoint_epoch_{epoch}_valloss_{val_loss:.4f}.pt",
+=======
+            self.checkpoint_dir, f"checkpoint_epoch_{epoch}_valloss_{val_loss:.4f}.pt"
+>>>>>>> main
         )
         # Сохраняем только state_dict, а не весь объект модели/токенизатора
         # Токенизатор обычно сохраняется отдельно или загружается по имени.
@@ -406,6 +450,7 @@ class Seq2SeqTrainer:
 
             self._prepare_optimization_parameters()
             if self.optimizer and "optimizer_state_dict" in checkpoint:
+<<<<<<< HEAD
                 self.optimizer.load_state_dict(
                     checkpoint["optimizer_state_dict"]
                 )
@@ -417,6 +462,13 @@ class Seq2SeqTrainer:
             self.current_epoch = checkpoint.get(
                 "epoch", -1
             )  # Восстанавливаем эпоху
+=======
+                self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            if self.scheduler and "scheduler_state_dict" in checkpoint:
+                self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+
+            self.current_epoch = checkpoint.get("epoch", -1)  # Восстанавливаем эпоху
+>>>>>>> main
             self.global_step = checkpoint.get(
                 "global_step", 0
             )  # И глобальный шаг, если он сохранялся
@@ -440,9 +492,13 @@ class Seq2SeqTrainer:
             or logits.numel() == 0
             or targets.numel() == 0
         ):
+<<<<<<< HEAD
             logger.warning(
                 "Logits или targets пусты. Метрики не могут быть вычислены."
             )
+=======
+            logger.warning("Logits или targets пусты. Метрики не могут быть вычислены.")
+>>>>>>> main
             return {
                 "accuracy": 0.0,
                 "perplexity": float("inf"),
@@ -496,29 +552,41 @@ class Seq2SeqTrainer:
         }
 
     def _log_metrics(
+<<<<<<< HEAD
         self,
         metrics: dict,
         prefix: str,
         epoch: int,
         step: Optional[int] = None,
+=======
+        self, metrics: dict, prefix: str, epoch: int, step: Optional[int] = None
+>>>>>>> main
     ):
         log_step = (
             step
             if step is not None
             else (epoch + 1)
+<<<<<<< HEAD
             * (
                 len(self.train_loader)
                 if self.train_loader and prefix == "train"
                 else 1
             )
+=======
+            * (len(self.train_loader) if self.train_loader and prefix == "train" else 1)
+>>>>>>> main
         )
 
         for name, value in metrics.items():
             if value is not None and not (
                 isinstance(value, float)
                 and (
+<<<<<<< HEAD
                     torch.isinf(torch.tensor(value))
                     or torch.isnan(torch.tensor(value))
+=======
+                    torch.isinf(torch.tensor(value)) or torch.isnan(torch.tensor(value))
+>>>>>>> main
                 )
             ):
                 self.writer.add_scalar(f"{prefix}/{name}", value, log_step)
@@ -543,13 +611,23 @@ class Seq2SeqTrainer:
                 "Модель, оптимизатор или DataLoader не инициализированы для обучения эпохи."
             )
             await self.jarvis.publish_event(
+<<<<<<< HEAD
                 "ml_training_error",
                 error="Epoch training initialization error",
+=======
+                "ml_training_error", error="Epoch training initialization error"
+>>>>>>> main
             )
             return float("inf")
 
         self.model.train()
         total_loss = 0.0
+<<<<<<< HEAD
+=======
+
+        epoch_predictions_logits_list = []
+        epoch_targets_list = []
+>>>>>>> main
 
         logger.info(f"Начало эпохи обучения {current_epoch + 1}...")
         progress_bar = None
@@ -575,16 +653,24 @@ class Seq2SeqTrainer:
             # DataCollatorForSeq2Seq уже должен вернуть тензоры на нужном устройстве, если модель на нем.
             # Но если нет, то:
             input_ids = batch["input_ids"].to(self.device, non_blocking=True)
+<<<<<<< HEAD
             attention_mask = batch["attention_mask"].to(
                 self.device, non_blocking=True
             )
+=======
+            attention_mask = batch["attention_mask"].to(self.device, non_blocking=True)
+>>>>>>> main
             labels = batch["labels"].to(self.device, non_blocking=True)
 
             self.optimizer.zero_grad()
             outputs = self.model(
+<<<<<<< HEAD
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 labels=labels,
+=======
+                input_ids=input_ids, attention_mask=attention_mask, labels=labels
+>>>>>>> main
             )
             loss = outputs.loss
 
@@ -609,8 +695,12 @@ class Seq2SeqTrainer:
             total_loss += current_loss_item
 
             if self.log_interval > 0 and (
+<<<<<<< HEAD
                 batch_idx % self.log_interval == 0
                 or batch_idx == len(dataloader) - 1
+=======
+                batch_idx % self.log_interval == 0 or batch_idx == len(dataloader) - 1
+>>>>>>> main
             ):
                 # Логируем метрики по текущему батчу (или накопленным, если есть смысл)
                 # Для простоты, пока логируем только loss батча
@@ -622,10 +712,14 @@ class Seq2SeqTrainer:
                 # batch_metrics.update(batch_acc_perp)
 
                 self._log_metrics(
+<<<<<<< HEAD
                     batch_metrics,
                     "train_batch",
                     current_epoch,
                     self.global_step,
+=======
+                    batch_metrics, "train_batch", current_epoch, self.global_step
+>>>>>>> main
                 )
                 await self.jarvis.publish_event(
                     "ml_training_batch_end",
@@ -635,9 +729,13 @@ class Seq2SeqTrainer:
                 )
 
             self.global_step += 1
+<<<<<<< HEAD
             if isinstance(
                 progress_bar, tqdm
             ):  # Обновляем описание прогресс-бара
+=======
+            if isinstance(progress_bar, tqdm):  # Обновляем описание прогресс-бара
+>>>>>>> main
                 progress_bar.set_postfix(
                     loss=f"{current_loss_item:.4f}",
                     avg_loss=f"{total_loss / (batch_idx + 1):.4f}",
@@ -648,9 +746,13 @@ class Seq2SeqTrainer:
             # if self.device.type == 'cuda': torch.cuda.empty_cache()
 
         avg_epoch_loss = (
+<<<<<<< HEAD
             total_loss / len(dataloader)
             if len(dataloader) > 0
             else float("inf")
+=======
+            total_loss / len(dataloader) if len(dataloader) > 0 else float("inf")
+>>>>>>> main
         )
         logger.info(
             f"Эпоха обучения {current_epoch + 1} завершена. Средний Loss: {avg_epoch_loss:.4f}"
@@ -665,8 +767,12 @@ class Seq2SeqTrainer:
                 "Модель или DataLoader не инициализированы для валидации эпохи."
             )
             await self.jarvis.publish_event(
+<<<<<<< HEAD
                 "ml_validation_error",
                 error="Epoch validation initialization error",
+=======
+                "ml_validation_error", error="Epoch validation initialization error"
+>>>>>>> main
             )
             return float("inf")
 
@@ -690,18 +796,26 @@ class Seq2SeqTrainer:
 
         with torch.no_grad():
             for batch in progress_bar_val:
+<<<<<<< HEAD
                 input_ids = batch["input_ids"].to(
                     self.device, non_blocking=True
                 )
+=======
+                input_ids = batch["input_ids"].to(self.device, non_blocking=True)
+>>>>>>> main
                 attention_mask = batch["attention_mask"].to(
                     self.device, non_blocking=True
                 )
                 labels = batch["labels"].to(self.device, non_blocking=True)
 
                 outputs = self.model(
+<<<<<<< HEAD
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     labels=labels,
+=======
+                    input_ids=input_ids, attention_mask=attention_mask, labels=labels
+>>>>>>> main
                 )
                 loss = outputs.loss
                 if loss is None:
@@ -724,9 +838,13 @@ class Seq2SeqTrainer:
 
         metrics = self._calculate_metrics(all_logits, all_targets)
         avg_epoch_loss = (
+<<<<<<< HEAD
             total_loss / len(dataloader)
             if len(dataloader) > 0
             else float("inf")
+=======
+            total_loss / len(dataloader) if len(dataloader) > 0 else float("inf")
+>>>>>>> main
         )
         metrics.update({"loss": avg_epoch_loss})
 
@@ -768,9 +886,13 @@ class Seq2SeqTrainer:
 
         for epoch_idx in range(start_epoch, self.num_epochs):
             self.current_epoch = epoch_idx  # Обновляем текущую эпоху тренера
+<<<<<<< HEAD
             logger.info(
                 f"--- Эпоха {self.current_epoch + 1}/{self.num_epochs} ---"
             )
+=======
+            logger.info(f"--- Эпоха {self.current_epoch + 1}/{self.num_epochs} ---")
+>>>>>>> main
 
             train_loss = await self.train_epoch_async(
                 self.train_loader, self.current_epoch
@@ -842,18 +964,26 @@ class Seq2SeqTrainer:
         logger.info("Начало оценки модели на тестовом наборе...")
         with torch.no_grad():
             for batch in loader_to_use:  # Можно добавить tqdm здесь тоже
+<<<<<<< HEAD
                 input_ids = batch["input_ids"].to(
                     self.device, non_blocking=True
                 )
+=======
+                input_ids = batch["input_ids"].to(self.device, non_blocking=True)
+>>>>>>> main
                 attention_mask = batch["attention_mask"].to(
                     self.device, non_blocking=True
                 )
                 labels = batch["labels"].to(self.device, non_blocking=True)
 
                 outputs = self.model(
+<<<<<<< HEAD
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     labels=labels,
+=======
+                    input_ids=input_ids, attention_mask=attention_mask, labels=labels
+>>>>>>> main
                 )
                 loss = outputs.loss
                 if loss is None:
@@ -877,9 +1007,13 @@ class Seq2SeqTrainer:
 
         metrics = self._calculate_metrics(all_logits, all_targets)
         avg_loss = (
+<<<<<<< HEAD
             total_loss / len(loader_to_use)
             if len(loader_to_use) > 0
             else float("inf")
+=======
+            total_loss / len(loader_to_use) if len(loader_to_use) > 0 else float("inf")
+>>>>>>> main
         )
         metrics.update({"loss": avg_loss})
 
@@ -933,9 +1067,13 @@ class Seq2SeqTrainer:
                 "repetition_penalty": float(
                     self.config.get("predict_repetition_penalty", 1.0)
                 ),
+<<<<<<< HEAD
                 "length_penalty": float(
                     self.config.get("predict_length_penalty", 1.0)
                 ),
+=======
+                "length_penalty": float(self.config.get("predict_length_penalty", 1.0)),
+>>>>>>> main
                 "no_repeat_ngram_size": int(
                     self.config.get("predict_no_repeat_ngram_size", 3)
                 ),  # Часто полезно
@@ -952,17 +1090,25 @@ class Seq2SeqTrainer:
                     **generation_params,
                 )
 
+<<<<<<< HEAD
             decoded_text = self.tokenizer.decode(
                 outputs[0], skip_special_tokens=True
             )
+=======
+            decoded_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+>>>>>>> main
             logger.info(
                 f"Предсказание для '{text}' (с префиксом '{self.source_prefix if self.source_prefix else ''}'): '{decoded_text}'"
             )
             return decoded_text
         except Exception as e:
             logger.error(
+<<<<<<< HEAD
                 f"Ошибка во время предсказания для текста '{text}': {e}",
                 exc_info=True,
+=======
+                f"Ошибка во время предсказания для текста '{text}': {e}", exc_info=True
+>>>>>>> main
             )
             return f"Ошибка предсказания: {e}"
 
@@ -985,9 +1131,13 @@ class Seq2SeqTrainer:
             self.tokenizer.save_pretrained(save_path)
 
             # Сохраняем конфигурацию тренера
+<<<<<<< HEAD
             trainer_config_path = os.path.join(
                 save_path, "trainer_config.json"
             )
+=======
+            trainer_config_path = os.path.join(save_path, "trainer_config.json")
+>>>>>>> main
             with open(trainer_config_path, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
             logger.info(
@@ -1052,9 +1202,13 @@ class Seq2SeqTrainer:
             try:
                 self.writer.close()
             except Exception as e:
+<<<<<<< HEAD
                 logger.warning(
                     f"Ошибка при закрытии TensorBoard SummaryWriter: {e}"
                 )
+=======
+                logger.warning(f"Ошибка при закрытии TensorBoard SummaryWriter: {e}")
+>>>>>>> main
 
 
 active_trainers: Dict[str, Seq2SeqTrainer] = {}
@@ -1114,14 +1268,18 @@ async def setup_trainer_command(jarvis: Any, args_str: str) -> str:
     global active_trainers
     config_name_or_path = args_str.strip()
     if not config_name_or_path:
-        return "Использование: setup_seq2seq_trainer <trainer_id_или_путь_к_json_конфигу>"
+        return (
+            "Использование: setup_seq2seq_trainer <trainer_id_или_путь_к_json_конфигу>"
+        )
 
     config_dict: Optional[Dict[str, Any]] = None
     trainer_id = config_name_or_path  # По умолчанию ID = имя конфига/путь
 
     # 1. Проверяем, не является ли это ID уже существующего конфига в памяти
     # Путь в памяти: system.module_configs.<имя_модуля>.<trainer_id>
-    memory_config_path = f"system.module_configs.{MODULE_METADATA['name']}.{config_name_or_path}"
+    memory_config_path = (
+        f"system.module_configs.{MODULE_METADATA['name']}.{config_name_or_path}"
+    )
     config_from_memory = jarvis.memory.query(memory_config_path)
 
     if isinstance(config_from_memory, dict):
@@ -1129,9 +1287,13 @@ async def setup_trainer_command(jarvis: Any, args_str: str) -> str:
         logger.info(
             f"Загружена конфигурация тренера '{trainer_id}' из памяти Jarvis: {memory_config_path}"
         )
+<<<<<<< HEAD
     elif os.path.exists(config_name_or_path) and config_name_or_path.endswith(
         ".json"
     ):
+=======
+    elif os.path.exists(config_name_or_path) and config_name_or_path.endswith(".json"):
+>>>>>>> main
         try:
             with open(config_name_or_path, "r", encoding="utf-8") as f:
                 config_dict = json.load(f)
@@ -1140,11 +1302,17 @@ async def setup_trainer_command(jarvis: Any, args_str: str) -> str:
             )
             # Если загрузили из файла, ID может быть внутри файла или равен имени файла
             trainer_id = config_dict.get(
+<<<<<<< HEAD
                 "trainer_id",
                 os.path.splitext(os.path.basename(config_name_or_path))[0],
+=======
+                "trainer_id", os.path.splitext(os.path.basename(config_name_or_path))[0]
+>>>>>>> main
             )
         except Exception as e:
-            return f"Ошибка загрузки JSON конфигурации из файла {config_name_or_path}: {e}"
+            return (
+                f"Ошибка загрузки JSON конфигурации из файла {config_name_or_path}: {e}"
+            )
     else:
         return f"Конфигурация '{config_name_or_path}' не найдена ни в памяти Jarvis ({memory_config_path}), ни как JSON файл."
 
@@ -1192,9 +1360,13 @@ async def start_training_command(jarvis: Any, args_str: str) -> str:
             msg = f"Обучение для тренера '{trainer_id}' завершено. Статус: {result.get('status', 'unknown')}, Best Val Loss: {result.get('best_val_loss', 'N/A'):.4f}"
             logger.info(msg)
             await jarvis.publish_event(
+<<<<<<< HEAD
                 "ml_training_task_completed",
                 trainer_id=trainer_id,
                 result=result,
+=======
+                "ml_training_task_completed", trainer_id=trainer_id, result=result
+>>>>>>> main
             )
             # Можно отправить сообщение пользователю через Jarvis, если есть такой механизм
         except Exception as e_train:
@@ -1203,9 +1375,13 @@ async def start_training_command(jarvis: Any, args_str: str) -> str:
                 exc_info=True,
             )
             await jarvis.publish_event(
+<<<<<<< HEAD
                 "ml_training_task_error",
                 trainer_id=trainer_id,
                 error=str(e_train),
+=======
+                "ml_training_task_error", trainer_id=trainer_id, error=str(e_train)
+>>>>>>> main
             )
 
     asyncio.create_task(_run_training())
@@ -1239,9 +1415,13 @@ async def load_checkpoint_command(jarvis: Any, args_str: str) -> str:
     try:
         epoch, val_loss = trainer._load_checkpoint(checkpoint_path)
         # После загрузки чекпоинта, сбрасываем счетчик эпох тренера
+<<<<<<< HEAD
         trainer.current_epoch = (
             epoch  # Или epoch + 1, если обучение продолжается
         )
+=======
+        trainer.current_epoch = epoch  # Или epoch + 1, если обучение продолжается
+>>>>>>> main
         trainer.global_step = 0  # Или восстанавливать global_step из чекпоинта
         return f"Чекпоинт '{checkpoint_path}' успешно загружен для тренера '{trainer_id}'. Эпоха: {epoch + 1}, Val Loss: {val_loss:.4f}."
     except Exception as e:

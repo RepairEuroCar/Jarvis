@@ -4,8 +4,13 @@ import json
 import os
 
 import radon.complexity as radon_complexity  # Для цикломатической сложности
+<<<<<<< HEAD
 from radon.metrics import mi_visit  # Для индекса обслуживаемости
 from radon.raw import analyze as radon_raw_analyze  # Подсчет SLOC и другое
+=======
+from radon.metrics import mi_visit  # Для метрик Холстеда и индекса обслуживаемости
+from radon.raw import analyze as radon_raw_analyze  # Для SLOC, комментариев и т.д.
+>>>>>>> main
 
 # Концептуально: интеграция с AI моделями для более глубокого анализа
 # from some_ai_code_analysis_library import AICodeHelper
@@ -37,9 +42,13 @@ class AdvancedCodeAnalyzer:
         )
         self.cache_results = self.config.get("cache_results", True)
         self.cache_ttl_minutes = self.config.get("cache_ttl_minutes", 60)
+<<<<<<< HEAD
         self.analysis_cache = (
             {}
         )  # Простой кэш в памяти: {filepath: (timestamp, data)}
+=======
+        self.analysis_cache = {}  # Простой кэш в памяти: {filepath: (timestamp, data)}
+>>>>>>> main
 
         # Концептуально: Инициализация AI помощника
         # self.ai_helper = AICodeHelper(api_key=self.jarvis.memory.get("api_keys", {}).get("ai_code_analysis_key"))
@@ -109,9 +118,13 @@ class AdvancedCodeAnalyzer:
                 "comment_lines": raw_analysis.comments + raw_analysis.multi,
                 "blank_lines": raw_analysis.blank,
                 "logical_lines": raw_analysis.lloc,
+<<<<<<< HEAD
                 "maintainability_index": (
                     round(mi_score, 2) if mi_score else "N/A"
                 ),
+=======
+                "maintainability_index": round(mi_score, 2) if mi_score else "N/A",
+>>>>>>> main
             }
             self._cache_analysis_result(filepath, "metrics_radon", metrics)
             return metrics, None
@@ -148,9 +161,13 @@ class AdvancedCodeAnalyzer:
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     num_args = len(node.args.args)
                     lines_in_def = (
+<<<<<<< HEAD
                         (node.end_lineno - node.lineno + 1)
                         if node.end_lineno
                         else 0
+=======
+                        (node.end_lineno - node.lineno + 1) if node.end_lineno else 0
+>>>>>>> main
                     )
                     is_async = isinstance(node, ast.AsyncFunctionDef)
                     structure["functions"].append(
@@ -167,6 +184,7 @@ class AdvancedCodeAnalyzer:
                     methods = [
                         item.name
                         for item in node.body
+<<<<<<< HEAD
                         if isinstance(
                             item, (ast.FunctionDef, ast.AsyncFunctionDef)
                         )
@@ -175,6 +193,12 @@ class AdvancedCodeAnalyzer:
                         (node.end_lineno - node.lineno + 1)
                         if node.end_lineno
                         else 0
+=======
+                        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    ]
+                    lines_in_def = (
+                        (node.end_lineno - node.lineno + 1) if node.end_lineno else 0
+>>>>>>> main
                     )
                     structure["classes"].append(
                         {
@@ -188,11 +212,15 @@ class AdvancedCodeAnalyzer:
                 elif isinstance(node, ast.Import):
                     for alias in node.names:
                         structure["imports"].append(
+<<<<<<< HEAD
                             {
                                 "type": "import",
                                 "module": alias.name,
                                 "as": alias.asname,
                             }
+=======
+                            {"type": "import", "module": alias.name, "as": alias.asname}
+>>>>>>> main
                         )
                 elif isinstance(node, ast.ImportFrom):
                     module_name = (
@@ -255,7 +283,10 @@ class AdvancedCodeAnalyzer:
             # For classes, Radon calculates complexity for methods within them.
             # We can aggregate or list them.
             for item in visitor.classes:
+<<<<<<< HEAD
                 pass
+=======
+>>>>>>> main
                 # Need to iterate through methods of this class if available in visitor output
                 # This part might need adjustment based on Radon's exact output for classes
                 # For now, let's assume item.real_complexity or similar if available
@@ -284,9 +315,13 @@ class AdvancedCodeAnalyzer:
                     sum(complexities) / len(complexities), 2
                 )
 
+<<<<<<< HEAD
             self._cache_analysis_result(
                 filepath, "cyclomatic_complexity", results
             )
+=======
+            self._cache_analysis_result(filepath, "cyclomatic_complexity", results)
+>>>>>>> main
             return results, None
         except Exception as e:
             return (
@@ -387,6 +422,7 @@ class AdvancedCodeAnalyzer:
         self._cache_analysis_result(filepath, "code_smells", smells)
         return smells, None
 
+<<<<<<< HEAD
     async def generate_comprehensive_report(
         self, path_str, report_format=None
     ):
@@ -398,13 +434,149 @@ class AdvancedCodeAnalyzer:
         if os.path.isfile(path_str):
             files_to_analyze = [path_str]
         elif os.path.isdir(path_str):
+=======
+    async def detect_magic_numbers(self, filepath):
+        """Ищет в коде числовые литералы, не сохранённые в константы."""
+        cached = self._get_cached_analysis(filepath, "magic_numbers")
+        if cached:
+            return cached, None
+
+        if not os.path.isfile(filepath):
+            return None, f"Файл не найден: {filepath}"
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                source = f.read()
+            tree = ast.parse(source, filename=filepath)
+
+            class MagicVisitor(ast.NodeVisitor):
+                def __init__(self):
+                    self.stack = []
+                    self.items = []
+
+                def generic_visit(self, node):
+                    self.stack.append(node)
+                    super().generic_visit(node)
+                    self.stack.pop()
+
+                def visit_Constant(self, node):
+                    if isinstance(node.value, (int, float, complex)):
+                        skip = False
+                        if self.stack:
+                            parent = self.stack[-1]
+                            if (
+                                isinstance(parent, (ast.Assign, ast.AnnAssign))
+                                and parent.value is node
+                            ):
+                                targets = (
+                                    parent.targets
+                                    if isinstance(parent, ast.Assign)
+                                    else [parent.target]
+                                )
+                                if all(
+                                    isinstance(t, ast.Name) and t.id.isupper()
+                                    for t in targets
+                                ):
+                                    skip = True
+                        if not skip:
+                            self.items.append(
+                                {"value": node.value, "lineno": node.lineno}
+                            )
+
+            visitor = MagicVisitor()
+            visitor.visit(tree)
+            self._cache_analysis_result(filepath, "magic_numbers", visitor.items)
+            return visitor.items, None
+        except SyntaxError as e:
+            return None, f"Синтаксическая ошибка в {filepath}: {e}"
+
+    async def detect_duplicate_code(self, filepath):
+        """Находит дублирующиеся функции в файле."""
+        cached = self._get_cached_analysis(filepath, "duplicate_code")
+        if cached:
+            return cached, None
+
+        if not os.path.isfile(filepath):
+            return None, f"Файл не найден: {filepath}"
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                source = f.read()
+            tree = ast.parse(source, filename=filepath)
+            func_map = {}
+            duplicates = []
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    body_module = ast.Module(body=node.body, type_ignores=[])
+                    body_dump = ast.dump(body_module, include_attributes=False)
+                    key = body_dump
+                    info = {"name": node.name, "lineno": node.lineno}
+                    if key in func_map:
+                        prev = func_map[key]
+                        duplicates.append(
+                            {
+                                "function_1": prev["name"],
+                                "lineno_1": prev["lineno"],
+                                "function_2": info["name"],
+                                "lineno_2": info["lineno"],
+                            }
+                        )
+                    else:
+                        func_map[key] = info
+
+            self._cache_analysis_result(filepath, "duplicate_code", duplicates)
+            return duplicates, None
+        except SyntaxError as e:
+            return None, f"Синтаксическая ошибка в {filepath}: {e}"
+
+    async def detect_module_globals(self, filepath):
+        """Ищет присваивания на уровне модуля."""
+        cached = self._get_cached_analysis(filepath, "module_globals")
+        if cached:
+            return cached, None
+
+        if not os.path.isfile(filepath):
+            return None, f"Файл не найден: {filepath}"
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                source = f.read()
+            tree = ast.parse(source, filename=filepath)
+            globals_found = []
+            for node in tree.body:
+                if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                    targets = (
+                        node.targets if isinstance(node, ast.Assign) else [node.target]
+                    )
+                    for t in targets:
+                        if isinstance(t, ast.Name) and not t.id.isupper():
+                            globals_found.append({"name": t.id, "lineno": t.lineno})
+
+            self._cache_analysis_result(filepath, "module_globals", globals_found)
+            return globals_found, None
+        except SyntaxError as e:
+            return None, f"Синтаксическая ошибка в {filepath}: {e}"
+
+    async def generate_comprehensive_report(self, path_str, report_format=None):
+        """Генерирует комплексный отчет для файла или директории."""
+        report_format = report_format if report_format else self.default_report_format
+
+        abs_path = os.path.abspath(path_str)
+
+        if os.path.isfile(abs_path):
+            files_to_analyze = [abs_path]
+            project_root = os.path.dirname(abs_path)
+        elif os.path.isdir(abs_path):
+>>>>>>> main
             files_to_analyze = []
-            for root, _, files in os.walk(path_str):
-                if self._is_path_ignored(root, path_str):
+            project_root = abs_path
+            for root, _, files in os.walk(abs_path):
+                if self._is_path_ignored(root, abs_path):
                     continue
                 for file in files:
                     if file.endswith(".py") and not self._is_path_ignored(
+<<<<<<< HEAD
                         os.path.join(root, file), path_str
+=======
+                        os.path.join(root, file), abs_path
+>>>>>>> main
                     ):
                         files_to_analyze.append(os.path.join(root, file))
         else:
@@ -423,6 +595,10 @@ class AdvancedCodeAnalyzer:
             "summary": {},
             "files": [],
             "timestamp": datetime.datetime.now().isoformat(),
+<<<<<<< HEAD
+=======
+            "project_root": project_root,
+>>>>>>> main
         }
         all_metrics_summary = {
             "sloc": 0,
@@ -433,16 +609,43 @@ class AdvancedCodeAnalyzer:
         }
         all_smells_count = 0
         critical_smells_count = 0
+        total_magic_numbers = 0
+        total_duplicate_functions = 0
+        total_module_globals = 0
 
         for filepath in files_to_analyze:
+            rel_path = os.path.relpath(filepath, project_root)
+
             metrics, err_m = await self.get_file_metrics_radon(filepath)
+            if metrics:
+                metrics["filepath"] = rel_path
+
             structure, err_s = await self.get_file_structure_ast(filepath)
+            if structure:
+                structure["filepath"] = rel_path
+
             complexity, err_c = await self.get_cyclomatic_complexity(filepath)
+<<<<<<< HEAD
             smells, err_sm = await self.detect_code_smells(
                 filepath, structure, complexity
             )
 
             file_report = {"filepath": filepath}
+=======
+            if complexity:
+                complexity["filepath"] = rel_path
+
+            smells, err_sm = await self.detect_code_smells(
+                filepath, structure, complexity
+            )
+            if smells:
+                smells["filepath"] = rel_path
+            magic_nums, _ = await self.detect_magic_numbers(filepath)
+            duplicates, _ = await self.detect_duplicate_code(filepath)
+            globals_defs, _ = await self.detect_module_globals(filepath)
+
+            file_report = {"filepath": rel_path}
+>>>>>>> main
             if metrics:
                 file_report["metrics"] = metrics
             if structure:
@@ -457,6 +660,18 @@ class AdvancedCodeAnalyzer:
                     for s in smells["detected_smells"]
                     if s.get("severity") == "critical"
                 )
+<<<<<<< HEAD
+=======
+            if magic_nums:
+                file_report["magic_numbers"] = magic_nums
+                total_magic_numbers += len(magic_nums)
+            if duplicates:
+                file_report["duplicate_code"] = duplicates
+                total_duplicate_functions += len(duplicates)
+            if globals_defs:
+                file_report["globals"] = globals_defs
+                total_module_globals += len(globals_defs)
+>>>>>>> main
 
             if metrics and metrics.get("maintainability_index") != "N/A":
                 all_metrics_summary["maintainability_index_sum"] += metrics[
@@ -473,29 +688,46 @@ class AdvancedCodeAnalyzer:
         report_data["summary"]["total_comment_lines"] = all_metrics_summary[
             "comment_lines"
         ]
+<<<<<<< HEAD
         report_data["summary"]["total_blank_lines"] = all_metrics_summary[
             "blank_lines"
         ]
+=======
+        report_data["summary"]["total_blank_lines"] = all_metrics_summary["blank_lines"]
+>>>>>>> main
         if all_metrics_summary["analyzed_files_count"] > 0:
             avg_mi = (
                 all_metrics_summary["maintainability_index_sum"]
                 / all_metrics_summary["analyzed_files_count"]
             )
+<<<<<<< HEAD
             report_data["summary"]["average_maintainability_index"] = round(
                 avg_mi, 2
             )
         report_data["summary"]["total_code_smells_detected"] = all_smells_count
         report_data["summary"]["critical_code_smells"] = critical_smells_count
+=======
+            report_data["summary"]["average_maintainability_index"] = round(avg_mi, 2)
+        report_data["summary"]["total_code_smells_detected"] = all_smells_count
+        report_data["summary"]["critical_code_smells"] = critical_smells_count
+        report_data["summary"]["total_magic_numbers"] = total_magic_numbers
+        report_data["summary"]["duplicate_functions"] = total_duplicate_functions
+        report_data["summary"]["module_level_globals"] = total_module_globals
+>>>>>>> main
 
         # Концептуально: AI генерирует общее резюме по проекту
         # if self.config.get("enable_ai_project_summary", False) and report_data["files"]:
         #     project_summary_text = await self.ai_helper.generate_project_summary(report_data)
         #     report_data["summary"]["ai_project_overview"] = project_summary_text
 
+<<<<<<< HEAD
         return (
             report_data,
             None,
         )  # Форматирование в Markdown/HTML/JSON будет в команде
+=======
+        return report_data, None  # Форматирование в Markdown/HTML/JSON будет в команде
+>>>>>>> main
 
 
 # --- Интерфейс модуля Jarvis ---
@@ -525,9 +757,13 @@ async def load_module(jarvis_instance, module_config=None):
 async def close_module(jarvis_instance):
     """Очистка ресурсов, если это необходимо в будущем."""
     if hasattr(jarvis_instance, "adv_code_analyzer"):
+<<<<<<< HEAD
         jarvis_instance.adv_code_analyzer = (
             None  # Очистка кэша и т.д. может быть здесь
         )
+=======
+        jarvis_instance.adv_code_analyzer = None  # Очистка кэша и т.д. может быть здесь
+>>>>>>> main
         print("Модуль Advanced Code Analyzer выгружен.")
 
 
@@ -559,9 +795,13 @@ def _format_report(report_data, format_type="markdown"):
         md += f"\n### Обзор проекта (AI):\n{summary['ai_project_overview']}\n"
 
     for file_report in report_data.get("files", []):
+<<<<<<< HEAD
         relative_filepath = file_report.get(
             "filepath"
         )  # TODO: Сделать путь относительным к корню анализа
+=======
+        relative_filepath = file_report.get("filepath")
+>>>>>>> main
         md += f"\n## Файл: `{relative_filepath}`\n"
 
         if "metrics" in file_report:
@@ -570,9 +810,13 @@ def _format_report(report_data, format_type="markdown"):
                 if k != "filepath":
                     md += f"- {k.replace('_', ' ').capitalize()}: {v}\n"
 
+<<<<<<< HEAD
         if "complexity" in file_report and file_report["complexity"].get(
             "functions"
         ):
+=======
+        if "complexity" in file_report and file_report["complexity"].get("functions"):
+>>>>>>> main
             md += "### Цикломатическая сложность (Функции):\n"
             for func in file_report["complexity"]["functions"]:
                 md += f"- `{func['name']}` (строка {func['lineno']}): **{func['complexity']}** (Ранг: {func['rank']})\n"
@@ -581,6 +825,18 @@ def _format_report(report_data, format_type="markdown"):
             md += '### Обнаруженные "запахи кода":\n'
             for smell in file_report["smells"]:
                 md += f"- **[{smell['severity'].upper()}]** {smell['type']} (строка {smell['location'].split(':')[-1]}): {smell['message']}\n"
+        if "magic_numbers" in file_report and file_report["magic_numbers"]:
+            md += "### Найденные magic numbers:\n"
+            for item in file_report["magic_numbers"]:
+                md += f"- {item['value']} (строка {item['lineno']})\n"
+        if "duplicate_code" in file_report and file_report["duplicate_code"]:
+            md += "### Дублирующиеся функции:\n"
+            for dup in file_report["duplicate_code"]:
+                md += f"- `{dup['function_1']}`:{dup['lineno_1']} дублирует `{dup['function_2']}`:{dup['lineno_2']}\n"
+        if "globals" in file_report and file_report["globals"]:
+            md += "### Глобальные переменные:\n"
+            for g in file_report["globals"]:
+                md += f"- `{g['name']}` (строка {g['lineno']})\n"
         # Можно добавить вывод структуры (импорты, классы, функции) при необходимости
     return md
 

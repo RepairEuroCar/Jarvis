@@ -2,21 +2,37 @@
 # jarvis/nlu/processor.py
 # -----------------------------
 import difflib
+<<<<<<< HEAD
 import logging
+=======
+import json
+>>>>>>> main
 import re
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
+<<<<<<< HEAD
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
+=======
+from pathlib import Path
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
+import yaml
+
+from utils.logger import get_logger
+
+>>>>>>> main
 from ..commands.registry import CommandCategory
+from .intent_model import IntentModel
+from .ner_model import NERModel
 
 # TODO: Развитие интеллекта задач
 #  - Распознавание семантики задач: генерация, анализ, перевод, диагностика
 #  - Автоопределение intent + confidence
 #  - Ответ на естественные вопросы: «Как ты решил это?»
 
-logger = logging.getLogger("Jarvis.NLU")
+logger = get_logger().getChild("NLU")
 
 
 class EntityExtractionMode(Enum):
@@ -58,14 +74,37 @@ class ProcessingResult:
 
 class NLUProcessor:
     def __init__(
-        self, memory_manager: Optional[Any] = None, max_history_size: int = 100
+        self,
+        memory_manager: Optional[Any] = None,
+        max_history_size: int = 100,
+        model_path: Optional[str] = None,
+        ner_model_name: Optional[str] = None,
+        intent_dataset_path: Optional[str] = None,
     ):
         self.memory_manager = memory_manager
+        self.intent_model: Optional[IntentModel] = None
+        self.ner_model: Optional[NERModel] = None
+        if model_path:
+            try:
+                self.intent_model = IntentModel(model_path)
+            except Exception as e:  # pragma: no cover - logging only
+                logger.warning(f"Failed to load intent model: {e}")
+        if ner_model_name:
+            try:
+                self.ner_model = NERModel(ner_model_name)
+            except Exception as e:  # pragma: no cover - logging only
+                logger.warning(f"Failed to load NER model: {e}")
         self.command_patterns: List[CommandPattern] = (
             self._initialize_command_patterns()
         )
+        self.synonyms: Dict[str, str] = self._load_synonyms()
         self.context: Dict[str, Any] = {}
         self.history: deque[ProcessingResult] = deque(maxlen=max_history_size)
+        self.intent_dataset_path = (
+            Path(intent_dataset_path)
+            if intent_dataset_path
+            else Path(__file__).with_name("intent_dataset.jsonl")
+        )
         self.entity_patterns: Dict[str, str] = {
             "path_entity": r"(?:[a-zA-Z]:)?(?:[/\\][^/\\]*)+/?",
             "module_name_entity": r"[a-zA-Z_][a-zA-Z0-9_]*",
@@ -94,8 +133,30 @@ class NLUProcessor:
             TaskSemantics.DIAGNOSTICS: ["диагност", "ошибка", "diagnose"],
         }
 
+        self.learned_corrections: Dict[str, str] = {}
         if self.memory_manager:
             self._load_custom_patterns()
+            self.learned_corrections = (
+                self.memory_manager.recall("nlu.corrections") or {}
+            )
+
+    def _load_synonyms(self) -> Dict[str, str]:
+        """Load synonyms mapping from a YAML file located next to this module."""
+        path = Path(__file__).with_name("synonyms.yaml")
+        if not path.exists():
+            return {}
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+            return {str(k).lower(): str(v).lower() for k, v in data.items()}
+        except Exception as e:  # pragma: no cover - logging only
+            logger.warning(f"Failed to load synonyms: {e}")
+            return {}
+
+    def _normalize_text_with_synonyms(self, text: str) -> str:
+        """Replace words in text according to the synonyms map."""
+        tokens = [self.synonyms.get(t, t) for t in text.split()]
+        return " ".join(tokens)
 
     def _detect_task_semantics(self, text_lower: str) -> TaskSemantics:
         for sem, words in self.semantics_keywords.items():
@@ -171,6 +232,18 @@ class NLUProcessor:
             result = self._handle_repeat_command()
         else:
             result = await self._process_text(text_original, text_lower)
+        if isinstance(result, ProcessingResult) and self.intent_model:
+            low_conf = result.confidence < 0.6 or result.metadata.get("is_fallback")
+            if low_conf:
+                context_cmds = [r.intent for r in list(self.history)[-3:]]
+                try:
+                    pred = self.intent_model.predict(text_original, context_cmds)
+                    result.intent = pred.get("intent", result.intent)
+                    result.confidence = pred.get("confidence", result.confidence)
+                    result.metadata["predicted_by_model"] = True
+                    self.history[-1] = result
+                except Exception as e:  # pragma: no cover - logging only
+                    logger.warning(f"Intent model prediction failed: {e}")
         if isinstance(result, ProcessingResult):
             return result.__dict__
         return result
@@ -179,6 +252,19 @@ class NLUProcessor:
         self, text_original: str, text_lower: str
     ) -> ProcessingResult:
         """Обрабатывает текст, пытаясь сопоставить с известными шаблонами команд."""
+        if text_lower in self.learned_corrections:
+            intent = self.learned_corrections[text_lower]
+            pattern = CommandPattern(
+                intent=intent,
+                triggers=[text_lower],
+                entity_extraction_mode=EntityExtractionMode.NO_ARGS,
+                description="Learned correction",
+            )
+            result = await self._extract_entities(
+                pattern, text_original, text_lower, 1.0
+            )
+            self._update_history(result)
+            return result
         for pattern in self.command_patterns:
             if result := await self._match_pattern(
                 pattern, text_original, text_lower
@@ -192,13 +278,19 @@ class NLUProcessor:
         self, pattern: CommandPattern, text_original: str, text_lower: str
     ) -> Optional[ProcessingResult]:
         """Пытается сопоставить текст с конкретным шаблоном команды."""
+        normalized_text = self._normalize_text_with_synonyms(text_lower)
         for trigger in pattern.triggers:
-            if text_lower.startswith(trigger.lower()):
+            normalized_trigger = self._normalize_text_with_synonyms(trigger.lower())
+            if normalized_text.startswith(normalized_trigger):
                 return await self._extract_entities(
                     pattern, text_original, trigger, 1.0
                 )
             ratio = difflib.SequenceMatcher(
+<<<<<<< HEAD
                 None, text_lower, trigger.lower()
+=======
+                None, normalized_text, normalized_trigger
+>>>>>>> main
             ).ratio()
             if ratio > 0.75:
                 return await self._extract_entities(
@@ -214,7 +306,9 @@ class NLUProcessor:
         confidence: float,
     ) -> ProcessingResult:
         """Извлекает сущности из текста в соответствии с шаблоном."""
-        args_part = text[len(trigger) :].strip()
+        trigger_words = trigger.split()
+        text_words = text.split()
+        args_part = " ".join(text_words[len(trigger_words) :]).strip()
         entities = {"raw_args": args_part}
 
         if (
@@ -223,6 +317,16 @@ class NLUProcessor:
         ):
             if pattern.entity_names:
                 entities[pattern.entity_names[0]] = args_part
+        elif pattern.entity_extraction_mode == EntityExtractionMode.NAMED_ENTITIES:
+            if self.ner_model is None:
+                raise RuntimeError("Named entity extraction requires NERModel")
+            spans = self.ner_model.extract_entities(args_part)
+            for span in spans:
+                label = span.get("label", "")
+                value = span.get("text", "")
+                if not label:
+                    continue
+                entities.setdefault(label, []).append(value)
 
         return ProcessingResult(
             intent=pattern.intent,
@@ -315,6 +419,31 @@ class NLUProcessor:
             self.memory_manager.remember("nlu.custom_patterns", existing)
             self.memory_manager.save()
 
+    def learn_correction(
+        self, wrong_text: str, intent: str, persist: bool = False
+    ) -> None:
+        """Запоминает исправление неверно распознанной команды."""
+        self.learned_corrections[wrong_text.lower()] = intent
+        if persist:
+            if self.memory_manager:
+                self.memory_manager.remember(
+                    "nlu.corrections", self.learned_corrections
+                )
+                self.memory_manager.save()
+            try:
+                with open(self.intent_dataset_path, "a", encoding="utf-8") as f:
+                    json.dump(
+                        {"text": wrong_text, "intent": intent}, f, ensure_ascii=False
+                    )
+                    f.write("\n")
+            except Exception as e:  # pragma: no cover - logging only
+                logger.warning(f"Failed to append to intent dataset: {e}")
+            if self.intent_model:
+                try:
+                    self.intent_model.update_model(wrong_text, intent)
+                except Exception as e:  # pragma: no cover - logging only
+                    logger.warning(f"Failed to update intent model: {e}")
+
     def _load_custom_patterns(self) -> None:
         """Загружает сохраненные пользователем шаблоны из памяти."""
         stored = self.memory_manager.recall("nlu.custom_patterns") or []
@@ -332,6 +461,13 @@ class NLUProcessor:
                 )
                 self.command_patterns.append(cp)
             except Exception as e:
+<<<<<<< HEAD
                 logger.error(
                     f"Ошибка загрузки пользовательского паттерна: {e}"
                 )
+=======
+                logger.error(f"Ошибка загрузки пользовательского паттерна: {e}")
+
+        corrections = self.memory_manager.recall("nlu.corrections") or {}
+        self.learned_corrections.update({k.lower(): v for k, v in corrections.items()})
+>>>>>>> main

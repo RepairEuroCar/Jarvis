@@ -1,0 +1,173 @@
+name: 🤖 Jarvis Auto-Codex Pro
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '**.py'
+      - '!**/migrations/**'
+      - '!**/tests/**'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+    branches: [main, master]
+
+concurrency:
+  group: jarvis-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+  security-events: write
+
+env:
+  PYTHON_VERSION: '3.11'
+  MAX_CHANGES: 800
+  TRUSTED_BOTS: 'github-copilot[bot],dependabot[bot],renovate[bot]'
+  BLOCK_LABELS: 'do-not-merge,wip,needs-review'
+  REQUIRED_CHECKS: 'test,lint,security-scan'
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    outputs:
+      safe_to_proceed: ${{ steps.validate.outputs.safe_to_proceed }}
+    steps:
+      - name: 🔍 Validate PR Metadata
+        id: validate
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # 1. Check author
+          if [[ "${{ env.TRUSTED_BOTS }}" != *"${{ github.actor }}"* ]]; then
+            echo "::notice::❌ Unauthorized actor: ${{ github.actor }}"
+            echo "safe_to_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # 2. Check labels via API
+          LABELS=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/labels" | \
+            jq -r '.[].name' | tr '\n' ',')
+
+          if [[ "$LABELS" == *"${{ env.BLOCK_LABELS }}"* ]]; then
+            echo "::notice::⚠️ Blocking label detected"
+            echo "safe_to_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # 3. Check changes size
+          if [[ ${{ github.event.pull_request.additions }} -gt ${{ env.MAX_CHANGES }} ]]; then
+            echo "::notice::❌ Too many changes (+${{ github.event.pull_request.additions }})"
+            echo "safe_to_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "safe_to_proceed=true" >> $GITHUB_OUTPUT
+          echo "::notice::✅ Validation passed"
+
+  security:
+    needs: validation
+    if: needs.validation.outputs.safe_to_proceed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: 🔒 Run Security Scan
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "security"
+          
+      - name: 🛡️ Dependency Audit
+        uses: actions/dependency-review-action@v3
+
+  code-quality:
+    needs: validation
+    if: needs.validation.outputs.safe_to_proceed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛠 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install Tools
+        run: |
+          pip install ruff==0.3.7 black==24.1.1 mypy==1.8.0
+          echo "RUFF_VERSION=$(ruff --version)" >> $GITHUB_ENV
+
+      - name: 🧹 Code Formatting
+        run: |
+          ruff check . --fix
+          black .
+          mypy --install-types --non-interactive --ignore-missing-imports .
+
+      - name: 📊 Generate Report
+        run: |
+          git diff --stat > changes.txt
+          ruff check . --statistics > issues.txt
+          echo "DIFF_STAT=$(cat changes.txt)" >> $GITHUB_ENV
+
+      - name: 💾 Commit Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "🧼 Code cleanup (ruff ${{ env.RUFF_VERSION }})"
+          branch: ${{ github.head_ref || github.ref_name }}
+
+  auto-merge:
+    needs: [validation, security, code-quality]
+    if: needs.validation.outputs.safe_to_proceed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⏳ Wait for Checks
+        uses: ty-actions/action-wait-for-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: ${{ env.REQUIRED_CHECKS }}
+          timeout-minutes: 30
+
+      - name: 🚀 Merge PR
+        uses: ridedott/merge-me@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          merge_method: SQUASH
+          delete_branch: true
+          presets: DEPENDABOT_MINOR
+
+      - name: 📢 Notify Team
+        uses: actions/github-script@v6
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        with:
+          script: |
+            const payload = {
+              text: `🔄 PR Merged: ${context.payload.pull_request.title}`,
+              attachments: [{
+                fields: [
+                  { title: "Repository", value: context.repo.repo },
+                  { title: "Changes", value: process.env.DIFF_STAT }
+                ]
+              }]
+            };
+            
+            await Promise.all([
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `✅ Auto-merged with ${process.env.RUFF_VERSION}\n\n${process.env.DIFF_STAT}`
+              }),
+              process.env.SLACK_WEBHOOK ? fetch(process.env.SLACK_WEBHOOK, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+              }) : Promise.resolve()
+            ]);

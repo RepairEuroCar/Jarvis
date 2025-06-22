@@ -1,6 +1,10 @@
 # -----------------------------
 # tests/test_memory.py
 # -----------------------------
+<<<<<<< HEAD
+=======
+import os
+>>>>>>> main
 import time
 
 import pytest
@@ -40,3 +44,13 @@ async def test_save_and_load(temp_memory_file):
     time.sleep(0.1)  # ensure filesystem writes are flushed
     new_mem = MemoryManager(str(temp_memory_file))
     assert new_mem.query("persist.test")["value"] == 123
+
+
+@pytest.mark.asyncio
+async def test_search_and_auto_save(temp_memory_file):
+    mem = MemoryManager(str(temp_memory_file), auto_save=True)
+    mem.remember("foo.bar", 1)
+    mem.remember("foo.baz", 2)
+    assert os.path.exists(str(temp_memory_file))
+    results = mem.search("ba")
+    assert "foo.bar" in results and "foo.baz" in results
