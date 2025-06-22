@@ -121,8 +121,6 @@ python -m jarvis.core.main --schema
 
 **Caution**: these commands execute heavy ML training and Git operations. Use them only if you understand the consequences and have configured the trainer and repository paths correctly.
 
-<<<<<<< HEAD
-=======
 ## Command dispatcher
 
 Jarvis includes a lightweight command dispatcher that lets modules expose
@@ -167,7 +165,6 @@ validated using small Pydantic models:
 | `exit` | *(none)* | Return the `CommandDispatcher.EXIT` sentinel |
 | `reload` | `--module=<name>` | Reload a Jarvis module |
 
->>>>>>> main
 ### Code formatting
 
 Run the formatting tools with:
@@ -176,10 +173,6 @@ Run the formatting tools with:
 ./scripts/format.sh
 ```
 
-<<<<<<< HEAD
-Use `--check` to verify formatting in CI or before committing changes.
-
-=======
 `flake8` reads its configuration from `pyproject.toml` via the
 `flake8-pyproject` plugin installed with the tools from `dev-requirements.txt`.
 
@@ -216,7 +209,6 @@ python scripts/run_with_retry.py your_script.py
 If a syntax issue is detected, you'll be prompted to correct the file and try
 again, illustrating a simple "learn from mistakes" workflow.
 
->>>>>>> main
 ## Design patterns
 
 The codebase utilises a couple of classic patterns:

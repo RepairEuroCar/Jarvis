@@ -1,10 +1,7 @@
 # -----------------------------
 # tests/test_memory.py
 # -----------------------------
-<<<<<<< HEAD
-=======
 import os
->>>>>>> main
 import time
 
 import pytest

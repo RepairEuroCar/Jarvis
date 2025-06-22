@@ -9,9 +9,5 @@ fi
 
 isort ${CHECK} .
 black ${CHECK} .
-<<<<<<< HEAD
-flake8 "$@"
-=======
 # Ensure flake8 reads configuration from pyproject.toml
 flake8 --config pyproject.toml "$@"
->>>>>>> main

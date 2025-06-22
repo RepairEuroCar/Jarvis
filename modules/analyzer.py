@@ -4,13 +4,8 @@ import json
 import os
 
 import radon.complexity as radon_complexity  # Для цикломатической сложности
-<<<<<<< HEAD
-from radon.metrics import mi_visit  # Для индекса обслуживаемости
-from radon.raw import analyze as radon_raw_analyze  # Подсчет SLOC и другое
-=======
 from radon.metrics import mi_visit  # Для метрик Холстеда и индекса обслуживаемости
 from radon.raw import analyze as radon_raw_analyze  # Для SLOC, комментариев и т.д.
->>>>>>> main
 
 # Концептуально: интеграция с AI моделями для более глубокого анализа
 # from some_ai_code_analysis_library import AICodeHelper
@@ -42,13 +37,7 @@ class AdvancedCodeAnalyzer:
         )
         self.cache_results = self.config.get("cache_results", True)
         self.cache_ttl_minutes = self.config.get("cache_ttl_minutes", 60)
-<<<<<<< HEAD
-        self.analysis_cache = (
-            {}
-        )  # Простой кэш в памяти: {filepath: (timestamp, data)}
-=======
         self.analysis_cache = {}  # Простой кэш в памяти: {filepath: (timestamp, data)}
->>>>>>> main
 
         # Концептуально: Инициализация AI помощника
         # self.ai_helper = AICodeHelper(api_key=self.jarvis.memory.get("api_keys", {}).get("ai_code_analysis_key"))
@@ -93,10 +82,7 @@ class AdvancedCodeAnalyzer:
             return cached_data, None
 
         if not os.path.exists(filepath) or not os.path.isfile(filepath):
-            return (
-                None,
-                f"Ошибка: Файл не найден или не является файлом: {filepath}",
-            )
+            return None, f"Ошибка: Файл не найден или не является файлом: {filepath}"
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 source_code = f.read()
@@ -118,21 +104,12 @@ class AdvancedCodeAnalyzer:
                 "comment_lines": raw_analysis.comments + raw_analysis.multi,
                 "blank_lines": raw_analysis.blank,
                 "logical_lines": raw_analysis.lloc,
-<<<<<<< HEAD
-                "maintainability_index": (
-                    round(mi_score, 2) if mi_score else "N/A"
-                ),
-=======
                 "maintainability_index": round(mi_score, 2) if mi_score else "N/A",
->>>>>>> main
             }
             self._cache_analysis_result(filepath, "metrics_radon", metrics)
             return metrics, None
         except Exception as e:
-            return (
-                None,
-                f"Ошибка чтения или обработки файла {filepath} с Radon: {e}",
-            )
+            return None, f"Ошибка чтения или обработки файла {filepath} с Radon: {e}"
 
     async def get_file_structure_ast(self, filepath):
         """
@@ -161,13 +138,7 @@ class AdvancedCodeAnalyzer:
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     num_args = len(node.args.args)
                     lines_in_def = (
-<<<<<<< HEAD
-                        (node.end_lineno - node.lineno + 1)
-                        if node.end_lineno
-                        else 0
-=======
                         (node.end_lineno - node.lineno + 1) if node.end_lineno else 0
->>>>>>> main
                     )
                     is_async = isinstance(node, ast.AsyncFunctionDef)
                     structure["functions"].append(
@@ -184,21 +155,10 @@ class AdvancedCodeAnalyzer:
                     methods = [
                         item.name
                         for item in node.body
-<<<<<<< HEAD
-                        if isinstance(
-                            item, (ast.FunctionDef, ast.AsyncFunctionDef)
-                        )
-                    ]
-                    lines_in_def = (
-                        (node.end_lineno - node.lineno + 1)
-                        if node.end_lineno
-                        else 0
-=======
                         if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
                     ]
                     lines_in_def = (
                         (node.end_lineno - node.lineno + 1) if node.end_lineno else 0
->>>>>>> main
                     )
                     structure["classes"].append(
                         {
@@ -212,20 +172,10 @@ class AdvancedCodeAnalyzer:
                 elif isinstance(node, ast.Import):
                     for alias in node.names:
                         structure["imports"].append(
-<<<<<<< HEAD
-                            {
-                                "type": "import",
-                                "module": alias.name,
-                                "as": alias.asname,
-                            }
-=======
                             {"type": "import", "module": alias.name, "as": alias.asname}
->>>>>>> main
                         )
                 elif isinstance(node, ast.ImportFrom):
-                    module_name = (
-                        node.module if node.module else "." * node.level
-                    )
+                    module_name = node.module if node.module else "." * node.level
                     for alias in node.names:
                         structure["imports"].append(
                             {
@@ -247,9 +197,7 @@ class AdvancedCodeAnalyzer:
 
     async def get_cyclomatic_complexity(self, filepath):
         """Вычисляет цикломатическую сложность для функций и классов."""
-        cached_data = self._get_cached_analysis(
-            filepath, "cyclomatic_complexity"
-        )
+        cached_data = self._get_cached_analysis(filepath, "cyclomatic_complexity")
         if cached_data:
             return cached_data, None
 
@@ -283,10 +231,6 @@ class AdvancedCodeAnalyzer:
             # For classes, Radon calculates complexity for methods within them.
             # We can aggregate or list them.
             for item in visitor.classes:
-<<<<<<< HEAD
-                pass
-=======
->>>>>>> main
                 # Need to iterate through methods of this class if available in visitor output
                 # This part might need adjustment based on Radon's exact output for classes
                 # For now, let's assume item.real_complexity or similar if available
@@ -315,13 +259,7 @@ class AdvancedCodeAnalyzer:
                     sum(complexities) / len(complexities), 2
                 )
 
-<<<<<<< HEAD
-            self._cache_analysis_result(
-                filepath, "cyclomatic_complexity", results
-            )
-=======
             self._cache_analysis_result(filepath, "cyclomatic_complexity", results)
->>>>>>> main
             return results, None
         except Exception as e:
             return (
@@ -422,19 +360,6 @@ class AdvancedCodeAnalyzer:
         self._cache_analysis_result(filepath, "code_smells", smells)
         return smells, None
 
-<<<<<<< HEAD
-    async def generate_comprehensive_report(
-        self, path_str, report_format=None
-    ):
-        """Генерирует комплексный отчет для файла или директории."""
-        report_format = (
-            report_format if report_format else self.default_report_format
-        )
-
-        if os.path.isfile(path_str):
-            files_to_analyze = [path_str]
-        elif os.path.isdir(path_str):
-=======
     async def detect_magic_numbers(self, filepath):
         """Ищет в коде числовые литералы, не сохранённые в константы."""
         cached = self._get_cached_analysis(filepath, "magic_numbers")
@@ -564,7 +489,6 @@ class AdvancedCodeAnalyzer:
             files_to_analyze = [abs_path]
             project_root = os.path.dirname(abs_path)
         elif os.path.isdir(abs_path):
->>>>>>> main
             files_to_analyze = []
             project_root = abs_path
             for root, _, files in os.walk(abs_path):
@@ -572,11 +496,7 @@ class AdvancedCodeAnalyzer:
                     continue
                 for file in files:
                     if file.endswith(".py") and not self._is_path_ignored(
-<<<<<<< HEAD
-                        os.path.join(root, file), path_str
-=======
                         os.path.join(root, file), abs_path
->>>>>>> main
                     ):
                         files_to_analyze.append(os.path.join(root, file))
         else:
@@ -595,10 +515,7 @@ class AdvancedCodeAnalyzer:
             "summary": {},
             "files": [],
             "timestamp": datetime.datetime.now().isoformat(),
-<<<<<<< HEAD
-=======
             "project_root": project_root,
->>>>>>> main
         }
         all_metrics_summary = {
             "sloc": 0,
@@ -625,13 +542,6 @@ class AdvancedCodeAnalyzer:
                 structure["filepath"] = rel_path
 
             complexity, err_c = await self.get_cyclomatic_complexity(filepath)
-<<<<<<< HEAD
-            smells, err_sm = await self.detect_code_smells(
-                filepath, structure, complexity
-            )
-
-            file_report = {"filepath": filepath}
-=======
             if complexity:
                 complexity["filepath"] = rel_path
 
@@ -645,7 +555,6 @@ class AdvancedCodeAnalyzer:
             globals_defs, _ = await self.detect_module_globals(filepath)
 
             file_report = {"filepath": rel_path}
->>>>>>> main
             if metrics:
                 file_report["metrics"] = metrics
             if structure:
@@ -660,8 +569,6 @@ class AdvancedCodeAnalyzer:
                     for s in smells["detected_smells"]
                     if s.get("severity") == "critical"
                 )
-<<<<<<< HEAD
-=======
             if magic_nums:
                 file_report["magic_numbers"] = magic_nums
                 total_magic_numbers += len(magic_nums)
@@ -671,7 +578,6 @@ class AdvancedCodeAnalyzer:
             if globals_defs:
                 file_report["globals"] = globals_defs
                 total_module_globals += len(globals_defs)
->>>>>>> main
 
             if metrics and metrics.get("maintainability_index") != "N/A":
                 all_metrics_summary["maintainability_index_sum"] += metrics[
@@ -688,46 +594,25 @@ class AdvancedCodeAnalyzer:
         report_data["summary"]["total_comment_lines"] = all_metrics_summary[
             "comment_lines"
         ]
-<<<<<<< HEAD
-        report_data["summary"]["total_blank_lines"] = all_metrics_summary[
-            "blank_lines"
-        ]
-=======
         report_data["summary"]["total_blank_lines"] = all_metrics_summary["blank_lines"]
->>>>>>> main
         if all_metrics_summary["analyzed_files_count"] > 0:
             avg_mi = (
                 all_metrics_summary["maintainability_index_sum"]
                 / all_metrics_summary["analyzed_files_count"]
             )
-<<<<<<< HEAD
-            report_data["summary"]["average_maintainability_index"] = round(
-                avg_mi, 2
-            )
-        report_data["summary"]["total_code_smells_detected"] = all_smells_count
-        report_data["summary"]["critical_code_smells"] = critical_smells_count
-=======
             report_data["summary"]["average_maintainability_index"] = round(avg_mi, 2)
         report_data["summary"]["total_code_smells_detected"] = all_smells_count
         report_data["summary"]["critical_code_smells"] = critical_smells_count
         report_data["summary"]["total_magic_numbers"] = total_magic_numbers
         report_data["summary"]["duplicate_functions"] = total_duplicate_functions
         report_data["summary"]["module_level_globals"] = total_module_globals
->>>>>>> main
 
         # Концептуально: AI генерирует общее резюме по проекту
         # if self.config.get("enable_ai_project_summary", False) and report_data["files"]:
         #     project_summary_text = await self.ai_helper.generate_project_summary(report_data)
         #     report_data["summary"]["ai_project_overview"] = project_summary_text
 
-<<<<<<< HEAD
-        return (
-            report_data,
-            None,
-        )  # Форматирование в Markdown/HTML/JSON будет в команде
-=======
         return report_data, None  # Форматирование в Markdown/HTML/JSON будет в команде
->>>>>>> main
 
 
 # --- Интерфейс модуля Jarvis ---
@@ -757,13 +642,7 @@ async def load_module(jarvis_instance, module_config=None):
 async def close_module(jarvis_instance):
     """Очистка ресурсов, если это необходимо в будущем."""
     if hasattr(jarvis_instance, "adv_code_analyzer"):
-<<<<<<< HEAD
-        jarvis_instance.adv_code_analyzer = (
-            None  # Очистка кэша и т.д. может быть здесь
-        )
-=======
         jarvis_instance.adv_code_analyzer = None  # Очистка кэша и т.д. может быть здесь
->>>>>>> main
         print("Модуль Advanced Code Analyzer выгружен.")
 
 
@@ -795,13 +674,7 @@ def _format_report(report_data, format_type="markdown"):
         md += f"\n### Обзор проекта (AI):\n{summary['ai_project_overview']}\n"
 
     for file_report in report_data.get("files", []):
-<<<<<<< HEAD
-        relative_filepath = file_report.get(
-            "filepath"
-        )  # TODO: Сделать путь относительным к корню анализа
-=======
         relative_filepath = file_report.get("filepath")
->>>>>>> main
         md += f"\n## Файл: `{relative_filepath}`\n"
 
         if "metrics" in file_report:
@@ -810,13 +683,7 @@ def _format_report(report_data, format_type="markdown"):
                 if k != "filepath":
                     md += f"- {k.replace('_', ' ').capitalize()}: {v}\n"
 
-<<<<<<< HEAD
-        if "complexity" in file_report and file_report["complexity"].get(
-            "functions"
-        ):
-=======
         if "complexity" in file_report and file_report["complexity"].get("functions"):
->>>>>>> main
             md += "### Цикломатическая сложность (Функции):\n"
             for func in file_report["complexity"]["functions"]:
                 md += f"- `{func['name']}` (строка {func['lineno']}): **{func['complexity']}** (Ранг: {func['rank']})\n"
@@ -871,9 +738,7 @@ async def analyze_code_report_cmd(jarvis_instance, args_string: str):
     if not analyzer:
         return "Ошибка: Модуль Advanced Code Analyzer не загружен."
 
-    report_data, error = await analyzer.generate_comprehensive_report(
-        resolved_path
-    )
+    report_data, error = await analyzer.generate_comprehensive_report(resolved_path)
     if error:
         return f"Ошибка генерации отчета: {error}"
     if not report_data:
@@ -882,9 +747,7 @@ async def analyze_code_report_cmd(jarvis_instance, args_string: str):
     formatted_output = _format_report(report_data, report_format)
 
     if output_filename:
-        resolved_output_filename = _resolve_path(
-            jarvis_instance, output_filename
-        )
+        resolved_output_filename = _resolve_path(jarvis_instance, output_filename)
         try:
             with open(resolved_output_filename, "w", encoding="utf-8") as f:
                 f.write(formatted_output)

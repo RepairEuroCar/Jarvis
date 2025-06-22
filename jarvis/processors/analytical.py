@@ -2,22 +2,14 @@
 # jarvis/processors/analytical.py
 # -----------------------------
 import asyncio
-<<<<<<< HEAD
-import logging
-import re
-from typing import Any, Dict, List, Union
-
-=======
 import re
 from typing import Any, Dict, List, Union
 
 from utils.logger import get_logger
 
->>>>>>> main
 from .base import BaseThoughtProcessor
 
 logger = get_logger().getChild("Processor.Analytical")
-
 
 
 class AnalyticalThoughtProcessor(BaseThoughtProcessor):
@@ -36,24 +28,13 @@ class AnalyticalThoughtProcessor(BaseThoughtProcessor):
         if "повтор" in str(data).lower():
             patterns.append("Обнаружен запрос на повторение.")
         if re.search(r"\d{4}", str(data)):
-<<<<<<< HEAD
-            patterns.append(
-                "Обнаружены числовые последовательности (возможно, даты)."
-            )
-=======
             patterns.append("Обнаружены числовые последовательности (возможно, даты).")
->>>>>>> main
         return patterns or ["Паттернов не найдено."]
 
-    async def _make_comparisons(
-        self, data: Union[str, Dict]
-    ) -> Dict[str, str]:
+    async def _make_comparisons(self, data: Union[str, Dict]) -> Dict[str, str]:
         await asyncio.sleep(0.02)
         if "лучше" in str(data).lower() and "хуже" in str(data).lower():
-            return {
-                "comparison_type": "A vs B",
-                "result": "Нужен детальный анализ.",
-            }
+            return {"comparison_type": "A vs B", "result": "Нужен детальный анализ."}
         return {"status": "Сравнений не произведено."}
 
     def _generate_recommendation(self, analysis: Dict[str, Any]) -> str:

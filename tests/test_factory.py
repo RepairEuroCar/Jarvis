@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 
->>>>>>> main
 from jarvis.brain import ThoughtProcessorFactory
 from jarvis.processors import LogicalThoughtProcessor
 

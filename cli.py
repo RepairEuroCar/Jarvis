@@ -5,11 +5,6 @@ import asyncio
 import atexit
 import os
 import platform
-<<<<<<< HEAD
-import sys
-
-from .core.main import Jarvis
-=======
 import readline
 
 from command_dispatcher import CommandDispatcher, InvalidCommandError
@@ -17,8 +12,6 @@ from jarvis.core.main import Jarvis
 from utils.logger import get_logger
 
 logger = get_logger().getChild("CLI")
->>>>>>> main
-
 
 
 async def run():
@@ -104,15 +97,8 @@ async def run():
             handler_tuple = jarvis.commands.get(cmd)
             if handler_tuple:
                 cmd_info, handler = handler_tuple
-<<<<<<< HEAD
-                args = result.get("entities", {}).get("raw_args", "")
-                output = (
-                    await handler(args) if cmd_info.is_async else handler(args)
-                )
-=======
                 args = parsed.get("entities", {}).get("raw_args", "")
                 output = await handler(args) if cmd_info.is_async else handler(args)
->>>>>>> main
                 print(output)
             else:
                 print(f"Unknown command: {cmd}")

@@ -6,14 +6,9 @@ from typing import Any, Optional
 import pyttsx3
 import speech_recognition as sr
 
-<<<<<<< HEAD
-logger = logging.getLogger("Jarvis.Voice")
-=======
 from utils.logger import get_logger
 
 logger = get_logger().getChild("Voice")
-
->>>>>>> main
 
 
 class VoiceInterface:
@@ -36,9 +31,6 @@ class VoiceInterface:
         self.engine.setProperty("rate", self.jarvis.settings.voice_rate)
         self.engine.setProperty("volume", self.jarvis.settings.voice_volume)
         voices = self.engine.getProperty("voices")
-<<<<<<< HEAD
-        self.engine.setProperty("voice", voices[0].id)
-=======
         target_lang = self.jarvis.settings.tts_language.lower()
         selected = None
         for v in voices:
@@ -55,7 +47,6 @@ class VoiceInterface:
             selected = voices[0]
         logger.info("Selected voice: %s", getattr(selected, "id", "unknown"))
         self.engine.setProperty("voice", selected.id)
->>>>>>> main
 
     def _calibrate_microphone(self):
         """Калибровка микрофона"""
@@ -71,18 +62,10 @@ class VoiceInterface:
                 audio = await asyncio.get_event_loop().run_in_executor(
                     None, self.recognizer.listen, source, 5
                 )
-<<<<<<< HEAD
-                text = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    self.recognizer.recognize_google,
-                    audio,
-                    {"language": "ru-RU"},
-=======
                 func = partial(
                     self.recognizer.recognize_google,
                     audio,
                     language=self.jarvis.settings.recognition_language,
->>>>>>> main
                 )
                 text = await asyncio.get_event_loop().run_in_executor(None, func)
                 logger.info(f"Распознано: {text}")
@@ -109,15 +92,9 @@ class VoiceInterface:
         while self.is_active:
             text = await self.listen()
             if text and self.jarvis.settings.voice_activation_phrase in text:
-<<<<<<< HEAD
-                command = text.split(
-                    self.jarvis.settings.voice_activation_phrase, 1
-                )[-1].strip()
-=======
                 command = text.split(self.jarvis.settings.voice_activation_phrase, 1)[
                     -1
                 ].strip()
->>>>>>> main
                 await self.jarvis.handle_command(command, is_voice=True)
             await asyncio.sleep(0.1)
 
