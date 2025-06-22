@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Awaitable, Any
 
 import yaml
 from pydantic import BaseModel
@@ -23,7 +23,7 @@ from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.core.agent_loop import AgentLoop
 from jarvis.core.module_manager import ModuleManager
-from jarvis.core.sensor_manager import SensorManager
+from jarvis.core.sensor_manager import SensorManager, ScheduledTask
 from jarvis.event_queue import EventQueue
 from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
@@ -175,6 +175,12 @@ class Jarvis:
         """Unload a previously loaded Jarvis module."""
         return await self.module_manager.unload_module(name)
 
+    def register_scheduled_task(
+        self, callback: Callable[["Jarvis"], Awaitable[Any]], interval: float
+    ) -> None:
+        """Register a periodic asynchronous task."""
+        self.sensor_manager.register_scheduled_task(callback, interval)
+
     def _register_commands(self):
         for cmd_info in ALL_COMMANDS:
             if not hasattr(self, f"{cmd_info.name}_command"):
@@ -265,9 +271,12 @@ class Jarvis:
     async def _on_voice_command(self, text: str) -> None:
         await self.handle_command(text, is_voice=True)
 
-    async def _on_scheduled_tick(self) -> None:
-        # Placeholder for future scheduled tasks
-        pass
+    async def _on_scheduled_tick(self, task: ScheduledTask) -> None:
+        """Execute registered scheduled tasks."""
+        try:
+            await task.callback(self)
+        except Exception as e:  # pragma: no cover - log and continue
+            logger.exception("Scheduled task failed: %s", e)
 
     # Пример команды
     async def help_command(self, event: UserEvent):
