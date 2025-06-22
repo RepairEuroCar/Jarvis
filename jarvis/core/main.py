@@ -9,7 +9,10 @@ from typing import Callable, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel
-from pydantic_settings import BaseSettings
+try:  # pydantic v1 fallback
+    from pydantic_settings import BaseSettings
+except ModuleNotFoundError:  # pragma: no cover - for environments without pydantic-settings
+    from pydantic import BaseSettings
 from transitions import Machine
 
 from jarvis.brain import Brain
