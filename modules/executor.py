@@ -3,6 +3,8 @@ import re
 import sys
 from pathlib import Path
 
+from reasoning.tracer import parse_tracebacks, suggest_fixes
+
 from command_dispatcher import CommandDispatcher, default_dispatcher
 from utils.linter import AstLinter
 
@@ -38,6 +40,12 @@ async def run(path: str = ".") -> dict[str, dict[str, list[str] | int]]:
     out, err = await proc.communicate()
     output = (out.decode() + err.decode()).strip()
 
+    tracebacks = parse_tracebacks(output)
+    failure_details = []
+    for tb in tracebacks:
+        suggestions = suggest_fixes(tb["error"])
+        failure_details.append({"traceback": tb, "suggestions": suggestions})
+
     m = re.search(r"(\d+)\s+passed", output)
     if m:
         passed = int(m.group(1))
@@ -69,6 +77,7 @@ async def run(path: str = ".") -> dict[str, dict[str, list[str] | int]]:
     return {
         "tests": {"passed": passed, "failed": failed},
         "lint": {"warnings": lint_messages},
+        "errors": failure_details,
     }
 
 
