@@ -596,6 +596,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.schema:
-        print(json.dumps(Settings.schema(), indent=2, ensure_ascii=False))
+        try:
+            # Pydantic provides a JSON string directly from schema_json
+            print(Settings.schema_json(indent=2, ensure_ascii=False))
+        except AttributeError:
+            # Fallback for versions without schema_json
+            print(
+                json.dumps(
+                    Settings.schema(), indent=2, ensure_ascii=False, default=str
+                )
+            )
     else:
         print(json.dumps(Settings().dict(), indent=2, ensure_ascii=False))

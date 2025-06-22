@@ -34,10 +34,13 @@ class VoiceInterface:
 
     def update_language(self):
         """Reconfigure voice with current settings."""
-        self._configure_voice()
+        if self.engine:
+            self._configure_voice()
 
     def _configure_voice(self):
         """Настройка параметров голоса"""
+        if not self.engine:
+            return
         self.engine.setProperty("rate", self.jarvis.settings.voice_rate)
         self.engine.setProperty("volume", self.jarvis.settings.voice_volume)
         voices = self.engine.getProperty("voices")
