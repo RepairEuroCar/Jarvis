@@ -1,10 +1,24 @@
 import ast
 import os
+from pathlib import Path
 from typing import Iterable, List
 
+import yaml
 from utils.docstring_helper import _indent_lines
 
 PLACEHOLDER = "Auto-generated summary."
+
+
+def _load_style(policy_path: str | os.PathLike[str]) -> str:
+    path = Path(policy_path)
+    if not path.is_file():
+        return "google"
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            cfg = yaml.safe_load(fh) or {}
+            return cfg.get("docstring", {}).get("style", "google")
+    except Exception:
+        return "google"
 
 
 def _is_placeholder(doc: str | None) -> bool:
@@ -41,11 +55,18 @@ def _summary_for_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     return f"Function {node.name}."
 
 
-def _docstring_lines(text: str, indent: str) -> List[str]:
-    return _indent_lines(f'"""{text}"""', indent)
+def _docstring_lines(text: str, indent: str, style: str) -> List[str]:
+    quotes = '"""'
+    return _indent_lines(f'{quotes}{text}{quotes}', indent)
 
 
-def enhance_file(path: str) -> bool:
+def enhance_file(
+    path: str,
+    style: str | None = None,
+    policy_path: str | os.PathLike[str] = "train/coding_policy.yaml",
+) -> bool:
+    if style is None:
+        style = _load_style(policy_path)
     with open(path, 'r', encoding='utf-8') as f:
         source = f.read()
     tree = ast.parse(source, filename=path)
@@ -56,7 +77,7 @@ def enhance_file(path: str) -> bool:
     first = tree.body[0] if tree.body else None
     if module_doc is None or _is_placeholder(module_doc):
         summary = _summary_for_module(tree, path)
-        doc_lines = [f'"""{summary}"""']
+        doc_lines = _docstring_lines(summary, "", style)
         if module_doc is None:
             insert_idx = 1 if lines and lines[0].startswith('#!') else 0
             lines[insert_idx:insert_idx] = doc_lines
@@ -76,7 +97,7 @@ def enhance_file(path: str) -> bool:
                 else:
                     summary = _summary_for_function(node)
                 indent = ' ' * (node.col_offset + 4)
-                new_lines = _docstring_lines(summary, indent)
+                new_lines = _docstring_lines(summary, indent, style)
                 if doc is None:
                     insert_at = body_first.lineno - 1 if body_first else node.lineno
                     lines[insert_at:insert_at] = new_lines
@@ -92,7 +113,11 @@ def enhance_file(path: str) -> bool:
     return updated
 
 
-def enhance_paths(paths: Iterable[str]) -> List[str]:
+def enhance_paths(
+    paths: Iterable[str],
+    style: str | None = None,
+    policy_path: str | os.PathLike[str] = "train/coding_policy.yaml",
+) -> List[str]:
     changed: List[str] = []
     for p in paths:
         if os.path.isdir(p):
@@ -100,11 +125,11 @@ def enhance_paths(paths: Iterable[str]) -> List[str]:
                 for fname in files:
                     if fname.endswith('.py'):
                         fpath = os.path.join(root, fname)
-                        if enhance_file(fpath):
+                        if enhance_file(fpath, style, policy_path):
                             changed.append(fpath)
         else:
             if p.endswith('.py') and os.path.isfile(p):
-                if enhance_file(p):
+                if enhance_file(p, style, policy_path):
                     changed.append(p)
     return changed
 
@@ -114,8 +139,15 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Enhance docstrings in project.')
     parser.add_argument('paths', nargs='+', help='Files or directories to process')
+    parser.add_argument('--style', choices=['google', 'sphinx'], help='Docstring style')
+    parser.add_argument(
+        '--policy',
+        type=str,
+        default='train/coding_policy.yaml',
+        help='Path to coding policy YAML file',
+    )
     args = parser.parse_args()
 
-    modified = enhance_paths(args.paths)
+    modified = enhance_paths(args.paths, style=args.style, policy_path=args.policy)
     for m in modified:
         print(f'Updated {m}')

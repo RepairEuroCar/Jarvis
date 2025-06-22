@@ -283,13 +283,19 @@ class Jarvis:
 
         parser = argparse.ArgumentParser(prog="lint", add_help=False)
         parser.add_argument("path")
-        parser.add_argument("--max-lines", type=int, default=50)
+        parser.add_argument("--max-lines", type=int)
+        parser.add_argument(
+            "--policy",
+            type=str,
+            default="train/coding_policy.yaml",
+            help="Path to coding policy file",
+        )
         try:
             opts = parser.parse_args(parts[1].split())
         except SystemExit:
             return "Invalid arguments"
 
-        linter = AstLinter(max_function_lines=opts.max_lines)
+        linter = AstLinter(max_function_lines=opts.max_lines, policy_path=opts.policy)
         errors = linter.lint_paths([opts.path])
         if not errors:
             return "No lint errors found."
@@ -303,13 +309,19 @@ class Jarvis:
 
         parser = argparse.ArgumentParser(prog="code_tips", add_help=False)
         parser.add_argument("path")
-        parser.add_argument("--max-lines", type=int, default=50)
+        parser.add_argument("--max-lines", type=int)
+        parser.add_argument(
+            "--policy",
+            type=str,
+            default="train/coding_policy.yaml",
+            help="Path to coding policy file",
+        )
         try:
             opts = parser.parse_args(parts[1].split())
         except SystemExit:
             return "Invalid arguments"
 
-        linter = AstLinter(max_function_lines=opts.max_lines)
+        linter = AstLinter(max_function_lines=opts.max_lines, policy_path=opts.policy)
         errors = linter.lint_paths([opts.path])
         if not errors:
             return "No suggestions. Code looks good."
