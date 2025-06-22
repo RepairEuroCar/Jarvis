@@ -47,7 +47,8 @@ async def run():
     atexit.register(lambda: readline.write_history_file(histfile))
     print(f"Jarvis CLI (Python {platform.python_version()})")
     print(f"User: {jarvis.user_name}\n")
-    print("Type 'help' for commands. Type 'exit' to quit.\n")
+    print("Type 'help' for commands. Type 'exit' to quit.")
+    print("Use 'load --module=<name>' or 'unload --module=<name>' to manage modules.\n")
 
     while True:
         try:

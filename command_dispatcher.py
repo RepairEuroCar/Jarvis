@@ -31,6 +31,20 @@ class ReloadParams(BaseModel):
         extra = "forbid"
 
 
+class LoadParams(BaseModel):
+    module: Optional[str] = None
+
+    class Config:
+        extra = "forbid"
+
+
+class UnloadParams(BaseModel):
+    module: Optional[str] = None
+
+    class Config:
+        extra = "forbid"
+
+
 class CommandError(Exception):
     """Base error raised by :class:`CommandDispatcher`."""
 
@@ -180,13 +194,18 @@ class CommandDispatcher:
         self.register_command_handler(
             "list_commands", None, self._list_commands, ListCommandsParams
         )
+        self.register_command_handler("load", None, self._load, LoadParams)
+        self.register_command_handler("unload", None, self._unload, UnloadParams)
         self.register_command_handler("reload", None, self._reload, ReloadParams)
 
     def _list_commands(self, **_: str) -> str:
         lines = []
         for mod, actions in self._handlers.items():
             for act in actions:
-                if mod in {"help", "exit", "list_commands", "reload"} and act is None:
+                if (
+                    mod in {"help", "exit", "list_commands", "load", "unload", "reload"}
+                    and act is None
+                ):
                     lines.append(mod)
                 else:
                     lines.append(f"{mod} {act}")
@@ -209,6 +228,22 @@ class CommandDispatcher:
 
     def _exit(self, **_: str) -> Any:
         return self.EXIT
+
+    async def _load(self, module: str | None = None, **_: str) -> str:
+        if not module:
+            return "Usage: load --module=<name>"
+        if not self.jarvis or not hasattr(self.jarvis, "module_manager"):
+            return "Load not supported"
+        success = await self.jarvis.module_manager.load_module(module)
+        return f"Module {module} loaded" if success else f"Failed to load {module}"
+
+    async def _unload(self, module: str | None = None, **_: str) -> str:
+        if not module:
+            return "Usage: unload --module=<name>"
+        if not self.jarvis or not hasattr(self.jarvis, "module_manager"):
+            return "Unload not supported"
+        success = await self.jarvis.module_manager.unload_module(module)
+        return f"Module {module} unloaded" if success else f"Failed to unload {module}"
 
     async def _reload(self, module: str | None = None, **_: str) -> str:
         if not module:
