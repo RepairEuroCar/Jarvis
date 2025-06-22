@@ -1,8 +1,11 @@
+import asyncio
 import json
 import os
 import shutil
 import time
 from typing import Any, Dict, Optional
+
+import aiofiles
 
 from utils.logger import get_logger
 
@@ -24,9 +27,13 @@ class MemoryManager:
         """
         self.memory_file = memory_file
         self.auto_save = auto_save
-        self.memory = self._initialize_memory()
+        loop = asyncio.new_event_loop()
+        try:
+            self.memory = loop.run_until_complete(self._initialize_memory())
+        finally:
+            loop.close()
 
-    def _initialize_memory(self) -> Dict[str, Any]:
+    async def _initialize_memory(self) -> Dict[str, Any]:
         """Инициализация структуры памяти"""
         base_structure = {
             "user_info": {"name": "User"},
@@ -37,26 +44,27 @@ class MemoryManager:
 
         if os.path.exists(self.memory_file):
             try:
-                with open(self.memory_file, "r", encoding="utf-8") as f:
-                    loaded = json.load(f)
-                    return {**base_structure, **loaded}
+                async with aiofiles.open(self.memory_file, encoding="utf-8") as f:
+                    data = await f.read()
+                loaded = json.loads(data)
+                return {**base_structure, **loaded}
             except Exception as e:
                 logger.error(f"Ошибка загрузки памяти: {e}")
 
         return base_structure
 
-    def save(self):
+    async def save(self) -> None:
         """Сохранение памяти в файл"""
         try:
             if os.path.exists(self.memory_file):
                 shutil.copy(self.memory_file, f"{self.memory_file}.bak")
 
-            with open(self.memory_file, "w", encoding="utf-8") as f:
-                json.dump(self.memory, f, indent=2, ensure_ascii=False)
+            async with aiofiles.open(self.memory_file, "w", encoding="utf-8") as f:
+                await f.write(json.dumps(self.memory, indent=2, ensure_ascii=False))
         except Exception as e:
             logger.error(f"Ошибка сохранения памяти: {e}")
 
-    def remember(self, key: str, value: Any, category: str = "general") -> bool:
+    async def remember(self, key: str, value: Any, category: str = "general") -> bool:
         """Сохранение данных в память"""
         try:
             keys = key.split(".")
@@ -69,7 +77,7 @@ class MemoryManager:
                 "category": category,
             }
             if self.auto_save:
-                self.save()
+                await self.save()
             return True
         except Exception as e:
             logger.error(f"Ошибка сохранения: {e}")
@@ -94,7 +102,7 @@ class MemoryManager:
         except Exception:
             return None
 
-    def forget(self, key: str) -> bool:
+    async def forget(self, key: str) -> bool:
         """Удаление записи из памяти"""
         try:
             parts = key.split(".")
@@ -110,7 +118,7 @@ class MemoryManager:
             if parent and last_part in parent:
                 del parent[last_part]
                 if self.auto_save:
-                    self.save()
+                    await self.save()
                 return True
             return False
         except Exception:

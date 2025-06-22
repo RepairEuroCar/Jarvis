@@ -14,7 +14,6 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
-
 try:
     import aioredis
 except ImportError:  # pragma: no cover - optional dependency
@@ -175,7 +174,7 @@ class ProjectManager:
         history_file = path / "project_history.json"
         if history_file.exists():
             try:
-                with open(history_file, "r", encoding="utf-8") as f:
+                with open(history_file, encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
                 logger.error("Failed to read project history")
@@ -205,7 +204,7 @@ class ProjectManager:
                 stats["files"] += 1
                 try:
                     with open(
-                        Path(root) / fname, "r", encoding="utf-8", errors="ignore"
+                        Path(root) / fname, encoding="utf-8", errors="ignore"
                     ) as f:
                         stats["lines"] += sum(1 for _ in f)
                 except Exception:
@@ -460,7 +459,7 @@ class ProjectManager:
                     "diffs": diffs,
                 }
             )
-            self.jarvis.memory.remember(
+            await self.jarvis.memory.remember(
                 "project_templates.history", history, category="project"
             )
 

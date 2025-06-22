@@ -65,8 +65,8 @@ async def test_custom_pattern_persistence(tmp_path):
     mem_file = tmp_path / "mem.json"
     mem = MemoryManager(str(mem_file))
     nlu = NLUProcessor(memory_manager=mem)
-    nlu.add_pattern("greet", "hi", persist=True)
-    mem.save()
+    await nlu.add_pattern("greet", "hi", persist=True)
+    await mem.save()
 
     mem2 = MemoryManager(str(mem_file))
     nlu2 = NLUProcessor(memory_manager=mem2)
@@ -79,8 +79,8 @@ async def test_learn_correction(tmp_path):
     mem_file = tmp_path / "mem.json"
     mem = MemoryManager(str(mem_file))
     nlu = NLUProcessor(memory_manager=mem)
-    nlu.learn_correction("helo", "exit", persist=True)
-    mem.save()
+    await nlu.learn_correction("helo", "exit", persist=True)
+    await mem.save()
 
     nlu2 = NLUProcessor(memory_manager=MemoryManager(str(mem_file)))
     result = await nlu2.process("helo")
@@ -110,10 +110,10 @@ async def test_learn_correction_dataset_and_update(monkeypatch, tmp_path):
         intent_dataset_path=str(dataset),
     )
 
-    nlu.learn_correction("helo", "exit", persist=True)
-    nlu.learn_correction("bye", "exit", persist=True)
+    await nlu.learn_correction("helo", "exit", persist=True)
+    await nlu.learn_correction("bye", "exit", persist=True)
 
-    with open(dataset, "r", encoding="utf-8") as f:
+    with open(dataset, encoding="utf-8") as f:
         lines = f.readlines()
 
     assert len(lines) == 2

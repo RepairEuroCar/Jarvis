@@ -39,11 +39,11 @@ def load_experiences(memory: MemoryManager) -> List[ProjectExperience]:
     return [ProjectExperience.from_dict(e) for e in _load_raw(memory)]
 
 
-def save_experience(memory: MemoryManager, exp: ProjectExperience) -> None:
+async def save_experience(memory: MemoryManager, exp: ProjectExperience) -> None:
     """Persist a new project experience to memory."""
     data = _load_raw(memory)
     data.append(exp.to_dict())
-    memory.remember("projects.experience", data, category="project")
+    await memory.remember("projects.experience", data, category="project")
 
 
 def query_experiences(
