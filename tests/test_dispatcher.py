@@ -113,3 +113,55 @@ async def test_dispatch_chain():
     results = await dispatcher.dispatch_chain(["mod a", "mod b"])
     assert results == ["first", "second"]
     assert calls == ["a", "b"]
+
+
+@pytest.mark.asyncio
+async def test_load_unload_reload_without_manager():
+    dispatcher = CommandDispatcher()
+
+    result = await dispatcher.dispatch("load --module=test")
+    assert result == "Load not supported"
+
+    result = await dispatcher.dispatch("unload --module=test")
+    assert result == "Unload not supported"
+
+    result = await dispatcher.dispatch("reload --module=test")
+    assert result == "Reload not supported"
+
+
+@pytest.mark.asyncio
+async def test_load_unload_reload_with_manager(monkeypatch):
+    class Dummy:
+        pass
+
+    jarvis = Dummy()
+    jarvis.module_manager = Dummy()
+    dispatcher = CommandDispatcher(jarvis)
+
+    async def fake_load(name: str) -> bool:
+        fake_load.called = name
+        return True
+
+    async def fake_unload(name: str) -> bool:
+        fake_unload.called = name
+        return True
+
+    async def fake_reload(name: str) -> bool:
+        fake_reload.called = name
+        return True
+
+    monkeypatch.setattr(jarvis.module_manager, "load_module", fake_load, raising=False)
+    monkeypatch.setattr(jarvis.module_manager, "unload_module", fake_unload, raising=False)
+    monkeypatch.setattr(jarvis.module_manager, "reload_module", fake_reload, raising=False)
+
+    result = await dispatcher.dispatch("load --module=demo")
+    assert result == "Module demo loaded"
+    assert fake_load.called == "demo"
+
+    result = await dispatcher.dispatch("unload --module=demo")
+    assert result == "Module demo unloaded"
+    assert fake_unload.called == "demo"
+
+    result = await dispatcher.dispatch("reload --module=demo")
+    assert result == "Module demo reloaded"
+    assert fake_reload.called == "demo"
