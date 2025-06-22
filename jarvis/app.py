@@ -17,6 +17,7 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, Union
 
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
+from jarvis.core.module_manager import ModuleManager
 
 from .event_queue import EventQueue
 
@@ -339,22 +340,6 @@ class Brain:
             logger.warning(
                 f"Не удалось сохранить мысль по проблеме '{problem[:50]}...'."
             )
-
-
-class ModuleManager:
-    def __init__(self, jarvis_instance: Any):
-        self.jarvis = jarvis_instance
-        self.modules: Dict[str, Any] = {}
-
-    async def load_module(
-        self, module_name: str, config: Optional[Dict] = None
-    ) -> bool:
-        logger.info(f"Загрузка модуля {module_name} (заглушка)...")
-        return True
-
-    async def unload_module(self, module_name: str) -> bool:
-        logger.info(f"Выгрузка модуля {module_name} (заглушка)...")
-        return True
 
 
 class ProjectManager:
