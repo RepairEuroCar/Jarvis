@@ -10,3 +10,21 @@
   module: main
   action: run_jarvis
   estimated_minutes: 1
+- id: basic-linter
+  title: Basic Linter
+  description: Run AST linter on a code base.
+  module: codex.linter_task
+  action: run_basic_linter
+  estimated_minutes: 5
+- id: generate-tests
+  title: Autotest Generation
+  description: Generate pytest tests from functions.
+  module: codex.autotest_generation
+  action: generate_autotests
+  estimated_minutes: 7
+- id: api-docs
+  title: Automatic API Docs
+  description: Build simple API documentation for a module.
+  module: codex.api_docs
+  action: generate_api_docs
+  estimated_minutes: 3
