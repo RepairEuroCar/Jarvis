@@ -1,0 +1,12 @@
+- id: setup-env
+  title: Setup environment
+  description: Install dependencies for Jarvis.
+  module: scripts.setup
+  action: install_dependencies
+  estimated_minutes: 10
+- id: run-jarvis
+  title: Run Jarvis
+  description: Launch the main application.
+  module: main
+  action: run_jarvis
+  estimated_minutes: 1
