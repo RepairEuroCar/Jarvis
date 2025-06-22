@@ -28,6 +28,10 @@ Install runtime dependencies with:
 pip install -r requirements.txt
 ```
 
+If the installation fails due to blocked network access to `pypi.org`,
+configure your environment to allow outbound HTTPS or use an internal
+Python package mirror.
+
 For development and testing install the additional tools from `dev-requirements.txt`:
 
 ```bash
