@@ -11,13 +11,14 @@ import time
 import traceback
 import uuid
 from collections import defaultdict
+from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from jarvis.core.module_manager import ModuleManager
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
-from jarvis.core.module_manager import ModuleManager
 
 from .event_queue import EventQueue
 
@@ -82,9 +83,7 @@ class BaseThoughtProcessor:
 class LogicalThoughtProcessor(BaseThoughtProcessor):
     async def process(self, problem: str, context: dict) -> dict:
         solution = await super().process(problem, context)
-        solution["details"] = (
-            "Логический анализ выполнен. Найдены возможные шаги."
-        )
+        solution["details"] = "Логический анализ выполнен. Найдены возможные шаги."
         # Пример: извлечение ключевых слов
         solution["keywords"] = re.findall(
             r"\b\w{4,}\b", problem.lower()
@@ -99,8 +98,7 @@ class CreativeThoughtProcessor(BaseThoughtProcessor):
             "num_creative_ideas", 3
         )  # Можно передавать параметры через контекст
         solution["ideas"] = [
-            f"Креативная идея #{i+1} для '{problem[:20]}...'"
-            for i in range(num_ideas)
+            f"Креативная идея #{i+1} для '{problem[:20]}...'" for i in range(num_ideas)
         ]
         solution["details"] = (
             "Креативный штурм завершен. Предложены новаторские подходы."
@@ -128,9 +126,7 @@ class AnalyticalThoughtProcessor(
             "average": sum(numbers) / len(numbers) if numbers else 0,
         }
 
-    async def _find_patterns(
-        self, problem_or_data: Union[str, Dict]
-    ) -> List[str]:
+    async def _find_patterns(self, problem_or_data: Union[str, Dict]) -> List[str]:
         """Заглушка: Ищет закономерности."""
         logger.debug(
             "AnalyticalProcessor: Поиск паттернов для '%s...'"
@@ -171,9 +167,7 @@ class AnalyticalThoughtProcessor(
             }
         return {"status": "Сравнений не производилось (заглушка)."}
 
-    def _generate_recommendation(
-        self, analysis_results: Dict[str, Any]
-    ) -> str:
+    def _generate_recommendation(self, analysis_results: Dict[str, Any]) -> str:
         """Заглушка: Генерирует рекомендацию на основе анализа."""
         logger.debug(
             "AnalyticalProcessor: Генерация рекомендации на основе %s"
@@ -281,7 +275,7 @@ class Brain:
 
         # Добавляем классификацию в само решение для удобства
         solution["problem_classification_used"] = problem_type
-        self._update_long_term_memory(problem, solution)
+        await self._update_long_term_memory(problem, solution)
 
         self.working_memory.clear()
         return solution
@@ -320,7 +314,7 @@ class Brain:
 
         return "logical"
 
-    def _update_long_term_memory(self, problem: str, solution: dict):
+    async def _update_long_term_memory(self, problem: str, solution: dict):
         problem_hash = uuid.uuid5(uuid.NAMESPACE_DNS, problem).hex
         memory_key = f"brain.thoughts.{problem_hash}"
 
@@ -330,9 +324,10 @@ class Brain:
             "timestamp": time.time(),
         }
 
-        if self.jarvis.memory.remember(
+        success = await self.jarvis.memory.remember(
             memory_key, thought_record, category="reasoning"
-        ):
+        )
+        if success:
             logger.info(
                 f"Мысль по проблеме '{problem[:50]}...' сохранена (ключ: {memory_key})."
             )
@@ -369,23 +364,25 @@ class Jarvis:
         self.commands: Dict[str, Tuple[CommandInfo, Callable]] = {}
         self._register_core_commands()
         self.event_queue = EventQueue()
-        self.event_listeners: Dict[str, List[Callable]] = (
-            self.event_queue._listeners
-        )
+        self.event_listeners: Dict[str, List[Callable]] = self.event_queue._listeners
         self.user_name = self.memory.query("user_info.name") or "User"
         self.settings = self.memory.query("system.settings") or {
             "auto_save_memory": True
         }
-        self.memory.remember("system.settings", self.settings)
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(
+                self.memory.remember("system.settings", self.settings)
+            )
+        finally:
+            loop.close()
         saved_project_path = self.memory.query("system.projects.current_path")
         self._initial_project_path = (
             saved_project_path
             if saved_project_path and os.path.isdir(saved_project_path)
             else None
         )
-        logger.info(
-            f"Jarvis инициализирован для пользователя {self.user_name}"
-        )
+        logger.info(f"Jarvis инициализирован для пользователя {self.user_name}")
 
     async def _initialize_project(self):
         if self._initial_project_path:
@@ -516,9 +513,7 @@ class Jarvis:
             ),
         ]
         for cmd_info in core_command_infos:
-            handler = getattr(
-                self, cmd_info.handler_name or f"{cmd_info.name}_command"
-            )
+            handler = getattr(self, cmd_info.handler_name or f"{cmd_info.name}_command")
             self.register_command(cmd_info, handler)
 
     def register_command(self, cmd_info: CommandInfo, handler: Callable):
@@ -540,39 +535,27 @@ class Jarvis:
                     del self.commands[alias.lower()]
             logger.debug(f"Удалена команда: {cmd_info.name}")
 
-    async def publish_event(
-        self, event_name: str, *args, priority: int = 0, **kwargs
-    ):
+    async def publish_event(self, event_name: str, *args, priority: int = 0, **kwargs):
         logger.debug(
             f"Публикация события: {event_name} с {args}, {kwargs}, priority={priority}"
         )
-        await self.event_queue.emit(
-            event_name, *args, priority=priority, **kwargs
-        )
+        await self.event_queue.emit(event_name, *args, priority=priority, **kwargs)
 
     def subscribe_event(self, event_name: str, listener: Callable):
         self.event_queue.subscribe(event_name, listener)
-        logger.debug(
-            f"Добавлен обработчик {listener.__name__} для {event_name}"
-        )
+        logger.debug(f"Добавлен обработчик {listener.__name__} для {event_name}")
 
-    async def add_background_task(
-        self, coro: Coroutine, priority: int = 0
-    ) -> None:
+    async def add_background_task(self, coro: Coroutine, priority: int = 0) -> None:
         """Schedule a coroutine to run in background with optional priority."""
         await self.event_queue.add_task(coro, priority=priority)
 
-    async def handle_user_input(
-        self, text: str, source: str = "cli"
-    ) -> Optional[str]:
+    async def handle_user_input(self, text: str, source: str = "cli") -> Optional[str]:
         if not text.strip():
             return None
         nlu_result = await self.nlu.process(text)
         command_name_from_nlu = nlu_result["intent"]
         entities = nlu_result["entities"]
-        logger.info(
-            f"NLU: intent='{command_name_from_nlu}', entities={entities}"
-        )
+        logger.info(f"NLU: intent='{command_name_from_nlu}', entities={entities}")
         self._log_command_to_history(nlu_result)
         command_lookup = self.commands.get(command_name_from_nlu.lower())
         if not command_lookup:
@@ -593,9 +576,7 @@ class Jarvis:
         if cmd_info.requires_confirmation and self.settings.get(
             "confirm_destructive_actions", True
         ):
-            confirm = await self.ask_user(
-                f"Подтвердите '{cmd_info.name}' (y/n): "
-            )
+            confirm = await self.ask_user(f"Подтвердите '{cmd_info.name}' (y/n): ")
             if confirm.lower() not in ["y", "yes", "да"]:
                 return "Команда отменена."
         try:
@@ -618,9 +599,7 @@ class Jarvis:
         self.command_history.append({"timestamp": time.time(), **nlu_result})
 
     async def ask_user(self, prompt: str) -> str:
-        return await asyncio.to_thread(
-            input, f"Jarvis ({self.user_name}): {prompt}"
-        )
+        return await asyncio.to_thread(input, f"Jarvis ({self.user_name}): {prompt}")
 
     async def help_command(self, args_str: str) -> str:
         filter_name = args_str.strip().lower()
@@ -631,8 +610,8 @@ class Jarvis:
             cmd_info, _ = lookup
             return f"Команда: {cmd_info.name} (Алиасы: {', '.join(cmd_info.aliases) or 'нет'})\nКатегория: {cmd_info.category.value}\nОписание: {cmd_info.description}\nИспользование: {cmd_info.usage}"
         output = ["Доступные команды ('help <команда>' для деталей):"]
-        categorized_commands: Dict[CommandCategory, List[CommandInfo]] = (
-            defaultdict(list)
+        categorized_commands: Dict[CommandCategory, List[CommandInfo]] = defaultdict(
+            list
         )
         unique_commands: Dict[str, CommandInfo] = {}
         for cmd_info_tuple in self.commands.values():
@@ -667,7 +646,7 @@ class Jarvis:
             value = json.loads(value_str)
         except json.JSONDecodeError:
             value = value_str
-        if self.memory.remember(key, value):
+        if await self.memory.remember(key, value):
             return f"Запомнено: '{key}' -> '{value_str}'"
         return f"Не удалось запомнить '{key}'."
 
@@ -681,26 +660,26 @@ class Jarvis:
                 k in result for k in ["value", "timestamp"]
             ):
                 return f"'{key}': {json.dumps(result['value'], ensure_ascii=False, indent=2)} (Запомнено: {datetime.datetime.fromtimestamp(result['timestamp']).strftime('%Y-%m-%d %H:%M:%S')}, Категория: {result.get('category', 'N/A')})"
-            return (
-                f"'{key}': {json.dumps(result, ensure_ascii=False, indent=2)}"
-            )
+            return f"'{key}': {json.dumps(result, ensure_ascii=False, indent=2)}"
         return f"Ключ '{key}' не найден в памяти."
 
     async def forget_command(self, args_str: str) -> str:
         key = args_str.strip()
         if not key:
             return "Использование: forget <ключ>"
-        if self.memory.forget(key):
+        if await self.memory.forget(key):
             return f"Забыто: '{key}'."
         return f"Не удалось забыть '{key}'."
 
     async def teach_pattern_command(self, args_str: str) -> str:
         parts = args_str.split(" ", 2)
         if len(parts) < 2:
-            return "Использование: teach_pattern <intent> <trigger_phrase> [entity_type]"
+            return (
+                "Использование: teach_pattern <intent> <trigger_phrase> [entity_type]"
+            )
         intent, trigger = parts[0].strip(), parts[1].strip()
         entity_type = parts[2].strip() if len(parts) > 2 else None
-        self.nlu.add_pattern(
+        await self.nlu.add_pattern(
             intent, trigger, entity_type=entity_type, persist=True
         )
         return f"Паттерн для '{intent}' добавлен."
@@ -753,9 +732,7 @@ class Jarvis:
                         slice=inner_type_ast,
                         ctx=ast.Load(),
                     )
-            match_dict = re.fullmatch(
-                r"Dict\[(.+),(.+)\]", arg_str, re.IGNORECASE
-            )
+            match_dict = re.fullmatch(r"Dict\[(.+),(.+)\]", arg_str, re.IGNORECASE)
             if match_dict:
                 key_type_ast = self._parse_arg_string_to_ast(
                     match_dict.group(1).strip(), "key_type"
@@ -776,9 +753,7 @@ class Jarvis:
                     parts = arg_str.split(".")
                     expr = ast.Name(id=parts[0], ctx=ast.Load())
                     for i in range(1, len(parts)):
-                        expr = ast.Attribute(
-                            value=expr, attr=parts[i], ctx=ast.Load()
-                        )
+                        expr = ast.Attribute(value=expr, attr=parts[i], ctx=ast.Load())
                     return expr
                 return ast.Name(id=arg_str, ctx=ast.Load())
             logger.warning(
@@ -789,9 +764,7 @@ class Jarvis:
             logger.error(f"Ошибка парсинга типа '{arg_str}'.")
             return ast.Constant(value=arg_str)
 
-    async def create_python_function_command(
-        self, entities: Dict[str, Any]
-    ) -> str:
+    async def create_python_function_command(self, entities: Dict[str, Any]) -> str:
         raw_signature_str = entities.get("function_signature_raw", "").strip()
         if not raw_signature_str:
             return "Использование: create_python_function <имя_функции>[(аргументы)] [-> возвращаемый_тип]"
@@ -806,9 +779,7 @@ class Jarvis:
             parts = remaining_signature.split("->", 1)
             args_str_full = parts[0].strip()
             return_type_str = (
-                parts[1].strip()
-                if len(parts) > 1 and parts[1].strip()
-                else "None"
+                parts[1].strip() if len(parts) > 1 and parts[1].strip() else "None"
             )
         else:
             args_str_full = remaining_signature.strip()
@@ -858,12 +829,10 @@ class Jarvis:
                             imports_needed.add(f"from typing import {el}")
                 if default_part:
                     try:
-                        parsed_default_body = ast.parse(
-                            f"lambda: {default_part}"
-                        ).body[0]
-                        if isinstance(
-                            parsed_default_body, ast.Expr
-                        ) and isinstance(
+                        parsed_default_body = ast.parse(f"lambda: {default_part}").body[
+                            0
+                        ]
+                        if isinstance(parsed_default_body, ast.Expr) and isinstance(
                             parsed_default_body.value, ast.Lambda
                         ):
                             arg_default_ast = parsed_default_body.value.body
@@ -875,9 +844,7 @@ class Jarvis:
                         )
                         arg_default_ast = ast.Constant(value=default_part)
                     ast_defaults.append(arg_default_ast)
-                ast_args_list.append(
-                    ast.arg(arg=arg_name_str, annotation=arg_type_ast)
-                )
+                ast_args_list.append(ast.arg(arg=arg_name_str, annotation=arg_type_ast))
         return_annotation_ast = self._parse_arg_string_to_ast(
             return_type_str, "return_type"
         )
@@ -917,15 +884,10 @@ class Jarvis:
         if imports_needed:
             grouped_imports = defaultdict(list)
             for imp_str in sorted(list(imports_needed)):
-                match_from = re.match(
-                    r"from\s+([\w.]+)\s+import\s+([\w\s,]+)", imp_str
-                )
+                match_from = re.match(r"from\s+([\w.]+)\s+import\s+([\w\s,]+)", imp_str)
                 if match_from:
                     grouped_imports[match_from.group(1)].extend(
-                        [
-                            name.strip()
-                            for name in match_from.group(2).split(",")
-                        ]
+                        [name.strip() for name in match_from.group(2).split(",")]
                     )
             for module_name, names_list in grouped_imports.items():
                 import_nodes.append(
@@ -940,11 +902,7 @@ class Jarvis:
                 )
         module_nodes = (
             import_nodes
-            + (
-                [ast.parse("\\n").body[0]]
-                if import_nodes and function_def_node
-                else []
-            )
+            + ([ast.parse("\\n").body[0]] if import_nodes and function_def_node else [])
             + [function_def_node]
         )
         module_ast = ast.Module(body=module_nodes, type_ignores=[])
@@ -998,14 +956,12 @@ class Jarvis:
         filepath_str = args_str.strip()
         if not filepath_str:
             return "Использование: analyze_python_file <путь_к_файлу.py>"
-        if not os.path.exists(filepath_str) or not os.path.isfile(
-            filepath_str
-        ):
+        if not os.path.exists(filepath_str) or not os.path.isfile(filepath_str):
             return f"Ошибка: Файл '{filepath_str}' не найден."
         if not filepath_str.lower().endswith(".py"):
             return f"Ошибка: Файл '{filepath_str}' не .py файл."
         try:
-            with open(filepath_str, "r", encoding="utf-8") as f:
+            with open(filepath_str, encoding="utf-8") as f:
                 source_code = f.read()
         except Exception as e:
             return f"Ошибка чтения '{filepath_str}': {e}"
@@ -1029,14 +985,11 @@ class Jarvis:
                 module_name = node.module or "."
                 names = ", ".join(
                     [
-                        alias.name
-                        + (f" as {alias.asname}" if alias.asname else "")
+                        alias.name + (f" as {alias.asname}" if alias.asname else "")
                         for alias in node.names
                     ]
                 )
-                imports.append(
-                    f"from {'.' * node.level}{module_name} import {names}"
-                )
+                imports.append(f"from {'.' * node.level}{module_name} import {names}")
             elif isinstance(node, ast.FunctionDef):
                 functions.append(
                     f"{node.name}({', '.join([arg.arg for arg in node.args.args])}) (строка: {node.lineno})"
@@ -1056,22 +1009,17 @@ class Jarvis:
                 if methods:
                     class_info += f" (методы: {', '.join(methods)})"
                 if async_methods:
-                    class_info += (
-                        f" (async методы: {', '.join(async_methods)})"
-                    )
+                    class_info += f" (async методы: {', '.join(async_methods)})"
                 classes.append(class_info)
         report = [f"Анализ файла: {filepath_str}\n"]
         if imports:
             report.append(
                 "Импорты:\n"
-                + "\n".join(
-                    [f"  - {imp}" for imp in sorted(list(set(imports)))]
-                )
+                + "\n".join([f"  - {imp}" for imp in sorted(list(set(imports)))])
             )
         if functions:
             report.append(
-                "\nФункции:\n"
-                + "\n".join([f"  - {func}" for func in functions])
+                "\nФункции:\n" + "\n".join([f"  - {func}" for func in functions])
             )
         if async_functions:
             report.append(
@@ -1079,9 +1027,7 @@ class Jarvis:
                 + "\n".join([f"  - {func}" for func in async_functions])
             )
         if classes:
-            report.append(
-                "\nКлассы:\n" + "\n".join([f"  - {cls}" for cls in classes])
-            )
+            report.append("\nКлассы:\n" + "\n".join([f"  - {cls}" for cls in classes]))
         if not any([imports, functions, classes, async_functions]):
             report.append("Значимых конструкций не найдено.")
         await self.publish_event(
@@ -1148,7 +1094,7 @@ class Jarvis:
             return "Использование: set_project <путь_к_проекту>"
         if await self.project_manager.set_project(project_path):
             if self.project_manager.current_project:
-                self.memory.remember(
+                await self.memory.remember(
                     "system.projects.current_path",
                     self.project_manager.current_project["path"],
                 )
@@ -1172,7 +1118,7 @@ class Jarvis:
                 counts[rel] += 1
         updated = self.project_manager.learn_template_updates(template_name)
         if updated:
-            self.memory.remember(
+            await self.memory.remember(
                 "templates.last_updated",
                 {"template": template_name, "files": updated},
             )
@@ -1208,9 +1154,7 @@ class Jarvis:
         if action == "commit":
             message = rest.strip() or "update"
             await git_module.commands["git_add"](self, ".")
-            return await git_module.commands["git_commit"](
-                self, f'"{message}"'
-            )
+            return await git_module.commands["git_commit"](self, f'"{message}"')
         if action == "pull":
             return await git_module.commands["git_pull"](self, rest)
         return "Использование: self_update <commit|pull> [аргументы]"
@@ -1229,9 +1173,7 @@ class Jarvis:
         while self.is_running:
             try:
                 p_name = (
-                    os.path.basename(
-                        self.project_manager.current_project["path"]
-                    )
+                    os.path.basename(self.project_manager.current_project["path"])
                     if self.project_manager.current_project
                     else "~"
                 )
@@ -1266,7 +1208,7 @@ class Jarvis:
         logger.info("Завершение работы Jarvis...")
         self.is_running = False
         if self.settings.get("auto_save_memory", True):
-            self.memory.save()
+            await self.memory.save()
         await self.event_queue.stop()
         await self.publish_event("jarvis_shutdown")
         logger.info("Jarvis завершил работу.")
@@ -1292,8 +1234,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Jarvis остановлен (KeyboardInterrupt в asyncio.run).")
     except Exception as e:
-        logger.critical(
-            f"Критическая ошибка верхнего уровня: {e}", exc_info=True
-        )
+        logger.critical(f"Критическая ошибка верхнего уровня: {e}", exc_info=True)
     finally:
         print("Программа Jarvis полностью завершена.")

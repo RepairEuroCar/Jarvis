@@ -4,8 +4,8 @@ from jarvis.memory.manager import MemoryManager
 from jarvis.memory.project_experience import (
     ProjectExperience,
     load_experiences,
-    save_experience,
     query_experiences,
+    save_experience,
 )
 
 
@@ -18,7 +18,7 @@ async def test_save_and_load(tmp_path):
         outcome="success",
         tags=["bug"],
     )
-    save_experience(mem, exp)
+    await save_experience(mem, exp)
     loaded = load_experiences(mem)
     assert len(loaded) == 1
     assert loaded[0].task == "Fix bug"
@@ -27,7 +27,7 @@ async def test_save_and_load(tmp_path):
 @pytest.mark.asyncio
 async def test_query(tmp_path):
     mem = MemoryManager(str(tmp_path / "mem.json"))
-    save_experience(
+    await save_experience(
         mem,
         ProjectExperience(
             task="Add feature",
@@ -36,7 +36,7 @@ async def test_query(tmp_path):
             tags=["feature"],
         ),
     )
-    save_experience(
+    await save_experience(
         mem,
         ProjectExperience(
             task="Fix bug",

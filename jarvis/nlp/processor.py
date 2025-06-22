@@ -5,10 +5,11 @@ import difflib
 import json
 import re
 from collections import deque
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -131,7 +132,7 @@ class NLUProcessor:
         if not path.exists():
             return {}
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
             return {str(k).lower(): str(v).lower() for k, v in data.items()}
         except Exception as e:  # pragma: no cover - logging only
@@ -354,7 +355,7 @@ class NLUProcessor:
         async for text in text_stream:
             yield await self.process(text)
 
-    def add_pattern(
+    async def add_pattern(
         self,
         intent: str,
         trigger: str,
@@ -384,20 +385,20 @@ class NLUProcessor:
                     "entity_names": [entity_type] if entity_type else [],
                 }
             )
-            self.memory_manager.remember("nlu.custom_patterns", existing)
-            self.memory_manager.save()
+            await self.memory_manager.remember("nlu.custom_patterns", existing)
+            await self.memory_manager.save()
 
-    def learn_correction(
+    async def learn_correction(
         self, wrong_text: str, intent: str, persist: bool = False
     ) -> None:
         """Запоминает исправление неверно распознанной команды."""
         self.learned_corrections[wrong_text.lower()] = intent
         if persist:
             if self.memory_manager:
-                self.memory_manager.remember(
+                await self.memory_manager.remember(
                     "nlu.corrections", self.learned_corrections
                 )
-                self.memory_manager.save()
+                await self.memory_manager.save()
             try:
                 with open(self.intent_dataset_path, "a", encoding="utf-8") as f:
                     json.dump(

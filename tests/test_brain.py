@@ -34,16 +34,15 @@ async def test_brain_creative():
 async def test_brain_analytical():
     jarvis = Jarvis()
     context = {}
-    result = await jarvis.brain.think(
-        "Проанализируй данные: 10, 20, 30, 40", context
-    )
+    result = await jarvis.brain.think("Проанализируй данные: 10, 20, 30, 40", context)
     assert result["status"].startswith("completed")
     assert result["analysis"]["metrics"]["sum"] == 100
 
 
-def test_log_thoughts_direct():
+@pytest.mark.asyncio
+async def test_log_thoughts_direct():
     jarvis = Jarvis()
-    jarvis.brain.log_thoughts("dummy task", {"ok": True})
+    await jarvis.brain.log_thoughts("dummy task", {"ok": True})
     chain = jarvis.brain.get_chain_of_thought(limit=1)
     assert chain
     assert chain[-1]["problem"] == "dummy task"
@@ -69,43 +68,46 @@ async def test_brain_self_evolve(tmp_path):
     assert "my_var" in result[str(f)]["diff"]
 
 
-def test_brain_self_review():
+@pytest.mark.asyncio
+async def test_brain_self_review():
     jarvis = Jarvis()
     code = "x = 1\nprint('hi')\n"
-    jarvis.brain.log_thoughts("test", {"generated_code": code})
+    await jarvis.brain.log_thoughts("test", {"generated_code": code})
     review = jarvis.brain.self_review()
     assert review
     warnings = list(review.values())[0]["warnings"]
     assert any("Global variable" in w for w in warnings)
 
 
-def test_summarize_recent_thoughts():
+@pytest.mark.asyncio
+async def test_summarize_recent_thoughts():
     jarvis = Jarvis()
-    jarvis.brain.log_thoughts("task one", {"status": "done"})
-    jarvis.brain.log_thoughts("task two", {"status": "failed"})
+    await jarvis.brain.log_thoughts("task one", {"status": "done"})
+    await jarvis.brain.log_thoughts("task two", {"status": "failed"})
     summary = jarvis.brain.summarize_recent_thoughts(limit=2)
     assert "task one" in summary and "done" in summary
     assert "task two" in summary and "failed" in summary
 
 
-def test_find_similar_solution():
+@pytest.mark.asyncio
+async def test_find_similar_solution():
     jarvis = Jarvis()
-    jarvis.brain.log_thoughts(
+    await jarvis.brain.log_thoughts(
         "как приготовить борщ",
         {"answer": "Используй свёклу", "status": "completed"},
     )
-
     result = jarvis.brain.find_similar_solution("как приготовить борщ быстро")
     assert result is not None
     assert result["answer"] == "Используй свёклу"
 
 
-def test_compare_recent_code_and_self_review_diff():
+@pytest.mark.asyncio
+async def test_compare_recent_code_and_self_review_diff():
     jarvis = Jarvis()
     first = "x = 1\n"
     second = "x = 2\n"
-    jarvis.brain.log_thoughts("repeat", {"generated_code": first})
-    jarvis.brain.log_thoughts("repeat", {"generated_code": second})
+    await jarvis.brain.log_thoughts("repeat", {"generated_code": first})
+    await jarvis.brain.log_thoughts("repeat", {"generated_code": second})
 
     diffs = jarvis.brain.compare_recent_code(limit=2)
     assert "repeat" in diffs

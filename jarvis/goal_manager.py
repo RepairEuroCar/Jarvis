@@ -33,11 +33,11 @@ class GoalManager:
 
     # ------------------------------------------------------------------
     # Compatibility helpers
-    def set_goal(self, goal: str, motivation: str = "") -> None:
+    async def set_goal(self, goal: str, motivation: str = "") -> None:
         """Set a single goal (compatibility wrapper)."""
         self._active_goals.clear()
-        self.add_goal(goal, motivation)
-        self.jarvis.memory.remember(
+        await self.add_goal(goal, motivation)
+        await self.jarvis.memory.remember(
             "goals.current", self._active_goals[0].to_dict(), category="goals"
         )
 
@@ -47,14 +47,14 @@ class GoalManager:
             return None
         return self._active_goals[0].to_dict()
 
-    def clear_goal(self) -> None:
+    async def clear_goal(self) -> None:
         """Remove all active goals."""
         self._active_goals.clear()
-        self.jarvis.memory.forget("goals.current")
-        self.jarvis.memory.remember("goals.active", [], category="goals")
+        await self.jarvis.memory.forget("goals.current")
+        await self.jarvis.memory.remember("goals.active", [], category="goals")
 
     # ------------------------------------------------------------------
-    def add_goal(
+    async def add_goal(
         self,
         goal: str,
         motivation: str = "",
@@ -73,12 +73,12 @@ class GoalManager:
         )
         self._active_goals.append(new_goal)
         self._active_goals.sort(reverse=True)
-        self.jarvis.memory.remember(
+        await self.jarvis.memory.remember(
             "goals.active", [g.to_dict() for g in self._active_goals], category="goals"
         )
         history = self.jarvis.memory.recall("goals.history") or []
         history.append(new_goal.to_dict())
-        self.jarvis.memory.remember("goals.history", history, category="goals")
+        await self.jarvis.memory.remember("goals.history", history, category="goals")
         return new_goal
 
     def list_goals(self) -> List[Dict[str, Any]]:
@@ -86,19 +86,19 @@ class GoalManager:
 
         return [g.to_dict() for g in self._active_goals]
 
-    def remove_goal(self, index: int) -> bool:
+    async def remove_goal(self, index: int) -> bool:
         """Remove a goal by index."""
 
         if index < 0 or index >= len(self._active_goals):
             return False
         del self._active_goals[index]
-        self.jarvis.memory.remember(
+        await self.jarvis.memory.remember(
             "goals.active", [g.to_dict() for g in self._active_goals], category="goals"
         )
         if self._active_goals:
-            self.jarvis.memory.remember(
+            await self.jarvis.memory.remember(
                 "goals.current", self._active_goals[0].to_dict(), category="goals"
             )
         else:
-            self.jarvis.memory.forget("goals.current")
+            await self.jarvis.memory.forget("goals.current")
         return True

@@ -2,10 +2,11 @@ import argparse
 import asyncio
 import code
 import logging
+from collections.abc import Awaitable
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Awaitable, Any
+from typing import Any, Callable, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel
@@ -23,7 +24,7 @@ from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.core.agent_loop import AgentLoop
 from jarvis.core.module_manager import ModuleManager
-from jarvis.core.sensor_manager import SensorManager, ScheduledTask
+from jarvis.core.sensor_manager import ScheduledTask, SensorManager
 from jarvis.event_queue import EventQueue
 from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
@@ -76,7 +77,7 @@ class Settings(BaseSettings):
         yaml_file = Path(yaml_path)
         if yaml_file.exists():
             try:
-                with open(yaml_file, "r", encoding="utf-8") as f:
+                with open(yaml_file, encoding="utf-8") as f:
                     data = yaml.safe_load(f) or {}
             except Exception as e:
                 logger.warning(f"Failed to read {yaml_path}: {e}")
@@ -217,7 +218,7 @@ class Jarvis:
             parsed = self.parse_input(command_text)
             if not parsed:
                 self._pending_question = command_text
-                self.memory.remember(
+                await self.memory.remember(
                     "system.pending_question", command_text, category="system"
                 )
                 clarification = f"Вы имели в виду '{nlu_result.get('intent')}'?"
@@ -441,7 +442,7 @@ class Jarvis:
         }
         history = self.memory.recall("commands_history") or []
         history.append(record)
-        self.memory.remember("commands_history", history, category="system")
+        await self.memory.remember("commands_history", history, category="system")
 
         return out if rc == 0 else f"Error: {err}"
 
@@ -529,7 +530,7 @@ class Jarvis:
         except SystemExit:
             return "Usage: add_goal <priority> <goal> [--deadline TS] [--source SRC] [--motivation TEXT]"
 
-        self.goals.add_goal(
+        await self.goals.add_goal(
             opts.goal,
             motivation=opts.motivation,
             priority=opts.priority,
@@ -560,7 +561,7 @@ class Jarvis:
             idx = int(parts[1])
         except ValueError:
             return "Usage: remove_goal <index>"
-        if self.goals.remove_goal(idx):
+        if await self.goals.remove_goal(idx):
             return "Goal removed"
         return "Invalid index"
 
