@@ -25,6 +25,7 @@ async def main() -> None:
 
     voice_task: asyncio.Task | None = None
     voice_active = False
+    cleanup_task: asyncio.Task | None = None
     history: list[str] = []
 
     async def run_command(cmd: str) -> None:
@@ -158,6 +159,25 @@ async def main() -> None:
         )
     menu.add_cascade(label="Commands", menu=commands_menu)
 
+    async def shutdown() -> None:
+        nonlocal voice_task, voice_active
+        if voice_task:
+            voice_active = False
+            await voice_task
+            voice_task = None
+        if jarvis.voice_interface and jarvis.voice_interface.is_active:
+            jarvis.voice_interface.stop()
+        await jarvis.sensor_manager.stop()
+        await jarvis.event_queue.stop()
+
+    def on_close() -> None:
+        nonlocal cleanup_task
+        if cleanup_task is None:
+            cleanup_task = asyncio.create_task(shutdown())
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_close)
+
     async def tk_loop() -> None:
         while True:
             try:
@@ -167,7 +187,10 @@ async def main() -> None:
             await asyncio.sleep(0.05)
 
     await tk_loop()
+    if cleanup_task is not None:
+        await cleanup_task
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+
