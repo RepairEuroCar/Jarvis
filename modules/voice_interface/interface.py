@@ -13,8 +13,11 @@ from voice.stub_vosk import KaldiRecognizer, Model
 
 from .config import VoiceConfig
 
+<<<<<<< HEAD
+=======
 # import vosk
 
+>>>>>>> main
 
 class VoiceInterface:
     def __init__(self, jarvis_instance, config: VoiceConfig = None):
@@ -24,11 +27,21 @@ class VoiceInterface:
         self.audio_queue = asyncio.Queue()
 
         if not os.path.exists(self.config.model_path):
-            raise FileNotFoundError(f"Модель Vosk не найдена: {self.config.model_path}")
+            raise FileNotFoundError(
+                f"Модель Vosk не найдена: {self.config.model_path}"
+            )
 
+<<<<<<< HEAD
+        self.model = vosk.Model(self.config.model_path)
+        context_json = json.dumps(
+            self.config.context_phrases, ensure_ascii=False
+        )
+        self.recognizer = vosk.KaldiRecognizer(
+=======
         self.model = Model(self.config.model_path)
         context_json = json.dumps(self.config.context_phrases, ensure_ascii=False)
         self.recognizer = KaldiRecognizer(
+>>>>>>> main
             self.model, self.config.samplerate, context_json
         )
 
@@ -41,12 +54,16 @@ class VoiceInterface:
         if status:
             print(f"Audio warning: {status}")
         if self.is_running:
-            self.loop.call_soon_threadsafe(self.audio_queue.put_nowait, bytes(indata))
+            self.loop.call_soon_threadsafe(
+                self.audio_queue.put_nowait, bytes(indata)
+            )
 
     async def _process_audio_data(self):
         while self.is_running or not self.audio_queue.empty():
             try:
-                raw_data = await asyncio.wait_for(self.audio_queue.get(), timeout=0.1)
+                raw_data = await asyncio.wait_for(
+                    self.audio_queue.get(), timeout=0.1
+                )
             except asyncio.TimeoutError:
                 continue
 
@@ -55,8 +72,13 @@ class VoiceInterface:
                 text = result.get("text", "").strip().lower()
                 if text:
                     print(f"Vosk: {text}")
-                    if self.config.enable_wake_word and not self.is_listening_active:
-                        if any(word in text for word in self.config.wake_words):
+                    if (
+                        self.config.enable_wake_word
+                        and not self.is_listening_active
+                    ):
+                        if any(
+                            word in text for word in self.config.wake_words
+                        ):
                             self.is_listening_active = True
                             print("🔓 Wake word activated.")
                             self.recognizer.Reset()
@@ -65,10 +87,14 @@ class VoiceInterface:
                         print("🛑 Stop command detected.")
                         await self.stop()
                         break
-                    if asyncio.iscoroutinefunction(self.jarvis.handle_user_input):
+                    if asyncio.iscoroutinefunction(
+                        self.jarvis.handle_user_input
+                    ):
                         await self.jarvis.handle_user_input(text)
                     else:
-                        await asyncio.to_thread(self.jarvis.handle_user_input, text)
+                        await asyncio.to_thread(
+                            self.jarvis.handle_user_input, text
+                        )
                     if self.config.enable_wake_word:
                         self.is_listening_active = False
                         self.recognizer.Reset()
@@ -84,7 +110,9 @@ class VoiceInterface:
         self.is_running = True
         self.is_listening_active = not self.config.enable_wake_word
         self.recognizer.Reset()
-        self._audio_processor_task = asyncio.create_task(self._process_audio_data())
+        self._audio_processor_task = asyncio.create_task(
+            self._process_audio_data()
+        )
 
         def stream():
             with sd.RawInputStream(
@@ -99,7 +127,9 @@ class VoiceInterface:
                 while self.is_running:
                     sd.sleep(100)
 
-        self._audio_stream_thread = threading.Thread(target=stream, daemon=True)
+        self._audio_stream_thread = threading.Thread(
+            target=stream, daemon=True
+        )
         self._audio_stream_thread.start()
         return "🎤 Голосовой интерфейс запущен."
 
@@ -109,7 +139,10 @@ class VoiceInterface:
         self.is_running = False
         if self._audio_stream_thread:
             self._audio_stream_thread.join(timeout=2.0)
-        if self._audio_processor_task and not self._audio_processor_task.done():
+        if (
+            self._audio_processor_task
+            and not self._audio_processor_task.done()
+        ):
             self._audio_processor_task.cancel()
             try:
                 await self._audio_processor_task

@@ -74,6 +74,11 @@ VOICE_COMMANDS = [
         usage="change_voice [скорость] [громкость]",
         aliases=["измени голос"],
     ),
+<<<<<<< HEAD
+]
+
+ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS
+=======
     CommandInfo(
         name="set_language",
         description="Change voice recognition and synthesis language",
@@ -174,3 +179,4 @@ UTILITY_COMMANDS = [
 ]
 
 ALL_COMMANDS = CORE_COMMANDS + VOICE_COMMANDS + DEVEL_COMMANDS + UTILITY_COMMANDS
+>>>>>>> main

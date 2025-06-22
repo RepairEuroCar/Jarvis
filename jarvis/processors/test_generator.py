@@ -36,7 +36,10 @@ class TestGeneratorProcessor(BaseThoughtProcessor):
             try:
                 tree = ast.parse(source)
                 for node in tree.body:
-                    if isinstance(node, ast.FunctionDef) and node.name == fn_name:
+                    if (
+                        isinstance(node, ast.FunctionDef)
+                        and node.name == fn_name
+                    ):
                         doc = ast.get_docstring(node)
                         if doc:
                             for expr, expected in self._extract_examples(doc):

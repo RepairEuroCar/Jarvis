@@ -4,6 +4,10 @@
 import difflib
 import inspect
 import json
+<<<<<<< HEAD
+import logging
+=======
+>>>>>>> main
 import os
 import platform
 import subprocess
@@ -14,6 +18,12 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
+<<<<<<< HEAD
+import docker
+import patch
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+=======
 
 try:
     import aioredis
@@ -31,12 +41,17 @@ from watchdog.observers import Observer
 from utils.logger import get_logger
 
 logger = get_logger().getChild("ProjectManager")
+>>>>>>> main
+
 
 
 class ProjectLifecycleException(Exception):
     """Исключения жизненного цикла проекта"""
 
+<<<<<<< HEAD
+=======
     pass
+>>>>>>> main
 
 
 class ProjectTemplateType(Enum):
@@ -58,7 +73,9 @@ class ProjectIntelligence:
 @dataclass
 class ProjectMetadata:
     created: str = field(default_factory=lambda: datetime.now().isoformat())
-    last_accessed: str = field(default_factory=lambda: datetime.now().isoformat())
+    last_accessed: str = field(
+        default_factory=lambda: datetime.now().isoformat()
+    )
     version: str = "1.0"
     tags: Set[str] = field(default_factory=set)
     dependencies: List[str] = field(default_factory=list)
@@ -101,7 +118,11 @@ class ProjectManager:
         }
         self._redis = None  # Для кеширования
         self._docker_client = (
+<<<<<<< HEAD
+            docker.from_env() if self._docker_available() else None
+=======
             docker.from_env() if docker and self._docker_available() else None
+>>>>>>> main
         )
         self._observer = None  # Для наблюдения за файлами
         self._template_files: Dict[str, str] = {}
@@ -140,14 +161,26 @@ class ProjectManager:
             any(f.endswith(".ipynb") for f in files)
             or "notebooks" in dirs
             or "models" in dirs
+<<<<<<< HEAD
+            or any(
+                lib in reqs_text
+                for lib in ["torch", "tensorflow", "scikit-learn"]
+            )
+=======
             or any(lib in reqs_text for lib in ["torch", "tensorflow", "scikit-learn"])
+>>>>>>> main
         ):
             return "ML"
         if (
             "api" in dirs
             or "app.py" in files
             or any(
+<<<<<<< HEAD
+                framework in reqs_text
+                for framework in ["flask", "fastapi", "django"]
+=======
                 framework in reqs_text for framework in ["flask", "fastapi", "django"]
+>>>>>>> main
             )
         ):
             return "API"
@@ -155,7 +188,9 @@ class ProjectManager:
             return "CLI"
         return "UNKNOWN"
 
-    async def _activate_modules_for_project_type(self, project_type: str) -> None:
+    async def _activate_modules_for_project_type(
+        self, project_type: str
+    ) -> None:
         """Автоматически загружает модули в зависимости от типа проекта."""
         if not hasattr(self.jarvis, "module_manager"):
             return
@@ -188,7 +223,13 @@ class ProjectManager:
         path = Path(self.current_project["path"])
         history_file = path / "project_history.json"
         history = self._project_history
+<<<<<<< HEAD
+        history.append(
+            {"timestamp": datetime.now().isoformat(), "event": event}
+        )
+=======
         history.append({"timestamp": datetime.now().isoformat(), "event": event})
+>>>>>>> main
         history = history[-self._MAX_HISTORY :]
         self._project_history = history
         try:
@@ -205,7 +246,14 @@ class ProjectManager:
                 stats["files"] += 1
                 try:
                     with open(
+<<<<<<< HEAD
+                        Path(root) / fname,
+                        "r",
+                        encoding="utf-8",
+                        errors="ignore",
+=======
                         Path(root) / fname, "r", encoding="utf-8", errors="ignore"
+>>>>>>> main
                     ) as f:
                         stats["lines"] += sum(1 for _ in f)
                 except Exception:
@@ -349,7 +397,14 @@ class ProjectManager:
                 ("src/", None),
                 (
                     "tests/",
+<<<<<<< HEAD
+                    {
+                        "__init__.py": "",
+                        "test_main.py": TEMPLATES["basic_test"],
+                    },
+=======
                     {"__init__.py": "", "test_main.py": TEMPLATES["basic_test"]},
+>>>>>>> main
                 ),
                 ("docs/", None),
                 (".env", "PYTHONPATH=src\n"),
@@ -370,10 +425,14 @@ class ProjectManager:
                 for fname, fcontent in content.items():
                     target = full_path / fname
                     target.write_text(fcontent)
-                    self._template_files[str(target.relative_to(path))] = fcontent
+                    self._template_files[str(target.relative_to(path))] = (
+                        fcontent
+                    )
             else:
                 full_path.write_text(content)
-                self._template_files[str(full_path.relative_to(path))] = content
+                self._template_files[str(full_path.relative_to(path))] = (
+                    content
+                )
 
         self._start_watchdog(path)
 
@@ -403,11 +462,15 @@ class ProjectManager:
         self._generate_ide_configs()
 
         # 4. Docker-инициализация
+<<<<<<< HEAD
+        if self._docker_available() and (path / "Dockerfile").exists():
+=======
         if (
             self._docker_client
             and self._docker_available()
             and (path / "Dockerfile").exists()
         ):
+>>>>>>> main
             self._docker_client.images.build(
                 path=str(path), tag=f"{path.name.lower()}:latest"
             )

@@ -1,10 +1,20 @@
+<<<<<<< HEAD
+import asyncio
+=======
 import argparse
 import asyncio
 import code
+>>>>>>> main
 import logging
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+<<<<<<< HEAD
+from typing import Callable, Dict, Optional
+
+import yaml
+from pydantic import BaseModel, BaseSettings
+=======
 from typing import Callable, Dict, List, Optional
 
 import yaml
@@ -13,10 +23,16 @@ try:  # pydantic v1 fallback
     from pydantic_settings import BaseSettings
 except ModuleNotFoundError:  # pragma: no cover - for environments without pydantic-settings
     from pydantic import BaseSettings
+>>>>>>> main
 from transitions import Machine
 
 from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
+<<<<<<< HEAD
+from jarvis.memory.manager import MemoryManager
+from jarvis.nlp.processor import NLUProcessor
+from jarvis.voice.interface import VoiceInterface
+=======
 from jarvis.core.agent_loop import AgentLoop
 from jarvis.core.sensor_manager import SensorManager
 from jarvis.event_queue import EventQueue
@@ -30,6 +46,8 @@ from utils.linter import AstLinter
 from utils.logger import get_logger, setup_logging
 
 logger = get_logger().getChild("Core")
+>>>>>>> main
+
 
 
 class UserEvent(BaseModel):
@@ -97,7 +115,13 @@ class Jarvis:
         return cls._instance
 
     def __init__(
+<<<<<<< HEAD
+        self,
+        settings: Settings = None,
+        config_path: str = "config/config.yaml",
+=======
         self, settings: Settings = None, config_path: str = "config/config.yaml"
+>>>>>>> main
     ):
         # Load settings from YAML and environment unless explicitly provided
         self.settings = settings or Settings.load(config_path)
@@ -111,6 +135,11 @@ class Jarvis:
         self.memory  # initialize memory
         self.nlu = NLUProcessor(model_path=self.settings.intent_model_path)
         self.brain = Brain(self)
+<<<<<<< HEAD
+
+    def _setup_logging(self):
+        logging.basicConfig(level=self.settings.log_level)
+=======
         self.goals = GoalManager(self)
         self.event_queue = EventQueue()
         self.sensor_manager = SensorManager(self, self.event_queue)
@@ -126,6 +155,7 @@ class Jarvis:
     def _setup_logging(self):
         level = getattr(logging, str(self.settings.log_level).upper(), logging.INFO)
         setup_logging(level=level)
+>>>>>>> main
 
     def _setup_state_machine(self):
         self.machine = Machine(model=self, states=self.states, initial="idle")
@@ -210,7 +240,13 @@ class Jarvis:
             return await self.unknown_command(command_text, is_voice)
 
         event = UserEvent(
+<<<<<<< HEAD
+            user_id=0,
+            text=command_text,
+            is_voice=is_voice,  # Системный пользователь
+=======
             user_id=0, text=command_text, is_voice=is_voice  # Системный пользователь
+>>>>>>> main
         )
 
         result = await cmd.handler(event)
@@ -256,6 +292,8 @@ class Jarvis:
         return "Доступные команды: " + ", ".join(
             cmd.info.name for cmd in self.commands.values()
         )
+<<<<<<< HEAD
+=======
 
     async def lint_command(self, event: UserEvent):
         """Run AST linter on a path."""
@@ -537,6 +575,7 @@ class Jarvis:
             result = await kali_tools.run_nmap("127.0.0.1")
             return f"Vulnerability scan completed:\n{result}"
         return f"No automated action for goal: {goal}"
+>>>>>>> main
 
     async def run(self):
         await self.initialize()
@@ -545,6 +584,10 @@ class Jarvis:
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
+    import argparse
+=======
+>>>>>>> main
     import json
 
     parser = argparse.ArgumentParser(description="Jarvis settings helper")

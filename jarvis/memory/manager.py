@@ -1,4 +1,8 @@
 import json
+<<<<<<< HEAD
+import logging
+=======
+>>>>>>> main
 import os
 import shutil
 import time
@@ -7,6 +11,7 @@ from typing import Any, Dict, Optional
 from utils.logger import get_logger
 
 logger = get_logger().getChild("Memory")
+
 
 
 class MemoryManager:
@@ -56,7 +61,9 @@ class MemoryManager:
         except Exception as e:
             logger.error(f"Ошибка сохранения памяти: {e}")
 
-    def remember(self, key: str, value: Any, category: str = "general") -> bool:
+    def remember(
+        self, key: str, value: Any, category: str = "general"
+    ) -> bool:
         """Сохранение данных в память"""
         try:
             keys = key.split(".")
@@ -123,7 +130,9 @@ class MemoryManager:
             current = self.memory
             for k in keys:
                 current = current[k]
-            return current.get("value") if isinstance(current, dict) else current
+            return (
+                current.get("value") if isinstance(current, dict) else current
+            )
         except KeyError:
             return None
 

@@ -34,7 +34,9 @@ async def test_brain_creative():
 async def test_brain_analytical():
     jarvis = Jarvis()
     context = {}
-    result = await jarvis.brain.think("Проанализируй данные: 10, 20, 30, 40", context)
+    result = await jarvis.brain.think(
+        "Проанализируй данные: 10, 20, 30, 40", context
+    )
     assert result["status"].startswith("completed")
     assert result["analysis"]["metrics"]["sum"] == 100
 

@@ -1,12 +1,17 @@
 # -----------------------------
 # jarvis/processors/creative.py
 # -----------------------------
+<<<<<<< HEAD
+import logging
+=======
 
 from utils.logger import get_logger
+>>>>>>> main
 
 from .base import BaseThoughtProcessor
 
 logger = get_logger().getChild("Processor.Creative")
+
 
 
 class CreativeThoughtProcessor(BaseThoughtProcessor):

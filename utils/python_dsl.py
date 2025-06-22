@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 """Helpers for generating Python code from simple descriptions.
 
 The functions in this module translate high level specifications into
@@ -6,6 +8,7 @@ to verify dynamic generation of code structures from minimal schemas or
 natural language phrases.
 """
 
+>>>>>>> main
 import ast
 import re
 from typing import Any, Dict, List
@@ -36,7 +39,9 @@ def phrase_to_python(phrase: str) -> str:
     if m:
         cls = m.group(1).capitalize()
         return f"class {cls}:\n    pass\n"
-    m = re.match(r"импортируй ([a-zA-Z0-9_\.]+)(?: как ([a-zA-Z_][a-zA-Z0-9_]*))?", pl)
+    m = re.match(
+        r"импортируй ([a-zA-Z0-9_\.]+)(?: как ([a-zA-Z_][a-zA-Z0-9_]*))?", pl
+    )
     if m:
         mod, alias = m.group(1), m.group(2)
         if alias:

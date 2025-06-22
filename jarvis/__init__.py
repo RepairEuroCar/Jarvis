@@ -10,8 +10,11 @@ _module_map = {
     # Base dependencies
     "memory": "jarvis.memory",
     "memory.manager": "jarvis.memory.manager",
+<<<<<<< HEAD
+=======
     "memory.core": "jarvis.memory.core",
     "memory.knowledge_base": "jarvis.memory.knowledge_base",
+>>>>>>> main
     "voice": "voice",
     "voice.interface": "voice.interface",
     "commands": "commands",
@@ -22,8 +25,11 @@ _module_map = {
     "core": "jarvis.core",
     # Expose Jarvis class directly
     "core.main": "jarvis.core.main",
+<<<<<<< HEAD
+=======
     "goal_manager": "jarvis.goal_manager",
     "reasoning_engine": "jarvis.reasoning_engine",
+>>>>>>> main
 }
 
 for alias, target in _module_map.items():

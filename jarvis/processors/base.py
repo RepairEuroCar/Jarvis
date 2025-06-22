@@ -1,21 +1,41 @@
 import asyncio
+<<<<<<< HEAD
+import logging
+from typing import Any, Dict
+=======
 from typing import Any, Dict
 
 from utils.logger import get_logger
 
 logger = get_logger().getChild("Processor.Base")
+>>>>>>> main
+
 
 
 class BaseThoughtProcessor:
     def __init__(self, jarvis: Any = None):
         self.jarvis = jarvis
 
+<<<<<<< HEAD
+    async def process(
+        self, problem: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+=======
     async def process(self, problem: str, context: Dict[str, Any]) -> Dict[str, Any]:
+>>>>>>> main
         logger.info(f"Обработка: {problem[:50]}...")
 
         result = await self._process_logic(problem, context)
 
+<<<<<<< HEAD
+        if (
+            context.get("is_voice")
+            and self.jarvis
+            and self.jarvis.voice_interface
+        ):
+=======
         if context.get("is_voice") and self.jarvis and self.jarvis.voice_interface:
+>>>>>>> main
             await self._voice_feedback(result)
 
         return result

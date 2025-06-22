@@ -13,8 +13,12 @@
 
 import ast
 import difflib
+<<<<<<< HEAD
+import logging
+=======
 import os
 import tempfile
+>>>>>>> main
 import time
 import uuid
 
@@ -23,11 +27,14 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Type
 
+<<<<<<< HEAD
+=======
 from utils.code_rating import rate_code
 from utils.linter import AstLinter
 from utils.logger import get_logger
 from utils.solution_compare import structural_diff
 
+>>>>>>> main
 from .processors import (
     AnalyticalThoughtProcessor,
     APIBuilderProcessor,
@@ -38,7 +45,11 @@ from .processors import (
     TestGeneratorProcessor,
 )
 
+<<<<<<< HEAD
+logger = logging.getLogger("Jarvis.Brain")
+=======
 logger = get_logger().getChild("Brain")
+>>>>>>> main
 
 
 class ThoughtProcessorFactory:
@@ -54,7 +65,9 @@ class ThoughtProcessorFactory:
     }
 
     @classmethod
-    def register(cls, name: str, processor_cls: Type[BaseThoughtProcessor]) -> None:
+    def register(
+        cls, name: str, processor_cls: Type[BaseThoughtProcessor]
+    ) -> None:
         """Register a new processor class."""
         cls._registry[name] = processor_cls
 
@@ -113,7 +126,9 @@ class Brain:
 
     async def _classify_problem(self, problem, context):
         p = problem.lower()
-        if any(x in p for x in ["проанализируй", "сравни", "статистика", "данные"]):
+        if any(
+            x in p for x in ["проанализируй", "сравни", "статистика", "данные"]
+        ):
             return "analytical"
         if "рефактор" in p:
             return "refactor"
@@ -128,11 +143,17 @@ class Brain:
         return context.get("preferred_processor", "logical")
 
     def _update_long_term_memory(self, problem, solution):
+<<<<<<< HEAD
+        memory_key = (
+            f"brain.thoughts.{uuid.uuid5(uuid.NAMESPACE_DNS, problem).hex}"
+        )
+=======
         memory_key = f"brain.thoughts.{uuid.uuid5(uuid.NAMESPACE_DNS, problem).hex}"
         rating = None
         code = solution.get("generated_code")
         if code is not None:
             rating = rate_code(code)
+>>>>>>> main
         record = {
             "problem": problem,
             "solution": solution,
@@ -151,9 +172,13 @@ class Brain:
         )
         self.reasoning_history.append(record)
 
-    def _make_plan(self, problem: str, solution: Dict[str, Any]) -> Dict[str, Any]:
+    def _make_plan(
+        self, problem: str, solution: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Create a tiny plan based on the problem and solution."""
-        return {"steps": [f"Разобрать задачу: {problem[:30]}", "Подготовить код"]}
+        return {
+            "steps": [f"Разобрать задачу: {problem[:30]}", "Подготовить код"]
+        }
 
     def _generate_code(self, plan: Dict[str, Any]) -> str:
         """Return placeholder code based on plan."""
@@ -225,7 +250,11 @@ class Brain:
                 results[str(file_path)] = {"error": f"read_failed: {e}"}
                 continue
 
-            analysis = {"lines": len(source.splitlines()), "functions": 0, "classes": 0}
+            analysis = {
+                "lines": len(source.splitlines()),
+                "functions": 0,
+                "classes": 0,
+            }
             try:
                 tree = ast.parse(source)
                 for node in ast.walk(tree):
@@ -236,7 +265,9 @@ class Brain:
             except Exception as e:
                 analysis["parse_error"] = str(e)
 
-            ref_result = await processor.process("refactor", {"source_code": source})
+            ref_result = await processor.process(
+                "refactor", {"source_code": source}
+            )
             new_code = ref_result.get("refactored_code", "")
 
             diff = "\n".join(
