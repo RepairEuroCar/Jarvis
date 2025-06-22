@@ -32,7 +32,11 @@ class SensorManager:
 
     async def start(self) -> None:
         """Start all configured sensors."""
-        if self.jarvis.settings.voice_enabled and self.jarvis.voice_interface:
+        if (
+            self.jarvis.settings.voice_enabled
+            and self.jarvis.voice_interface
+            and self.jarvis.voice_interface.microphone
+        ):
             self._tasks.append(asyncio.create_task(self._microphone_loop()))
         # Scheduled tasks run always for now
         self._tasks.append(asyncio.create_task(self._scheduled_loop()))

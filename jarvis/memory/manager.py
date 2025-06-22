@@ -5,7 +5,6 @@ import shutil
 import time
 from typing import Any, Dict, Optional
 
-import aiofiles
 
 from utils.logger import get_logger
 
@@ -27,14 +26,11 @@ class MemoryManager:
         """
         self.memory_file = memory_file
         self.auto_save = auto_save
-        loop = asyncio.new_event_loop()
-        try:
-            self.memory = loop.run_until_complete(self._initialize_memory())
-        finally:
-            loop.close()
+        # Load memory synchronously to avoid event loop issues during init
+        self.memory = self._initialize_memory()
 
-    async def _initialize_memory(self) -> Dict[str, Any]:
-        """Инициализация структуры памяти"""
+    def _initialize_memory(self) -> Dict[str, Any]:
+        """Инициализация структуры памяти (синхронно)"""
         base_structure = {
             "user_info": {"name": "User"},
             "system": {},
@@ -44,8 +40,8 @@ class MemoryManager:
 
         if os.path.exists(self.memory_file):
             try:
-                async with aiofiles.open(self.memory_file, encoding="utf-8") as f:
-                    data = await f.read()
+                with open(self.memory_file, encoding="utf-8") as f:
+                    data = f.read()
                 loaded = json.loads(data)
                 return {**base_structure, **loaded}
             except Exception as e:
@@ -59,8 +55,11 @@ class MemoryManager:
             if os.path.exists(self.memory_file):
                 shutil.copy(self.memory_file, f"{self.memory_file}.bak")
 
-            async with aiofiles.open(self.memory_file, "w", encoding="utf-8") as f:
-                await f.write(json.dumps(self.memory, indent=2, ensure_ascii=False))
+            def _write():
+                with open(self.memory_file, "w", encoding="utf-8") as f:
+                    json.dump(self.memory, f, indent=2, ensure_ascii=False)
+
+            await asyncio.to_thread(_write)
         except Exception as e:
             logger.error(f"Ошибка сохранения памяти: {e}")
 
