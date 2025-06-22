@@ -4,16 +4,12 @@
 import pytest
 
 from jarvis.memory.manager import MemoryManager
-<<<<<<< HEAD
-from jarvis.nlp.processor import NLUProcessor, TaskSemantics
-=======
 from jarvis.nlp.processor import (
     CommandPattern,
     EntityExtractionMode,
     NLUProcessor,
     TaskSemantics,
 )
->>>>>>> main
 
 
 @pytest.fixture

@@ -2,19 +2,11 @@
 # jarvis/nlu/processor.py
 # -----------------------------
 import difflib
-<<<<<<< HEAD
-import logging
-=======
 import json
->>>>>>> main
 import re
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, auto
-<<<<<<< HEAD
-from typing import Any, AsyncGenerator, Dict, List, Optional
-
-=======
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
@@ -22,7 +14,6 @@ import yaml
 
 from utils.logger import get_logger
 
->>>>>>> main
 from ..commands.registry import CommandCategory
 from .intent_model import IntentModel
 from .ner_model import NERModel
@@ -117,17 +108,11 @@ class NLUProcessor:
             "problem_description_entity": r".+",
         }
         self._compiled_entity_patterns = {
-            name: re.compile(pattern)
-            for name, pattern in self.entity_patterns.items()
+            name: re.compile(pattern) for name, pattern in self.entity_patterns.items()
         }
 
         self.semantics_keywords = {
-            TaskSemantics.GENERATION: [
-                "создай",
-                "сгенерируй",
-                "generate",
-                "напиши",
-            ],
+            TaskSemantics.GENERATION: ["создай", "сгенерируй", "generate", "напиши"],
             TaskSemantics.ANALYSIS: ["анализ", "проанализируй", "analyze"],
             TaskSemantics.TRANSLATION: ["переведи", "translate"],
             TaskSemantics.DIAGNOSTICS: ["диагност", "ошибка", "diagnose"],
@@ -209,11 +194,7 @@ class NLUProcessor:
             ),
             CommandPattern(
                 intent="explain_solution",
-                triggers=[
-                    "как ты решил это",
-                    "как ты это решил",
-                    "объясни решение",
-                ],
+                triggers=["как ты решил это", "как ты это решил", "объясни решение"],
                 entity_extraction_mode=EntityExtractionMode.NO_ARGS,
                 category=CommandCategory.REASONING,
                 description="Объясняет процесс решения последней задачи",
@@ -266,9 +247,7 @@ class NLUProcessor:
             self._update_history(result)
             return result
         for pattern in self.command_patterns:
-            if result := await self._match_pattern(
-                pattern, text_original, text_lower
-            ):
+            if result := await self._match_pattern(pattern, text_original, text_lower):
                 self._update_history(result)
                 return result
 
@@ -286,11 +265,7 @@ class NLUProcessor:
                     pattern, text_original, trigger, 1.0
                 )
             ratio = difflib.SequenceMatcher(
-<<<<<<< HEAD
-                None, text_lower, trigger.lower()
-=======
                 None, normalized_text, normalized_trigger
->>>>>>> main
             ).ratio()
             if ratio > 0.75:
                 return await self._extract_entities(
@@ -299,11 +274,7 @@ class NLUProcessor:
         return None
 
     async def _extract_entities(
-        self,
-        pattern: CommandPattern,
-        text: str,
-        trigger: str,
-        confidence: float,
+        self, pattern: CommandPattern, text: str, trigger: str, confidence: float
     ) -> ProcessingResult:
         """Извлекает сущности из текста в соответствии с шаблоном."""
         trigger_words = trigger.split()
@@ -311,10 +282,7 @@ class NLUProcessor:
         args_part = " ".join(text_words[len(trigger_words) :]).strip()
         entities = {"raw_args": args_part}
 
-        if (
-            pattern.entity_extraction_mode
-            == EntityExtractionMode.ALL_AFTER_TRIGGER
-        ):
+        if pattern.entity_extraction_mode == EntityExtractionMode.ALL_AFTER_TRIGGER:
             if pattern.entity_names:
                 entities[pattern.entity_names[0]] = args_part
         elif pattern.entity_extraction_mode == EntityExtractionMode.NAMED_ENTITIES:
@@ -461,13 +429,7 @@ class NLUProcessor:
                 )
                 self.command_patterns.append(cp)
             except Exception as e:
-<<<<<<< HEAD
-                logger.error(
-                    f"Ошибка загрузки пользовательского паттерна: {e}"
-                )
-=======
                 logger.error(f"Ошибка загрузки пользовательского паттерна: {e}")
 
         corrections = self.memory_manager.recall("nlu.corrections") or {}
         self.learned_corrections.update({k.lower(): v for k, v in corrections.items()})
->>>>>>> main

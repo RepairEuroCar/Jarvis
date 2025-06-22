@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 import importlib
 import sys
 import time
@@ -7,12 +6,6 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from enum import Enum, auto
 from functools import wraps
-<<<<<<< HEAD
-from multiprocessing import Process, Queue
-from pathlib import Path
-from resource import RLIMIT_AS, RLIMIT_CPU, setrlimit
-=======
->>>>>>> main
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ValidationError
@@ -80,16 +73,10 @@ def module_error_handler(func):
             logger.error(f"Module {module_name} not found")
         except ValidationError as e:
             logger.error(f"Config error in {module_name}: {e}")
-<<<<<<< HEAD
-        except Exception:
-            logger.exception(
-                f"Unexpected error in {func.__name__} for {module_name}"
-=======
         except Exception as e:
             logger.exception(
                 f"Unexpected error in {func.__name__} for {module_name}",
                 exc_info=e,
->>>>>>> main
             )
         return False
 
@@ -106,7 +93,6 @@ def time_operation(operation_name: str):
 def apply_resource_limits(limits: Dict[str, int]):
     """No-op after removing sandbox limits."""
     return
-
 
 
 # ========================
@@ -148,9 +134,7 @@ class ModuleManager:
                 self.module_states[module_name] = ModuleState.ERROR
                 return False
 
-            if not await self._verify_module_security(
-                module_name, module_config
-            ):
+            if not await self._verify_module_security(module_name, module_config):
                 self.module_states[module_name] = ModuleState.ERROR
                 return False
 
@@ -159,9 +143,7 @@ class ModuleManager:
                 return False
 
             with time_operation(f"Module {module_name} load"):
-                module = await self._initialize_module(
-                    module_name, module_config
-                )
+                module = await self._initialize_module(module_name, module_config)
                 if not module:
                     return False
 
@@ -202,9 +184,7 @@ class ModuleManager:
     # ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ
     # ------------------------
 
-    async def send_event(
-        self, module_name: str, event_name: str, data: Dict
-    ) -> bool:
+    async def send_event(self, module_name: str, event_name: str, data: Dict) -> bool:
         """Отправка события модулю."""
         if module_name not in self.modules:
             return False
@@ -244,33 +224,13 @@ class ModuleManager:
     async def _verify_module_security(
         self, module_name: str, config: ModuleConfig
     ) -> bool:
-<<<<<<< HEAD
-        if not config.expected_hash:
-            return True
-
-        module_path = Path(f"jarvis/modules/{module_name}.py")
-        if not module_path.exists():
-            return False
-
-        with open(module_path, "rb") as f:
-            file_hash = hashlib.sha256(f.read()).hexdigest()
-
-        if file_hash != config.expected_hash:
-            logger.error(f"Security hash mismatch for {module_name}")
-            return False
-=======
->>>>>>> main
         return True
 
-    async def _load_dependencies(
-        self, module_name: str, config: ModuleConfig
-    ) -> bool:
+    async def _load_dependencies(self, module_name: str, config: ModuleConfig) -> bool:
         for dep in config.dependencies:
             if dep not in self.modules:
                 if not await self.load_module(dep):
-                    logger.error(
-                        f"Dependency {dep} for {module_name} failed to load"
-                    )
+                    logger.error(f"Dependency {dep} for {module_name} failed to load")
                     return False
         return True
 
@@ -278,12 +238,6 @@ class ModuleManager:
         self, module_name: str, config: ModuleConfig
     ) -> Optional[JarvisModule]:
         try:
-<<<<<<< HEAD
-            if config.sandboxed:
-                return await self._initialize_sandboxed(module_name, config)
-
-=======
->>>>>>> main
             module = importlib.import_module(f"jarvis.modules.{module_name}")
             if not hasattr(module, "setup"):
                 logger.error(f"Module {module_name} has no setup function")
@@ -294,9 +248,7 @@ class ModuleManager:
 
             return await module.setup(self.jarvis, config.dict())
         except Exception as e:
-            logger.error(
-                f"Module {module_name} initialization failed: {str(e)}"
-            )
+            logger.error(f"Module {module_name} initialization failed: {str(e)}")
             return None
 
     async def _check_module_compatibility(self, module: Any) -> bool:
@@ -307,35 +259,3 @@ class ModuleManager:
             )
             return False
         return True
-<<<<<<< HEAD
-
-    async def _initialize_sandboxed(
-        self, module_name: str, config: ModuleConfig
-    ) -> Optional[JarvisModule]:
-        result_queue = Queue()
-        process = Process(
-            target=self._run_sandboxed_module,
-            args=(module_name, config.dict(), result_queue),
-        )
-        process.start()
-        process.join(timeout=config.resource_limits.get("cpu_time", 1) + 1)
-
-        if process.is_alive():
-            process.terminate()
-            logger.error(f"Sandboxed module {module_name} timed out")
-            return None
-
-        return result_queue.get() if not result_queue.empty() else None
-
-    @staticmethod
-    def _run_sandboxed_module(module_name: str, config: Dict, queue: Queue):
-        try:
-            apply_resource_limits(config["resource_limits"])
-            module = importlib.import_module(f"jarvis.modules.{module_name}")
-            instance = module.setup(config)
-            queue.put(instance)
-        except Exception as e:
-            logger.error(f"Sandbox error in {module_name}: {str(e)}")
-            queue.put(None)
-=======
->>>>>>> main

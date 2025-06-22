@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 
->>>>>>> main
 from utils.python_dsl import generate_code_from_schema
 
 
@@ -11,12 +8,7 @@ def test_generate_function_with_loop():
         "name": "demo",
         "args": ["n"],
         "body": [
-            {
-                "type": "Loop",
-                "var": "i",
-                "iter": "range(n)",
-                "body": ["print(i)"],
-            }
+            {"type": "Loop", "var": "i", "iter": "range(n)", "body": ["print(i)"]}
         ],
     }
     code = generate_code_from_schema(schema)
