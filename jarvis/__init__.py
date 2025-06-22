@@ -12,6 +12,7 @@ _module_map = {
     "memory.manager": "jarvis.memory.manager",
     "memory.core": "jarvis.memory.core",
     "memory.knowledge_base": "jarvis.memory.knowledge_base",
+    "memory.project_experience": "jarvis.memory.project_experience",
     "voice": "voice",
     "voice.interface": "voice.interface",
     "commands": "commands",
