@@ -33,6 +33,8 @@ async def main() -> None:
     voice_active = False
     cleanup_task: asyncio.Task | None = None
     history: list[str] = []
+    command_history: list[str] = []
+    history_index = 0
 
     async def run_command(cmd: str) -> None:
         try:
@@ -47,13 +49,39 @@ async def main() -> None:
         output.see(tk.END)
 
     def send_command(event=None) -> None:  # type: ignore[override]
+        nonlocal history_index
         cmd = entry.get().strip()
         if not cmd:
             return
         output.insert(tk.END, f"> {cmd}\n")
         history.append(cmd)
+        command_history.append(cmd)
+        history_index = len(command_history)
         entry.delete(0, tk.END)
         asyncio.create_task(run_command(cmd))
+
+    def navigate_up(event=None) -> str:
+        nonlocal history_index
+        if not command_history:
+            return "break"
+        if history_index > 0:
+            history_index -= 1
+        entry.delete(0, tk.END)
+        entry.insert(0, command_history[history_index])
+        return "break"
+
+    def navigate_down(event=None) -> str:
+        nonlocal history_index
+        if not command_history:
+            return "break"
+        if history_index < len(command_history) - 1:
+            history_index += 1
+            entry.delete(0, tk.END)
+            entry.insert(0, command_history[history_index])
+        else:
+            history_index = len(command_history)
+            entry.delete(0, tk.END)
+        return "break"
 
     async def voice_loop() -> None:
         nonlocal voice_active, voice_task
@@ -65,7 +93,9 @@ async def main() -> None:
             output.insert(tk.END, f"Voice> {text}\n")
             history.append(f"Voice> {text}")
             if jarvis.settings.voice_activation_phrase in text:
-                command = text.split(jarvis.settings.voice_activation_phrase, 1)[-1].strip()
+                command = text.split(jarvis.settings.voice_activation_phrase, 1)[
+                    -1
+                ].strip()
                 if command:
                     output.insert(tk.END, f"> {command}\n")
                     history.append(command)
@@ -83,6 +113,8 @@ async def main() -> None:
             voice_button.config(text="Stop Voice")
 
     entry.bind("<Return>", send_command)
+    entry.bind("<Up>", navigate_up)
+    entry.bind("<Down>", navigate_down)
     btn = tk.Button(frame, text="Send", command=send_command)
     btn.pack(side=tk.RIGHT, padx=(5, 0), pady=(5, 0))
 
@@ -146,7 +178,9 @@ async def main() -> None:
                 jarvis.voice_interface.update_language()
             win.destroy()
 
-        tk.Button(win, text="Apply", command=apply).grid(row=3, column=0, columnspan=2, pady=5)
+        tk.Button(win, text="Apply", command=apply).grid(
+            row=3, column=0, columnspan=2, pady=5
+        )
 
     settings_menu = tk.Menu(menu, tearoff=False)
     settings_menu.add_command(label="Voice & Language", command=open_settings)
@@ -199,4 +233,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-
