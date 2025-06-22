@@ -8,12 +8,10 @@ implementation lightweight for the test suite.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import random
 import re
 import time
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -22,7 +20,6 @@ import aiofiles
 from faker import Faker
 from loguru import logger
 from pydantic import BaseModel, Field, validator
-from typing_extensions import Literal
 
 from command_dispatcher import CommandDispatcher, default_dispatcher
 
@@ -181,7 +178,12 @@ class DatasetBuilder:
         chunk_file = self.config.output_dir / "raw" / f"chunk_{chunk_num}.jsonl"
         async with aiofiles.open(chunk_file, "w") as fh:
             for ex in examples:
-                await fh.write(ex.model_dump_json() + "\n")
+                data = (
+                    ex.model_dump_json()
+                    if hasattr(ex, "model_dump_json")
+                    else ex.json()
+                )
+                await fh.write(data + "\n")
         stat = chunk_file.stat()
         return stat.st_size
 
@@ -190,7 +192,8 @@ class DatasetBuilder:
         chunk_num = 0
         target_bytes = int(self.config.target_size_gb * 1024**3)
         logger.info(
-            f"Generating dataset to {self.config.output_dir} (~{self.config.target_size_gb} GB)"
+            f"Generating dataset to {self.config.output_dir} "
+            f"(~{self.config.target_size_gb} GB)"
         )
         while total_size < target_bytes:
             examples = await self._generate_chunk(self.config.chunk_size)
