@@ -15,6 +15,8 @@ import time
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import gzip
+import shutil
 
 import aiofiles
 from faker import Faker
@@ -26,6 +28,7 @@ from command_dispatcher import CommandDispatcher, default_dispatcher
 DEFAULT_CHUNK_SIZE = 1000
 SUPPORTED_LANGUAGES = ["python"]
 COMPRESSION_LEVEL = 3
+COMPRESSED_EXTENSION = ".jsonl.gz"
 
 
 class CodeCategory(str, Enum):
@@ -184,8 +187,17 @@ class DatasetBuilder:
                     else ex.json()
                 )
                 await fh.write(data + "\n")
-        stat = chunk_file.stat()
-        return stat.st_size
+
+        compressed_dir = self.config.output_dir / "compressed"
+        compressed_file = compressed_dir / f"chunk_{chunk_num}{COMPRESSED_EXTENSION}"
+        with open(chunk_file, "rb") as src, gzip.open(
+            compressed_file, "wb", compresslevel=COMPRESSION_LEVEL
+        ) as dst:
+            shutil.copyfileobj(src, dst)
+
+        size = compressed_file.stat().st_size
+        chunk_file.unlink()
+        return size
 
     async def generate(self) -> None:
         total_size = 0
@@ -208,6 +220,10 @@ class DatasetBuilder:
             "chunks": chunk_num,
             "examples_per_chunk": self.config.chunk_size,
             "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "compression": "gzip",
+            "compression_level": COMPRESSION_LEVEL,
+            "chunk_extension": COMPRESSED_EXTENSION,
+            "total_size_bytes": total_size,
         }
         async with aiofiles.open(self.config.output_dir / "metadata.json", "w") as fh:
             await fh.write(json.dumps(metadata, indent=2))
@@ -225,10 +241,33 @@ async def generate_dataset(
     return f"Dataset generated in {output}"
 
 
+async def read_metadata(output: str | Path) -> Dict[str, Any]:
+    output = Path(output)
+    metadata_file = output / "metadata.json"
+    async with aiofiles.open(metadata_file, "r") as fh:
+        metadata = json.loads(await fh.read())
+
+    ext = metadata.get("chunk_extension", COMPRESSED_EXTENSION)
+    compressed_dir = output / "compressed"
+    chunk_files = list(compressed_dir.glob(f"chunk_*{ext}"))
+    if not chunk_files:
+        chunk_files = list((output / "raw").glob("chunk_*" + ext))
+
+    size = sum(f.stat().st_size for f in chunk_files)
+    metadata["total_size_bytes"] = size
+    metadata["chunk_extension"] = ext
+    return metadata
+
+
 def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> None:
     dispatcher.register_command_handler("dataset", "generate", generate_dataset)
 
 
 register_commands(default_dispatcher)
 
-__all__ = ["generate_dataset", "DatasetBuilder", "register_commands"]
+__all__ = [
+    "generate_dataset",
+    "DatasetBuilder",
+    "register_commands",
+    "read_metadata",
+]
