@@ -3,7 +3,7 @@ from codex.tasks import load_tasks, Task
 
 def test_load_default_tasks():
     tasks = load_tasks()
-    assert len(tasks) == 2
+    assert len(tasks) == 5
     assert tasks[0] == Task(
         id="setup-env",
         title="Setup environment",
@@ -13,6 +13,9 @@ def test_load_default_tasks():
         estimated_minutes=10,
     )
     assert tasks[1].id == "run-jarvis"
+    assert tasks[2].id == "basic-linter"
+    assert tasks[3].id == "generate-tests"
+    assert tasks[4].id == "api-docs"
 
 
 def test_load_custom_tasks(tmp_path):
