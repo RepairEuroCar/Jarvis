@@ -19,6 +19,9 @@ Launch the Tk interface with:
 python gui.py
 ```
 
+The input field supports `<Tab>` completion. Press the key while typing a
+command to cycle through the available command names from `jarvis.commands`.
+
 Install runtime dependencies with:
 
 ```bash

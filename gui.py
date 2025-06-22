@@ -1,6 +1,7 @@
 import asyncio
 import tkinter as tk
 from tkinter import filedialog
+from typing import Dict, List
 
 from jarvis.core.main import Jarvis
 from utils.logger import setup_logging
@@ -10,6 +11,13 @@ async def main() -> None:
     setup_logging()
     jarvis = Jarvis()
     await jarvis.initialize()
+
+    command_names: List[str] = sorted(set(jarvis.commands.keys()))
+    completion_state: Dict[str, object] = {
+        "prefix": "",
+        "matches": [],
+        "index": 0,
+    }
 
     root = tk.Tk()
     root.title("Jarvis GUI")
@@ -35,6 +43,23 @@ async def main() -> None:
     history: list[str] = []
     command_history: list[str] = []
     history_index = 0
+
+    def autocomplete(event=None) -> str:
+        prefix = entry.get()
+        state = completion_state
+        if prefix != state["prefix"]:
+            matches = [c for c in command_names if c.startswith(prefix)]
+            state["matches"] = matches
+            state["index"] = 0
+            state["prefix"] = prefix
+        matches = state.get("matches", [])
+        if not matches:
+            return "break"
+        match = matches[state["index"]]
+        state["index"] = (state["index"] + 1) % len(matches)
+        entry.delete(0, tk.END)
+        entry.insert(0, match)
+        return "break"
 
     async def run_command(cmd: str) -> None:
         try:
@@ -115,6 +140,7 @@ async def main() -> None:
     entry.bind("<Return>", send_command)
     entry.bind("<Up>", navigate_up)
     entry.bind("<Down>", navigate_down)
+    entry.bind("<Tab>", autocomplete)
     btn = tk.Button(frame, text="Send", command=send_command)
     btn.pack(side=tk.RIGHT, padx=(5, 0), pady=(5, 0))
 
