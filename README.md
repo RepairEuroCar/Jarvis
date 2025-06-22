@@ -166,7 +166,12 @@ validated using small Pydantic models:
 | `list_commands` | *(none)* | Show all registered commands |
 | `help` | `--command=<module action>` | Display handler documentation |
 | `exit` | *(none)* | Return the `CommandDispatcher.EXIT` sentinel |
+| `load` | `--module=<name>` | Load a Jarvis module |
+| `unload` | `--module=<name>` | Unload a Jarvis module |
 | `reload` | `--module=<name>` | Reload a Jarvis module |
+
+Use `load`, `unload` and `reload` to manage optional features without
+restarting the assistant.
 
 ### Code formatting
 

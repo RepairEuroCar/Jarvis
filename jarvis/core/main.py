@@ -9,15 +9,20 @@ from typing import Callable, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel
+
 try:  # pydantic v1 fallback
     from pydantic_settings import BaseSettings
-except ModuleNotFoundError:  # pragma: no cover - for environments without pydantic-settings
+except (
+    ModuleNotFoundError
+):  # pragma: no cover - for environments without pydantic-settings
     from pydantic import BaseSettings
+
 from transitions import Machine
 
 from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.core.agent_loop import AgentLoop
+from jarvis.core.module_manager import ModuleManager
 from jarvis.core.sensor_manager import SensorManager
 from jarvis.event_queue import EventQueue
 from jarvis.goal_manager import GoalManager
@@ -114,6 +119,7 @@ class Jarvis:
         self.goals = GoalManager(self)
         self.event_queue = EventQueue()
         self.sensor_manager = SensorManager(self, self.event_queue)
+        self.module_manager = ModuleManager(self)
         self.agent_loop = None
         self._pending_question: Optional[str] = None
         # Initialize per-instance cache for input parsing
@@ -156,6 +162,18 @@ class Jarvis:
     def pending_question(self) -> Optional[str]:
         """Return the last question awaiting user clarification."""
         return self._pending_question
+
+    # --------------------------------------------------------------
+    # Module management helpers
+    # --------------------------------------------------------------
+
+    async def load_module(self, name: str, config: Optional[Dict] = None) -> bool:
+        """Load a Jarvis module via :class:`ModuleManager`."""
+        return await self.module_manager.load_module(name, config)
+
+    async def unload_module(self, name: str) -> bool:
+        """Unload a previously loaded Jarvis module."""
+        return await self.module_manager.unload_module(name)
 
     def _register_commands(self):
         for cmd_info in ALL_COMMANDS:
