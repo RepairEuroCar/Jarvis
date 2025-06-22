@@ -7,7 +7,11 @@ import os
 import platform
 import readline
 
-from command_dispatcher import CommandDispatcher, InvalidCommandError
+from command_dispatcher import (
+    CommandDispatcher,
+    InvalidCommandError,
+    default_dispatcher,
+)
 from jarvis.core.main import Jarvis
 from utils.logger import get_logger
 
@@ -16,7 +20,8 @@ logger = get_logger().getChild("CLI")
 
 async def run():
     jarvis = Jarvis()
-    dispatcher = CommandDispatcher(jarvis)
+    dispatcher = default_dispatcher
+    dispatcher.jarvis = jarvis
     await jarvis.initialize()
 
     # -----------------------------
