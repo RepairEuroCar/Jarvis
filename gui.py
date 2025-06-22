@@ -17,8 +17,14 @@ async def main() -> None:
     frame = tk.Frame(root)
     frame.pack(padx=10, pady=10)
 
-    output = tk.Text(frame, height=20, width=80)
-    output.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+    text_frame = tk.Frame(frame)
+    text_frame.pack(fill=tk.BOTH, expand=True)
+
+    output = tk.Text(text_frame, height=20, width=80)
+    scrollbar = tk.Scrollbar(text_frame, command=output.yview)
+    output.configure(yscrollcommand=scrollbar.set)
+    output.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     entry = tk.Entry(frame, width=60)
     entry.pack(side=tk.LEFT, fill=tk.X, expand=True, pady=(5, 0))
