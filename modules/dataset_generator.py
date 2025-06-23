@@ -106,11 +106,25 @@ class PythonCodeGenerator(BaseCodeGenerator):
         instruction = (
             f"Write a Python function `{func_name}` that returns {return_type}."
         )
+        logic_map = {
+            "int": "    result = len(str(data))",
+            "str": "    result = str(data)",
+            "bool": "    result = bool(data)",
+            "float": (
+                "    try:\n"
+                "        result = float(data)\n"
+                "    except (TypeError, ValueError):\n"
+                "        result = 0.0"
+            ),
+            "dict": "    result = {'data': data}",
+            "list": "    result = [data]",
+        }
+        logic = logic_map.get(return_type, f"    result = {self._mock_value(return_type)}")
         code = (
             f"def {func_name}(data):\n"
             f'    """Process data and return {return_type}."""\n'
-            f"    # TODO: implement logic\n"
-            f"    return {self._mock_value(return_type)}\n"
+            f"{logic}\n"
+            f"    return result\n"
         )
         return CodeExample(
             instruction=instruction,
