@@ -113,13 +113,6 @@ class NLUProcessor:
             name: re.compile(pattern) for name, pattern in self.entity_patterns.items()
         }
 
-        self.semantics_keywords = {
-            TaskSemantics.GENERATION: ["создай", "сгенерируй", "generate", "напиши"],
-            TaskSemantics.ANALYSIS: ["анализ", "проанализируй", "analyze"],
-            TaskSemantics.TRANSLATION: ["переведи", "translate"],
-            TaskSemantics.DIAGNOSTICS: ["диагност", "ошибка", "diagnose"],
-        }
-
         self.semantics_patterns = {
             TaskSemantics.GENERATION: [re.compile(r"\b(создай|сгенерируй|generate|напиши)\b")],
             TaskSemantics.ANALYSIS: [re.compile(r"\b(анализ|проанализируй|analy[sz]e)\b")],
