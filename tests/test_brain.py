@@ -5,6 +5,7 @@
 import pytest
 
 from jarvis.core.main import Jarvis
+from jarvis.app import Jarvis as SimpleJarvis
 
 
 @pytest.mark.asyncio
@@ -116,3 +117,17 @@ async def test_compare_recent_code_and_self_review_diff():
     review = jarvis.brain.self_review()
     assert "repeat" in review
     assert "structural_diff" in review["repeat"]
+
+
+@pytest.mark.asyncio
+async def test_explain_solution_command_last_two():
+    jarvis = Jarvis()
+    await jarvis.brain.log_thoughts("task-one", {"status": "a"})
+    await jarvis.brain.log_thoughts("task-two", {"status": "b"})
+    await jarvis.brain.log_thoughts("task-three", {"status": "c"})
+
+    result = await SimpleJarvis.explain_solution_command(jarvis, "2")
+    problem_lines = [line for line in result.splitlines() if line.startswith("\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430:")]
+    assert len(problem_lines) == 2
+    assert "task-two" in result
+    assert "task-three" in result

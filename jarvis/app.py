@@ -1096,18 +1096,20 @@ class Jarvis:
         history = self.brain.get_chain_of_thought(limit=limit)
         if not history:
             return "История рассуждений пуста."
-        record = history[-1]
-        lines = [f"Проблема: {record.get('problem', '')}"]
-        solution = record.get("solution", {})
-        chain = solution.get("chain") or []
-        for step in chain:
-            stage = step.get("stage")
-            data = step.get("data")
-            lines.append(f"- {stage}: {data}")
-        result = solution.get("result") or solution.get("status")
-        if result:
-            lines.append(f"Итог: {result}")
-        return "\n".join(lines)
+        blocks = []
+        for record in history:
+            lines = [f"Проблема: {record.get('problem', '')}"]
+            solution = record.get("solution", {})
+            chain = solution.get("chain") or []
+            for step in chain:
+                stage = step.get("stage")
+                data = step.get("data")
+                lines.append(f"- {stage}: {data}")
+            result = solution.get("result") or solution.get("status")
+            if result:
+                lines.append(f"Итог: {result}")
+            blocks.append("\n".join(lines))
+        return "\n\n".join(blocks)
 
     async def load_module_command(self, args_str: str) -> str:
         module_name = args_str.strip()
