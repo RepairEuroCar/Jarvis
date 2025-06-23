@@ -9,6 +9,27 @@ from command_dispatcher import CommandDispatcher, default_dispatcher
 from utils.linter import AstLinter
 
 
+async def review_failures() -> str:
+    """Return recent failure tracebacks and suggestions."""
+    jarvis = getattr(default_dispatcher, "jarvis", None)
+    if not jarvis:
+        return "Jarvis instance not available"
+
+    failures = jarvis.memory.recall("tests.last_failures")
+    if not failures:
+        return "No recorded test failures."
+
+    lines: list[str] = []
+    for idx, item in enumerate(failures, 1):
+        tb = item.get("traceback", {})
+        error = tb.get("error", "")
+        lines.append(f"{idx}. {error}")
+        for sugg in item.get("suggestions", []):
+            lines.append(f"   - {sugg}")
+
+    return "\n".join(lines)
+
+
 async def run(path: str = ".") -> dict[str, dict[str, list[str] | int]]:
     """Run pytest and ruff (or AstLinter) on *path*.
 
@@ -46,6 +67,13 @@ async def run(path: str = ".") -> dict[str, dict[str, list[str] | int]]:
         suggestions = suggest_fixes(tb["error"])
         failure_details.append({"traceback": tb, "suggestions": suggestions})
 
+    jarvis = getattr(default_dispatcher, "jarvis", None)
+    if jarvis is not None:
+        try:
+            await jarvis.memory.remember("tests.last_failures", failure_details)
+        except Exception:
+            pass
+
     m = re.search(r"(\d+)\s+passed", output)
     if m:
         passed = int(m.group(1))
@@ -82,11 +110,12 @@ async def run(path: str = ".") -> dict[str, dict[str, list[str] | int]]:
 
 
 def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> None:
-    """Register ``executor run`` command with ``dispatcher``."""
+    """Register ``executor`` commands with ``dispatcher``."""
 
     dispatcher.register_command_handler("executor", "run", run)
+    dispatcher.register_command_handler("executor", "review_failures", review_failures)
 
 
 register_commands(default_dispatcher)
 
-__all__ = ["run", "register_commands"]
+__all__ = ["run", "review_failures", "register_commands"]
