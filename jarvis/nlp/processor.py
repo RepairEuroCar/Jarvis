@@ -62,6 +62,7 @@ class ProcessingResult:
     is_repeated: bool = False
     metadata: Dict[str, Any] = field(default_factory=dict)
     semantics: TaskSemantics = TaskSemantics.UNKNOWN
+    semantics_confidence: float = 0.0
 
 
 class NLUProcessor:
@@ -119,6 +120,13 @@ class NLUProcessor:
             TaskSemantics.DIAGNOSTICS: ["диагност", "ошибка", "diagnose"],
         }
 
+        self.semantics_patterns = {
+            TaskSemantics.GENERATION: [re.compile(r"\b(создай|сгенерируй|generate|напиши)\b")],
+            TaskSemantics.ANALYSIS: [re.compile(r"\b(анализ|проанализируй|analy[sz]e)\b")],
+            TaskSemantics.TRANSLATION: [re.compile(r"\b(переведи|перевести|translate)\b")],
+            TaskSemantics.DIAGNOSTICS: [re.compile(r"\b(диагност|ошибк|diagnos)\w*")],
+        }
+
         self.learned_corrections: Dict[str, str] = {}
         if self.memory_manager:
             self._load_custom_patterns()
@@ -144,12 +152,24 @@ class NLUProcessor:
         tokens = [self.synonyms.get(t, t) for t in text.split()]
         return " ".join(tokens)
 
-    def _detect_task_semantics(self, text_lower: str) -> TaskSemantics:
-        for sem, words in self.semantics_keywords.items():
-            for w in words:
-                if w in text_lower:
-                    return sem
-        return TaskSemantics.UNKNOWN
+    def _detect_task_semantics(self, text_lower: str) -> tuple[TaskSemantics, float]:
+        """Heuristically determine task semantics and return confidence."""
+        best_sem = TaskSemantics.UNKNOWN
+        best_score = 0.0
+        for sem, patterns in self.semantics_patterns.items():
+            for pat in patterns:
+                m = pat.search(text_lower)
+                if m:
+                    score = len(m.group(0)) / max(len(text_lower), 1)
+                    if score > best_score:
+                        best_sem, best_score = sem, score
+                else:
+                    ratio = difflib.SequenceMatcher(None, text_lower, pat.pattern).ratio()
+                    if ratio * 0.5 > best_score:
+                        best_sem, best_score = sem, ratio * 0.5
+        if best_score < 0.3:
+            return TaskSemantics.UNKNOWN, best_score
+        return best_sem, best_score
 
     def _initialize_command_patterns(self) -> List[CommandPattern]:
         return [
@@ -252,6 +272,11 @@ class NLUProcessor:
                 self._update_history(result)
                 return result
 
+        if auto := await self._auto_detect_intent(text_original, text_lower):
+            self._update_history(auto)
+            auto.metadata["auto_detected"] = True
+            return auto
+
         return self._handle_fallback(text_original)
 
     async def _match_pattern(
@@ -272,6 +297,26 @@ class NLUProcessor:
                 return await self._extract_entities(
                     pattern, text_original, trigger, ratio
                 )
+        return None
+
+    async def _auto_detect_intent(
+        self, text_original: str, text_lower: str
+    ) -> Optional[ProcessingResult]:
+        """Attempt to guess intent using fuzzy matching."""
+        normalized_text = self._normalize_text_with_synonyms(text_lower)
+        best_ratio = 0.0
+        best_pattern: Optional[CommandPattern] = None
+        for pattern in self.command_patterns:
+            for trigger in pattern.triggers:
+                norm_tr = self._normalize_text_with_synonyms(trigger.lower())
+                ratio = difflib.SequenceMatcher(None, normalized_text, norm_tr).ratio()
+                if ratio > best_ratio:
+                    best_ratio = ratio
+                    best_pattern = pattern
+        if best_pattern and best_ratio > 0.6:
+            return await self._extract_entities(
+                best_pattern, text_original, best_pattern.triggers[0], best_ratio
+            )
         return None
 
     async def _extract_entities(
@@ -297,6 +342,7 @@ class NLUProcessor:
                     continue
                 entities.setdefault(label, []).append(value)
 
+        sem, sem_conf = self._detect_task_semantics(text.lower())
         return ProcessingResult(
             intent=pattern.intent,
             entities=entities,
@@ -304,7 +350,8 @@ class NLUProcessor:
             raw_text=text,
             category=pattern.category,
             metadata={"trigger": trigger},
-            semantics=self._detect_task_semantics(text.lower()),
+            semantics=sem,
+            semantics_confidence=sem_conf,
         )
 
     def _update_history(self, result: ProcessingResult) -> None:
@@ -321,11 +368,13 @@ class NLUProcessor:
     def _handle_fallback(self, text: str) -> ProcessingResult:
         """Обрабатывает текст, который не соответствует ни одному шаблону."""
         parts = text.split(maxsplit=1)
+        sem, sem_conf = self._detect_task_semantics(text.lower())
         result = self._create_fallback_result(
             parts[0].lower() if parts else "unknown_command",
             text,
             parts[1] if len(parts) > 1 else "",
-            semantics=self._detect_task_semantics(text.lower()),
+            semantics=sem,
+            semantics_confidence=sem_conf,
         )
         self._update_history(result)
         return result
@@ -336,6 +385,7 @@ class NLUProcessor:
         raw_text: str,
         raw_args: str = "",
         semantics: TaskSemantics = TaskSemantics.UNKNOWN,
+        semantics_confidence: float = 0.0,
     ) -> ProcessingResult:
         """Создает результат обработки для неизвестных команд."""
         return ProcessingResult(
@@ -346,6 +396,7 @@ class NLUProcessor:
             category=CommandCategory.UTILITY,
             metadata={"is_fallback": True},
             semantics=semantics,
+            semantics_confidence=semantics_confidence,
         )
 
     async def process_stream(

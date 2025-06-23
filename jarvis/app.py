@@ -435,6 +435,13 @@ class Jarvis:
                 aliases=["подумай", "обдумай_проблему"],
             ),
             CommandInfo(
+                name="explain_solution",
+                description="Показывает ход решения последней задачи.",
+                category=CommandCategory.REASONING,
+                usage="explain_solution [n]",
+                aliases=["как_решено", "объясни_решение"],
+            ),
+            CommandInfo(
                 name="load_module",
                 description="Загружает модуль.",
                 category=CommandCategory.SYSTEM,
@@ -1079,6 +1086,28 @@ class Jarvis:
         except TypeError:
             solution_str = str(solution)
         return f"Результат обдумывания проблемы '{problem_description[:50]}...':\n{solution_str}"
+
+    async def explain_solution_command(self, args_str: str) -> str:
+        """Return a summary of the last reasoning steps."""
+        try:
+            limit = max(1, int(args_str.strip())) if args_str.strip() else 1
+        except ValueError:
+            limit = 1
+        history = self.brain.get_chain_of_thought(limit=limit)
+        if not history:
+            return "История рассуждений пуста."
+        record = history[-1]
+        lines = [f"Проблема: {record.get('problem', '')}"]
+        solution = record.get("solution", {})
+        chain = solution.get("chain") or []
+        for step in chain:
+            stage = step.get("stage")
+            data = step.get("data")
+            lines.append(f"- {stage}: {data}")
+        result = solution.get("result") or solution.get("status")
+        if result:
+            lines.append(f"Итог: {result}")
+        return "\n".join(lines)
 
     async def load_module_command(self, args_str: str) -> str:
         module_name = args_str.strip()
