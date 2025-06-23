@@ -297,6 +297,16 @@ generate_project spec.txt my_project
 Each line becomes a Python module inside `my_project` and required imports are
 added automatically.
 
+## Code analysis
+
+`analyze_report` runs the AdvancedCodeAnalyzer over one or more Python files.
+Alongside metrics and complexity checks the analyzer now executes **pylint** and
+includes any warnings in the output summary.
+
+```bash
+analyze_report src/ --format=json
+```
+
 ## Python reference
 
 For a refresher on Python basics see [docs/python_overview.md](docs/python_overview.md).

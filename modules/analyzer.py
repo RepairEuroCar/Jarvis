@@ -1,4 +1,5 @@
 import ast  # Abstract Syntax Tree для анализа структуры кода
+import asyncio
 import datetime
 import json
 import os
@@ -479,6 +480,49 @@ class AdvancedCodeAnalyzer:
         except SyntaxError as e:
             return None, f"Синтаксическая ошибка в {filepath}: {e}"
 
+    async def run_pylint(self, filepath):
+        """Запускает pylint и возвращает предупреждения."""
+        cached = self._get_cached_analysis(filepath, "pylint")
+        if cached:
+            return cached, None
+
+        if not os.path.isfile(filepath):
+            return None, f"Файл не найден: {filepath}"
+
+        try:
+            process = await asyncio.create_subprocess_exec(
+                "pylint",
+                "--output-format=json",
+                filepath,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await process.communicate()
+            if process.returncode != 0 and not stdout:
+                return None, stderr.decode().strip()
+            try:
+                messages = json.loads(stdout.decode() or "[]")
+            except json.JSONDecodeError as e:
+                return None, f"Ошибка разбора вывода pylint: {e}"
+
+            warnings = [
+                {
+                    "line": m.get("line"),
+                    "symbol": m.get("symbol"),
+                    "message": m.get("message"),
+                    "message_id": m.get("message-id"),
+                }
+                for m in messages
+                if m.get("type") == "warning"
+            ]
+
+            self._cache_analysis_result(filepath, "pylint", warnings)
+            return warnings, None
+        except FileNotFoundError:
+            return None, "pylint not found"
+        except Exception as e:
+            return None, f"Ошибка запуска pylint: {e}"
+
     async def generate_comprehensive_report(self, path_str, report_format=None):
         """Генерирует комплексный отчет для файла или директории."""
         report_format = report_format if report_format else self.default_report_format
@@ -529,6 +573,7 @@ class AdvancedCodeAnalyzer:
         total_magic_numbers = 0
         total_duplicate_functions = 0
         total_module_globals = 0
+        total_pylint_warnings = 0
 
         for filepath in files_to_analyze:
             rel_path = os.path.relpath(filepath, project_root)
@@ -553,6 +598,7 @@ class AdvancedCodeAnalyzer:
             magic_nums, _ = await self.detect_magic_numbers(filepath)
             duplicates, _ = await self.detect_duplicate_code(filepath)
             globals_defs, _ = await self.detect_module_globals(filepath)
+            pylint_warns, _ = await self.run_pylint(filepath)
 
             file_report = {"filepath": rel_path}
             if metrics:
@@ -578,6 +624,9 @@ class AdvancedCodeAnalyzer:
             if globals_defs:
                 file_report["globals"] = globals_defs
                 total_module_globals += len(globals_defs)
+            if pylint_warns:
+                file_report["pylint_warnings"] = pylint_warns
+                total_pylint_warnings += len(pylint_warns)
 
             if metrics and metrics.get("maintainability_index") != "N/A":
                 all_metrics_summary["maintainability_index_sum"] += metrics[
@@ -606,6 +655,7 @@ class AdvancedCodeAnalyzer:
         report_data["summary"]["total_magic_numbers"] = total_magic_numbers
         report_data["summary"]["duplicate_functions"] = total_duplicate_functions
         report_data["summary"]["module_level_globals"] = total_module_globals
+        report_data["summary"]["pylint_warnings"] = total_pylint_warnings
 
         # Концептуально: AI генерирует общее резюме по проекту
         # if self.config.get("enable_ai_project_summary", False) and report_data["files"]:
