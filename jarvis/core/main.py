@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     tts_language: str = "ru"
     allowed_networks: List[str] = ["0.0.0.0/0"]
     plugin_dir: str = "plugins"
+    extra_plugin_dirs: List[str] = ["~/.jarvis/plugins"]
     intent_model_path: str = "models/intent"
     clarify_threshold: float = 0.5
 
@@ -127,8 +128,12 @@ class Jarvis:
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
             self._parse_input_uncached
         )
-        # Load optional plugins
-        load_plugins(self, self.settings.plugin_dir)
+        # Load optional plugins from configured directories
+        load_plugins(
+            self,
+            self.settings.plugin_dir,
+            self.settings.extra_plugin_dirs,
+        )
 
     def _setup_logging(self):
         level = getattr(logging, str(self.settings.log_level).upper(), logging.INFO)
