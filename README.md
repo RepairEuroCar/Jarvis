@@ -121,6 +121,13 @@ python -m jarvis.core.main --schema
 - `self_update commit <message> [remote branch]` – stages all changes, commits with the message and pushes if a remote/branch is specified.
 - `self_update pull [remote branch]` – pulls updates from the given remote and branch (defaults to `origin main`).
 - `repl` – opens an interactive Python session with Jarvis loaded.
+- `explain_solution [n]` – prints how the last task was solved. Pass a number to show several recent solutions.
+
+Example:
+
+```bash
+explain_solution 2
+```
 
 **Caution**: these commands execute heavy ML training and Git operations. Use them only if you understand the consequences and have configured the trainer and repository paths correctly.
 
