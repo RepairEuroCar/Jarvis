@@ -52,6 +52,14 @@ async def test_unknown_command(nlu):
 async def test_semantics_translation(nlu):
     result = await nlu.process("переведи это")
     assert result["semantics"] == TaskSemantics.TRANSLATION
+    assert result["semantics_confidence"] > 0
+
+
+@pytest.mark.asyncio
+async def test_auto_detect_intent_typo(nlu):
+    result = await nlu.process("вити")
+    assert result["intent"] == "exit"
+    assert result["metadata"].get("auto_detected") is True
 
 
 @pytest.mark.asyncio
