@@ -5,6 +5,7 @@ import pytest
 from command_dispatcher import default_dispatcher
 from modules import executor
 from utils.linter import AstLinter, LintError
+from jarvis.memory.manager import MemoryManager
 
 
 @pytest.mark.asyncio
@@ -112,3 +113,52 @@ async def test_executor_command_registered(monkeypatch):
     result = await default_dispatcher.dispatch("executor run")
     assert isinstance(result, dict)
     assert "tests" in result
+
+
+@pytest.mark.asyncio
+async def test_executor_saves_failures_to_memory(monkeypatch, tmp_path):
+    async def fake_exec(*args, **kwargs):
+        if "pytest" in args:
+            class Proc:
+                returncode = 1
+
+                async def communicate(self):
+                    tb = (
+                        "Traceback (most recent call last):\n"
+                        "  File \"t.py\", line 1, in <module>\n"
+                        "    foo()\n"
+                        "NameError: name 'foo' is not defined\n"
+                        "1 failed\n"
+                    )
+                    return tb.encode(), b""
+
+            return Proc()
+        raise FileNotFoundError
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+    def fake_lint(self, paths):
+        return []
+
+    monkeypatch.setattr(AstLinter, "lint_paths", fake_lint)
+
+    jarvis = type("J", (), {"memory": MemoryManager(str(tmp_path / "mem.json"))})()
+    default_dispatcher.jarvis = jarvis
+
+    result = await executor.run(".")
+    stored = jarvis.memory.recall("tests.last_failures")
+    assert stored == result["errors"]
+
+
+@pytest.mark.asyncio
+async def test_review_failures_command(monkeypatch, tmp_path):
+    jarvis = type("J", (), {"memory": MemoryManager(str(tmp_path / "mem.json"))})()
+    await jarvis.memory.remember(
+        "tests.last_failures",
+        [{"traceback": {"error": "Boom"}, "suggestions": ["fix it"]}],
+    )
+    default_dispatcher.jarvis = jarvis
+
+    output = await default_dispatcher.dispatch("executor review_failures")
+    assert "Boom" in output
+    assert "fix it" in output
