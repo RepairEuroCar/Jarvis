@@ -2,7 +2,7 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Iterable
+from typing import Iterable, Sequence
 
 from utils.logger import get_logger
 
@@ -40,11 +40,10 @@ def _load_module(path: Path) -> ModuleType | None:
     return module
 
 
-def load_plugins(jarvis, plugin_dir: str) -> None:
-    """Discover and load plugins from *plugin_dir*."""
-    directory = Path(plugin_dir)
+def _load_directory(jarvis, directory: Path) -> None:
+    """Load all plugins from a specific directory."""
     if not directory.exists():
-        logger.info("Plugin directory %s does not exist", plugin_dir)
+        logger.info("Plugin directory %s does not exist", directory)
         return
 
     for mod_path in _iter_module_files(directory):
@@ -60,3 +59,10 @@ def load_plugins(jarvis, plugin_dir: str) -> None:
                 logger.warning("Plugin %s raised during register: %s", mod_path, exc)
         else:
             logger.debug("Plugin %s has no register() function", mod_path)
+
+
+def load_plugins(jarvis, plugin_dir: str, extra_dirs: Sequence[str] | None = None) -> None:
+    """Discover and load plugins from *plugin_dir* and *extra_dirs*."""
+    _load_directory(jarvis, Path(plugin_dir))
+    for d in extra_dirs or []:
+        _load_directory(jarvis, Path(d).expanduser())

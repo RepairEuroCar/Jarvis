@@ -51,6 +51,7 @@ Default values are:
 | `JARVIS_VOICE_RATE` | `180` |
 | `JARVIS_VOICE_VOLUME` | `0.9` |
 | `JARVIS_PLUGIN_DIR` | `plugins` |
+| `JARVIS_EXTRA_PLUGIN_DIRS` | `~/.jarvis/plugins` |
 | `JARVIS_ALLOWED_NETWORKS` | `0.0.0.0/0` |
 
 `allowed_networks` defines the CIDR ranges Jarvis modules may
@@ -253,8 +254,9 @@ write_code(task)
 ## Developing plugins
 
 Jarvis can load additional functionality from Python modules located in the
-directory defined by the `plugin_dir` setting (default: `plugins`). The
-convention is to place modules in the top-level `plugins/` directory so they are
+directory defined by the `plugin_dir` setting (default: `plugins`) and any
+paths listed in `extra_plugin_dirs`. By default `~/.jarvis/plugins` is also
+scanned. The convention is to place modules in the top-level `plugins/` directory so they are
 automatically discovered. Every module found there is imported on startup and,
 if it exposes a `register(jarvis)` function, that function is called with the
 running `Jarvis` instance. Use it to register new commands or initialise
