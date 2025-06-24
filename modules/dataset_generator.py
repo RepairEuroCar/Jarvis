@@ -24,6 +24,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, validator
 
 from command_dispatcher import CommandDispatcher, default_dispatcher
+from core.metrics.module_usage import track_usage
 
 DEFAULT_CHUNK_SIZE = 1000
 SUPPORTED_LANGUAGES = ["python"]
@@ -244,6 +245,7 @@ class DatasetBuilder:
         logger.info("Dataset generation complete")
 
 
+@track_usage("dataset_generator")
 async def generate_dataset(
     output: str, size_gb: float = 0.001, chunk_size: int = 10
 ) -> str:
