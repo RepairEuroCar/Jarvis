@@ -1,6 +1,8 @@
-import time
 import threading
+import time
+
 from core.events import emit_event
+from core.metrics import broadcast_metrics
 from core.module_registry import get_active_modules
 
 
@@ -27,6 +29,13 @@ class SelfDiagnostics:
             for module in modules:
                 try:
                     stats = module.get_health_metrics()
+                    broadcast_metrics(
+                        {
+                            "module": getattr(module, "name", str(module)),
+                            **stats,
+                            "timestamp": time.time(),
+                        }
+                    )
                     if stats.get("response_time", 0) > stats.get(
                         "threshold", float("inf")
                     ):
