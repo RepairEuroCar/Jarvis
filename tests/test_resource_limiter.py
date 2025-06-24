@@ -3,6 +3,7 @@ import time
 
 from core.events import register_event_emitter
 from core.module_registry import register_module_supplier
+from core.flags import default_flag_manager
 from modules.resource_limiter import ResourceLimiter
 
 
@@ -30,3 +31,19 @@ def test_resource_limiter_emits_warning():
     limiter.stop()
 
     assert any(e[0] == "ResourceLimitWarning" for e in events)
+
+
+def test_resource_limiter_flags_module():
+    events = []
+    register_event_emitter(lambda n, d: events.append((n, d)))
+    module = DummyModule()
+    default_flag_manager.clear_flag("dummy")
+    register_module_supplier(lambda: [module])
+
+    limiter = ResourceLimiter(interval=0.1)
+    limiter.start()
+    time.sleep(0.3)
+    limiter.stop()
+
+    assert default_flag_manager.is_flagged("dummy")
+    assert any(e[0] == "ModuleAnomalyFlagged" for e in events)

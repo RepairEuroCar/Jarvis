@@ -4,6 +4,7 @@ import time
 from core.events import emit_event
 from core.metrics import broadcast_metrics
 from core.module_registry import get_active_modules
+from core.flags import default_flag_manager
 
 
 class SelfDiagnostics:
@@ -46,6 +47,10 @@ class SelfDiagnostics:
                                 "details": stats,
                             },
                         )
+                        default_flag_manager.flag(
+                            getattr(module, "name", str(module)),
+                            "Response time threshold exceeded",
+                        )
                 except Exception as e:  # pragma: no cover - best effort logging
                     emit_event(
                         "ModuleDiagnosticsError",
@@ -53,5 +58,9 @@ class SelfDiagnostics:
                             "module": getattr(module, "name", str(module)),
                             "error": str(e),
                         },
+                    )
+                    default_flag_manager.flag(
+                        getattr(module, "name", str(module)),
+                        f"Diagnostics error: {e}",
                     )
             time.sleep(self.interval)

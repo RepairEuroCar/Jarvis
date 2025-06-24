@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ValidationError
 
 from utils.logger import get_logger
+from core.flags import default_flag_manager
 
 logger = get_logger().getChild("ModuleManager")
 
@@ -86,6 +87,7 @@ def module_error_handler(func):
                 f"Unexpected error in {func.__name__} for {module_name}",
                 exc_info=e,
             )
+            default_flag_manager.record_error(module_name, e)
         return False
 
     return wrapper
