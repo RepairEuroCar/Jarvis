@@ -121,6 +121,7 @@ python -m jarvis.core.main --schema
 - `self_learn <trainer_id>` – trains or fine-tunes a model through the Seq2SeqTrainer module.
 - `self_update commit <message> [remote branch]` – stages all changes, commits with the message and pushes if a remote/branch is specified.
 - `self_update pull [remote branch]` – pulls updates from the given remote and branch (defaults to `origin main`).
+- `check_updates [remote] [branch]` – shows the latest commit on the remote if it differs from the local one.
 - `repl` – opens an interactive Python session with Jarvis loaded.
 - `explain_solution [n]` – prints how the last task was solved. Pass a number to show several recent solutions.
 
@@ -180,6 +181,24 @@ validated using small Pydantic models:
 
 Use `load`, `unload` and `reload` to manage optional features without
 restarting the assistant.
+
+## REST API
+
+Run the lightweight REST service to control Jarvis programmatically:
+
+```bash
+python -m jarvis.rest_api
+```
+
+Send a command via HTTP POST:
+
+```bash
+curl -X POST -H 'Content-Type: application/json' \
+     -d '{"text": "help"}' http://localhost:8001/command
+```
+
+The service exposes `/command` and `/status` endpoints for issuing commands and
+querying the current state.
 
 ### Code formatting
 

@@ -127,6 +127,13 @@ DEVEL_COMMANDS = [
         aliases=[],
     ),
     CommandInfo(
+        name="check_updates",
+        description="Check for newer version in remote repository",
+        category=CommandCategory.DEVELOPMENT,
+        usage="check_updates [remote] [branch]",
+        aliases=[],
+    ),
+    CommandInfo(
         name="run_with_retry",
         description="Run a script with syntax check and retry",
         category=CommandCategory.DEVELOPMENT,
