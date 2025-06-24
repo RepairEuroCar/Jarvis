@@ -1,0 +1,32 @@
+import os
+import time
+
+from core.events import register_event_emitter
+from core.module_registry import register_module_supplier
+from modules.resource_limiter import ResourceLimiter
+
+
+class DummyModule:
+    def __init__(self) -> None:
+        self.name = "dummy"
+        self.pid = os.getpid()
+
+    def get_pid(self) -> int:
+        return self.pid
+
+    def get_resource_quota(self) -> dict:
+        return {"memory": 0, "cpu": 100}
+
+
+def test_resource_limiter_emits_warning():
+    events = []
+    register_event_emitter(lambda n, d: events.append((n, d)))
+    module = DummyModule()
+    register_module_supplier(lambda: [module])
+
+    limiter = ResourceLimiter(interval=0.1)
+    limiter.start()
+    time.sleep(0.3)
+    limiter.stop()
+
+    assert any(e[0] == "ResourceLimitWarning" for e in events)
