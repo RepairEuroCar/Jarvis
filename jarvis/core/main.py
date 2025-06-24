@@ -35,6 +35,9 @@ from modules.git_manager import GitManager
 from utils.update_checker import check_for_updates
 from utils.linter import AstLinter
 from utils.logger import get_logger, setup_logging
+from core.events import register_event_emitter
+from core.module_registry import register_module_supplier
+import core.system_initializer  # noqa: F401 - triggers diagnostics startup
 
 logger = get_logger().getChild("Core")
 
@@ -123,6 +126,10 @@ class Jarvis:
         self.event_queue = EventQueue()
         self.sensor_manager = SensorManager(self, self.event_queue)
         self.module_manager = ModuleManager(self)
+        register_module_supplier(lambda: list(self.module_manager.modules.values()))
+        register_event_emitter(
+            lambda name, data: asyncio.create_task(self.event_queue.emit(name, data))
+        )
         self.agent_loop = None
         self._pending_question: Optional[str] = None
         # Initialize per-instance cache for input parsing
