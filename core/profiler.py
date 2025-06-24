@@ -52,16 +52,18 @@ class ModuleProfiler:
 
     def _record(self, module: str, func: str, elapsed: float, peak: int) -> None:
         self.stats.setdefault(module, {})[func] = {
-            "time_sec": round(elapsed, 4),
-            "peak_mem_kb": peak // 1024,
+            "time_seconds": round(elapsed, 4),
+            "peak_memory_kb": peak // 1024,
         }
-        broadcast_metrics({
-            "module": module,
-            "function": func,
-            "time_sec": elapsed,
-            "peak_mem_kb": peak // 1024,
-            "timestamp": time.time(),
-        })
+        broadcast_metrics(
+            {
+                "module": module,
+                "function": func,
+                "time_seconds": elapsed,
+                "peak_memory_kb": peak // 1024,
+                "timestamp": time.time(),
+            }
+        )
         if elapsed > 1.0 or peak > 10 * 1024 * 1024:
             logger.warning(
                 "[Profiler] %s.%s took %.2fs, peak %d KB",
@@ -74,3 +76,7 @@ class ModuleProfiler:
     def get_stats(self) -> Dict[str, Dict[str, Dict[str, float | int]]]:
         """Return collected stats."""
         return self.stats
+
+
+default_profiler = ModuleProfiler()
+
