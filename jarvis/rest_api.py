@@ -30,6 +30,12 @@ async def status() -> dict:
     return {"state": jarvis.machine.state}
 
 
+@app.get("/metrics")
+async def metrics() -> dict:
+    """Return collected module profiler statistics."""
+    return jarvis.module_manager.profiler.get_stats()
+
+
 if __name__ == "__main__":
     import uvicorn
 

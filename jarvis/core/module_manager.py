@@ -12,6 +12,7 @@ from pydantic import BaseModel, ValidationError
 
 from utils.logger import get_logger
 from core.flags import default_flag_manager
+from core.profiler import ModuleProfiler
 
 logger = get_logger().getChild("ModuleManager")
 
@@ -118,6 +119,7 @@ class ModuleManager:
         self.module_configs: Dict[str, ModuleConfig] = {}
         self.module_events: Dict[str, List[ModuleEvent]] = {}
         self.lock = asyncio.Lock()
+        self.profiler = ModuleProfiler()
         self.MIN_MODULE_VERSION = "1.0.0"
 
     # ------------------------
@@ -157,6 +159,7 @@ class ModuleManager:
                 if not module:
                     return False
 
+            self._instrument_module(module_name, module)
             self.modules[module_name] = module
             self.module_states[module_name] = ModuleState.LOADED
             logger.info(f"Module {module_name} loaded successfully")
@@ -269,3 +272,18 @@ class ModuleManager:
             )
             return False
         return True
+
+    def _instrument_module(self, name: str, module: Any) -> None:
+        """Wrap common module methods with profiling decorators."""
+        for attr in [
+            "handle_event",
+            "setup",
+            "cleanup",
+            "health_check",
+            "run_tests",
+        ]:
+            if hasattr(module, attr):
+                func = getattr(module, attr)
+                if callable(func):
+                    wrapped = self.profiler.profile(name, attr)(func)
+                    setattr(module, attr, wrapped)
