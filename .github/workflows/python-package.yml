@@ -32,8 +32,8 @@ jobs:
     - name: Check formatting and lint
       run: |
         ./scripts/format.sh --check
-    - name: Test with coverage
+    - name: Generate and test with coverage
       run: |
         pip install coverage pytest-asyncio
-        coverage run -m pytest
+        ./scripts/run_core_tests.sh
         coverage report --fail-under=80
