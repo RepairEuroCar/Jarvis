@@ -357,3 +357,9 @@ python scripts/generate_core_tests.py HEAD~2
 
 For a refresher on Python basics see [docs/python_overview.md](docs/python_overview.md).
 
+## Dependency updates
+
+Automated dependency updates are handled by Dependabot. The CI workflow installs
+`pip-audit` and `safety` to scan the environment and fails on high-severity
+vulnerabilities.
+

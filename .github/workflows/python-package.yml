@@ -36,6 +36,11 @@ jobs:
       run: |
         pip install coverage pytest-asyncio
         ./scripts/run_core_tests.sh
+    - name: Audit dependencies
+      run: |
+        pip install pip-audit safety
+        pip-audit --fail-on high
+        safety check --full-report
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
