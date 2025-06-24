@@ -6,6 +6,7 @@ import psutil
 from core.events import emit_event
 from core.metrics import broadcast_metrics
 from core.module_registry import get_active_modules
+from core.flags import default_flag_manager
 
 
 class ResourceLimiter:
@@ -57,6 +58,10 @@ class ResourceLimiter:
                                 "cpu": cpu,
                                 "quota": quota,
                             },
+                        )
+                        default_flag_manager.flag(
+                            getattr(module, "name", str(module)),
+                            "Resource usage exceeded limits",
                         )
                 except Exception as e:
                     emit_event(
