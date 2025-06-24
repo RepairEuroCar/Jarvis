@@ -32,6 +32,7 @@ from jarvis.nlp.processor import NLUProcessor
 from jarvis.plugins import load_plugins
 from jarvis.voice.interface import VoiceInterface
 from modules.git_manager import GitManager
+from utils.update_checker import check_for_updates
 from utils.linter import AstLinter
 from utils.logger import get_logger, setup_logging
 
@@ -63,6 +64,7 @@ class Settings(BaseSettings):
     tts_language: str = "ru"
     allowed_networks: List[str] = ["0.0.0.0/0"]
     plugin_dir: str = "plugins"
+    extra_plugin_dirs: List[str] = ["~/.jarvis/plugins"]
     intent_model_path: str = "models/intent"
     clarify_threshold: float = 0.5
 
@@ -127,8 +129,12 @@ class Jarvis:
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
             self._parse_input_uncached
         )
-        # Load optional plugins
-        load_plugins(self, self.settings.plugin_dir)
+        # Load optional plugins from configured directories
+        load_plugins(
+            self,
+            self.settings.plugin_dir,
+            self.settings.extra_plugin_dirs,
+        )
 
     def _setup_logging(self):
         level = getattr(logging, str(self.settings.log_level).upper(), logging.INFO)
@@ -404,6 +410,17 @@ class Jarvis:
             return await gm.pull(self, remote_branch)
 
         return "Usage: self_update <commit|pull> ..."
+
+    async def check_updates_command(self, event: UserEvent):
+        """Check for remote updates available via git."""
+        parts = event.text.split()
+        remote = parts[1] if len(parts) > 1 else "origin"
+        branch = parts[2] if len(parts) > 2 else "main"
+        repo_path = str(Path(__file__).resolve().parents[2])
+        commit = await check_for_updates(repo_path, remote, branch)
+        if commit:
+            return f"Update available: {commit}"
+        return "Jarvis is up to date."
 
     async def run_with_retry_command(self, event: UserEvent):
         """Run a Python script using scripts/run_with_retry.py."""

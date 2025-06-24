@@ -51,6 +51,7 @@ Default values are:
 | `JARVIS_VOICE_RATE` | `180` |
 | `JARVIS_VOICE_VOLUME` | `0.9` |
 | `JARVIS_PLUGIN_DIR` | `plugins` |
+| `JARVIS_EXTRA_PLUGIN_DIRS` | `~/.jarvis/plugins` |
 | `JARVIS_ALLOWED_NETWORKS` | `0.0.0.0/0` |
 
 `allowed_networks` defines the CIDR ranges Jarvis modules may
@@ -120,6 +121,7 @@ python -m jarvis.core.main --schema
 - `self_learn <trainer_id>` – trains or fine-tunes a model through the Seq2SeqTrainer module.
 - `self_update commit <message> [remote branch]` – stages all changes, commits with the message and pushes if a remote/branch is specified.
 - `self_update pull [remote branch]` – pulls updates from the given remote and branch (defaults to `origin main`).
+- `check_updates [remote] [branch]` – shows the latest commit on the remote if it differs from the local one.
 - `repl` – opens an interactive Python session with Jarvis loaded.
 - `explain_solution [n]` – prints how the last task was solved. Pass a number to show several recent solutions.
 
@@ -179,6 +181,24 @@ validated using small Pydantic models:
 
 Use `load`, `unload` and `reload` to manage optional features without
 restarting the assistant.
+
+## REST API
+
+Run the lightweight REST service to control Jarvis programmatically:
+
+```bash
+python -m jarvis.rest_api
+```
+
+Send a command via HTTP POST:
+
+```bash
+curl -X POST -H 'Content-Type: application/json' \
+     -d '{"text": "help"}' http://localhost:8001/command
+```
+
+The service exposes `/command` and `/status` endpoints for issuing commands and
+querying the current state.
 
 ### Code formatting
 
@@ -253,8 +273,9 @@ write_code(task)
 ## Developing plugins
 
 Jarvis can load additional functionality from Python modules located in the
-directory defined by the `plugin_dir` setting (default: `plugins`). The
-convention is to place modules in the top-level `plugins/` directory so they are
+directory defined by the `plugin_dir` setting (default: `plugins`) and any
+paths listed in `extra_plugin_dirs`. By default `~/.jarvis/plugins` is also
+scanned. The convention is to place modules in the top-level `plugins/` directory so they are
 automatically discovered. Every module found there is imported on startup and,
 if it exposes a `register(jarvis)` function, that function is called with the
 running `Jarvis` instance. Use it to register new commands or initialise
