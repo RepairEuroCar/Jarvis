@@ -6,9 +6,11 @@ from pathlib import Path
 from reasoning.tracer import parse_tracebacks, suggest_fixes
 
 from command_dispatcher import CommandDispatcher, default_dispatcher
+from core.metrics.module_usage import track_usage
 from utils.linter import AstLinter
 
 
+@track_usage("executor")
 async def review_failures() -> str:
     """Return recent failure tracebacks and suggestions."""
     jarvis = getattr(default_dispatcher, "jarvis", None)
@@ -30,6 +32,7 @@ async def review_failures() -> str:
     return "\n".join(lines)
 
 
+@track_usage("executor")
 async def run(path: str = ".") -> dict[str, dict[str, list[str] | int]]:
     """Run pytest and ruff (or AstLinter) on *path*.
 
