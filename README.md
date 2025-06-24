@@ -352,6 +352,13 @@ Specify a different git diff range if needed:
 ```bash
 python scripts/generate_core_tests.py HEAD~2
 ```
+## Python and ML utilities
+
+Jarvis provides helper commands for development tasks:
+- `python.create_script --name=app --skeleton=cli` creates a basic script.
+- `python.run_tests --target=path` runs tests and lint.
+- `ml.create_experiment --name=exp --config=cfg.json` prepares an experiment folder.
+
 
 ## Python reference
 
