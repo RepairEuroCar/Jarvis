@@ -58,6 +58,14 @@ class JarvisModule(ABC):
     async def run_tests(self) -> Dict[str, Any]:
         return {"status": "no_tests"}
 
+    def get_health_metrics(self) -> Dict[str, Any]:
+        """Return basic health metrics for diagnostics."""
+        return {
+            "response_time": 0,
+            "threshold": float("inf"),
+            "error_rate": 0.0,
+        }
+
 
 # ========================
 # ДЕКОРАТОРЫ И УТИЛИТЫ
