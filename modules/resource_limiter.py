@@ -1,8 +1,11 @@
-import psutil
 import threading
 import time
-from core.module_registry import get_active_modules
+
+import psutil
+
 from core.events import emit_event
+from core.metrics import broadcast_metrics
+from core.module_registry import get_active_modules
 
 
 class ResourceLimiter:
@@ -29,8 +32,23 @@ class ResourceLimiter:
                     mem_mb = p.memory_info().rss / (1024 * 1024)
                     cpu = p.cpu_percent(interval=0.1)
 
-                    quota = getattr(module, "get_resource_quota", lambda: {"memory": float("inf"), "cpu": float("inf")})()
-                    if mem_mb > quota.get("memory", float("inf")) or cpu > quota.get("cpu", float("inf")):
+                    broadcast_metrics(
+                        {
+                            "module": getattr(module, "name", str(module)),
+                            "memory": mem_mb,
+                            "cpu": cpu,
+                            "timestamp": time.time(),
+                        }
+                    )
+
+                    quota = getattr(
+                        module,
+                        "get_resource_quota",
+                        lambda: {"memory": float("inf"), "cpu": float("inf")},
+                    )()
+                    if mem_mb > quota.get("memory", float("inf")) or cpu > quota.get(
+                        "cpu", float("inf")
+                    ):
                         emit_event(
                             "ResourceLimitWarning",
                             {
