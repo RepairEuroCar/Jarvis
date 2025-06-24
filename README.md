@@ -335,6 +335,24 @@ includes any warnings in the output summary.
 analyze_report src/ --format=json
 ```
 
+## Generating core tests
+
+The `scripts/generate_core_tests.py` helper scans recent commits for new
+functions inside `jarvis/core` and `core`. For each detected function it runs
+the built-in test generator and writes the results under `tests/generated/`.
+
+Run it with the default range to inspect the last commit:
+
+```bash
+python scripts/generate_core_tests.py
+```
+
+Specify a different git diff range if needed:
+
+```bash
+python scripts/generate_core_tests.py HEAD~2
+```
+
 ## Python reference
 
 For a refresher on Python basics see [docs/python_overview.md](docs/python_overview.md).

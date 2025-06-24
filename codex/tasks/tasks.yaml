@@ -28,3 +28,9 @@
   module: codex.api_docs
   action: generate_api_docs
   estimated_minutes: 3
+- id: generate-core-tests
+  title: Generate Core Tests
+  description: Generate tests for modified core modules.
+  module: scripts.generate_core_tests
+  action: main
+  estimated_minutes: 5
