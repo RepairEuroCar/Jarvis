@@ -8,6 +8,8 @@ from enum import Enum, auto
 from functools import wraps
 from typing import Any, Dict, List, Optional
 
+from core.profiler import default_profiler
+
 from pydantic import BaseModel, ValidationError
 
 from utils.logger import get_logger
@@ -45,10 +47,12 @@ class ModuleConfig(BaseModel):
 
 class JarvisModule(ABC):
     @abstractmethod
-    async def setup(self, jarvis: Any, config: Dict) -> bool: ...
+    async def setup(self, jarvis: Any, config: Dict) -> bool:
+        ...
 
     @abstractmethod
-    async def cleanup(self) -> None: ...
+    async def cleanup(self) -> None:
+        ...
 
     async def health_check(self) -> bool:
         return True
@@ -157,6 +161,7 @@ class ModuleManager:
                 if not module:
                     return False
 
+            self._apply_profiler(module_name, module)
             self.modules[module_name] = module
             self.module_states[module_name] = ModuleState.LOADED
             logger.info(f"Module {module_name} loaded successfully")
@@ -269,3 +274,12 @@ class ModuleManager:
             )
             return False
         return True
+
+    def _apply_profiler(self, module_name: str, module: Any) -> None:
+        """Wrap common module methods with the profiler."""
+        for attr in ("on_event", "run", "handle_event"):
+            if hasattr(module, attr):
+                func = getattr(module, attr)
+                if callable(func):
+                    wrapped = default_profiler.profile(module_name, attr)(func)
+                    setattr(module, attr, wrapped)
