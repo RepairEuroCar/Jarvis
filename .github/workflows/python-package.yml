@@ -34,9 +34,7 @@ jobs:
       run: |
         ./scripts/format.sh --check
     - name: Run coverage
-      run: |
-        pytest --cov=jarvis tests/
-        coverage xml -o coverage.xml
+      run: ./scripts/run_core_tests.sh
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
