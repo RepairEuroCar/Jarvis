@@ -11,3 +11,7 @@ Pull requests trigger the CI workflow which automatically generates tests for an
 ```
 
 This script regenerates tests under `tests/generated/` and executes `pytest` with coverage.
+
+Pull requests must maintain at least **80%** test coverage. The CI workflow uploads coverage
+results and posts a comment on the pull request showing the total coverage and how far it is
+from this threshold. If coverage drops below 80%, the workflow will fail.
