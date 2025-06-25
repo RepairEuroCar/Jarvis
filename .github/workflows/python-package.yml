@@ -54,3 +54,32 @@ jobs:
       with:
         name: coverage-html-${{ matrix.python-version }}
         path: htmlcov/
+    - name: Comment coverage results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      env:
+        FAIL_UNDER: '80'
+      with:
+        script: |
+          const fs = require('fs');
+          const xml = fs.readFileSync('coverage.xml', 'utf8');
+          const match = xml.match(/line-rate="([0-9.]+)"/);
+          if (!match) {
+            core.setFailed('Unable to parse coverage data');
+          } else {
+            const coverage = parseFloat(match[1]) * 100;
+            const threshold = parseFloat(process.env.FAIL_UNDER);
+            const diff = coverage - threshold;
+            const body = [
+              '### Coverage Report',
+              `Coverage: **${coverage.toFixed(2)}%**`,
+              `Fail-under threshold: **${threshold}%**`,
+              `Difference from threshold: **${diff.toFixed(2)}%**`
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+          }
