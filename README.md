@@ -1,4 +1,5 @@
 # Jarvis
+[![codecov](https://codecov.io/gh/OWNER/REPO/branch/main/graph/badge.svg)](https://codecov.io/gh/OWNER/REPO)
 
 This project is a simple voice assistant prototype. To start the assistant run:
 
