@@ -359,6 +359,8 @@ Jarvis provides helper commands for development tasks:
 - `python.create_script --name=app --skeleton=cli` creates a basic script.
 - `python.run_tests --target=path` runs tests and lint.
 - `ml.create_experiment --name=exp --config=cfg.json` prepares an experiment folder.
+- `codex.executor.run --path=dir` executes tests and linting via the
+  **CodexExecutor** wrapper located at `codex/executor.py`.
 
 
 ## Python reference
