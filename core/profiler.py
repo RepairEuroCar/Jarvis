@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 import tracemalloc
+from contextlib import asynccontextmanager
 from typing import Any, Callable
 
 
@@ -58,6 +59,19 @@ class ModuleProfiler:
 
     def get_stats(self) -> dict[str, dict[str, Any]]:
         return self.stats
+
+    @asynccontextmanager
+    async def profile_block(self, module: str, label: str):
+        """Async context manager to profile arbitrary blocks."""
+        tracemalloc.start()
+        start_time = time.perf_counter()
+        try:
+            yield
+        finally:
+            elapsed = time.perf_counter() - start_time
+            _current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+            self._record(module, label, elapsed, peak)
 
 
 default_profiler = ModuleProfiler()
