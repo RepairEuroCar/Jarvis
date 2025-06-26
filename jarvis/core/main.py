@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import code
 import logging
+import time
 from collections.abc import Awaitable
 from dataclasses import dataclass
 from functools import lru_cache
@@ -101,6 +102,12 @@ class Jarvis:
 
     states = ["idle", "listening", "processing", "sleeping"]
     _instance: Optional["Jarvis"] = None
+    INIT_ORDER = ["voice_interface", "event_queue", "sensor_manager"]
+    INIT_THRESHOLDS = {
+        "voice_interface": 2.0,
+        "event_queue": 1.0,
+        "sensor_manager": 1.0,
+    }
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -209,14 +216,50 @@ class Jarvis:
                     info=cmd_info, handler=handler, is_alias=True
                 )
 
+    async def _init_step(self, name: str, func: Callable, threshold: float) -> None:
+        """Run an initialization step and log its duration."""
+        logger.info("Initializing %s...", name)
+        start = time.monotonic()
+        try:
+            if asyncio.iscoroutinefunction(func):
+                await func()
+            else:
+                func()
+        except Exception as e:  # pragma: no cover - log unexpected errors
+            logger.exception("%s initialization failed: %s", name, e)
+            raise
+        finally:
+            duration = time.monotonic() - start
+            logger.info("%s initialized in %.2fs", name, duration)
+            if duration > threshold:
+                logger.warning(
+                    "%s initialization took %.2fs which exceeds %.2fs",
+                    name,
+                    duration,
+                    threshold,
+                )
+
     async def initialize(self):
-        """Start subsystems like voice interface and sensors."""
+        """Start subsystems like voice interface and sensors with timing."""
+        steps = []
         if self.voice_interface:
-            self.voice_interface.start()
-        await self.event_queue.start()
-        self.event_queue.subscribe("voice_command", self._on_voice_command)
-        self.event_queue.subscribe("scheduled_tick", self._on_scheduled_tick)
-        await self.sensor_manager.start()
+            steps.append(("voice_interface", self.voice_interface.start))
+        steps.append(("event_queue", self.event_queue.start))
+        steps.append(("sensor_manager", self.sensor_manager.start))
+
+        for name in self.INIT_ORDER:
+            for step_name, func in steps:
+                if step_name != name:
+                    continue
+                await self._init_step(
+                    name,
+                    func,
+                    self.INIT_THRESHOLDS.get(name, 1.0),
+                )
+                if name == "event_queue":
+                    self.event_queue.subscribe("voice_command", self._on_voice_command)
+                    self.event_queue.subscribe("scheduled_tick", self._on_scheduled_tick)
+                break
 
     async def handle_command(self, command_text: str, is_voice: bool = False):
         """Обработка команд с поддержкой голоса"""
