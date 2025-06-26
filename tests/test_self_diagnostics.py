@@ -45,3 +45,33 @@ def test_self_diagnostics_flags_module():
 
     assert default_flag_manager.is_flagged("dummy")
     assert any(e[0] == "ModuleAnomalyFlagged" for e in events)
+
+
+class FailingModule:
+    def __init__(self):
+        self.name = "failing"
+        self.health_calls = 0
+        self.reconnects = 0
+
+    def get_health_metrics(self):
+        return {"response_time": 0, "threshold": 1, "error_rate": 0}
+
+    async def health_check(self):
+        self.health_calls += 1
+        return self.health_calls > 1
+
+    async def reconnect(self):
+        self.reconnects += 1
+
+
+def test_self_diagnostics_attempts_reconnect():
+    register_event_emitter(lambda *a, **k: None)
+    module = FailingModule()
+    register_module_supplier(lambda: [module])
+
+    diag = SelfDiagnostics(interval=0.05, backoff_base=0.01, backoff_max=0.05)
+    diag.start()
+    time.sleep(0.15)
+    diag.stop()
+
+    assert module.reconnects == 1
