@@ -63,6 +63,10 @@ class JarvisModule(ABC):
     async def run_tests(self) -> Dict[str, Any]:
         return {"status": "no_tests"}
 
+    async def reconnect(self) -> None:
+        """Attempt to reconnect if the module becomes unhealthy."""
+        return None
+
     def get_health_metrics(self) -> Dict[str, Any]:
         """Return basic health metrics for diagnostics."""
         return {
