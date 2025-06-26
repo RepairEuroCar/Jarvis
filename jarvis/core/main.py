@@ -35,6 +35,7 @@ from modules.git_manager import GitManager
 from utils.update_checker import check_for_updates
 from utils.linter import AstLinter
 from utils.logger import get_logger, setup_logging
+from jarvis.core.health_checker import HealthChecker
 from core.events import register_event_emitter
 from core.module_registry import register_module_supplier
 import core.system_initializer  # noqa: F401 - triggers diagnostics startup
@@ -70,6 +71,9 @@ class Settings(BaseSettings):
     extra_plugin_dirs: List[str] = ["~/.jarvis/plugins"]
     intent_model_path: str = "models/intent"
     clarify_threshold: float = 0.5
+    db_dsn: str | None = None
+    redis_url: str | None = None
+    external_api_urls: List[str] = []
 
     class Config:
         env_file = ".env"
@@ -124,6 +128,7 @@ class Jarvis:
         self.brain = Brain(self)
         self.goals = GoalManager(self)
         self.event_queue = EventQueue()
+        self.health_checker = HealthChecker(self.settings)
         self.sensor_manager = SensorManager(self, self.event_queue)
         self.module_manager = ModuleManager(self)
         register_module_supplier(lambda: list(self.module_manager.modules.values()))
@@ -217,6 +222,7 @@ class Jarvis:
         self.event_queue.subscribe("voice_command", self._on_voice_command)
         self.event_queue.subscribe("scheduled_tick", self._on_scheduled_tick)
         await self.sensor_manager.start()
+        await self.health_checker.run_all_checks(self)
 
     async def handle_command(self, command_text: str, is_voice: bool = False):
         """Обработка команд с поддержкой голоса"""

@@ -71,6 +71,12 @@ async def uptime() -> dict:
     return {"uptime": _format_iso_duration(delta)}
 
 
+@app.get("/startup/healthcheck")
+async def startup_healthcheck() -> dict:
+    """Return results of dependency checks performed on startup."""
+    return jarvis.health_checker.results
+
+
 if __name__ == "__main__":
     import uvicorn
 
