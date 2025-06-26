@@ -157,7 +157,8 @@ class ModuleManager:
                 return False
 
             with time_operation(f"Module {module_name} load"):
-                module = await self._initialize_module(module_name, module_config)
+                async with default_profiler.profile_block(module_name, "init"):
+                    module = await self._initialize_module(module_name, module_config)
                 if not module:
                     return False
 
