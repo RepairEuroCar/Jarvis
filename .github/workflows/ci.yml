@@ -2,12 +2,12 @@ name: Jarvis Full Auto CI
 
 on:
   push:
-    branches: [dev, main]
+    branches: [main]
     paths:
       - '**.py'
       - '.github/workflows/ci.yml'
   pull_request:
-    branches: [dev, main]
+    branches: [main]
     paths:
       - '**.py'
       - '.github/workflows/ci.yml'
