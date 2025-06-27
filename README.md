@@ -353,6 +353,14 @@ Specify a different git diff range if needed:
 ```bash
 python scripts/generate_core_tests.py HEAD~2
 ```
+
+## Fallback management
+
+Modules can register async fallback handlers that activate when the
+`FlagManager` marks them as problematic. Use `ModuleManager.register_fallback()`
+to associate a coroutine with a module name. When errors exceed the threshold,
+the manager triggers the handler and emits a `FallbackActivated` event.
+This allows modules to degrade gracefully without stopping the entire system.
 ## Python and ML utilities
 
 Jarvis provides helper commands for development tasks:

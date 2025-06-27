@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from enum import Enum, auto
 from functools import wraps
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable, Awaitable
 
 from core.profiler import default_profiler
 
@@ -14,6 +14,7 @@ from pydantic import BaseModel, ValidationError
 
 from utils.logger import get_logger
 from core.flags import default_flag_manager
+from core.fallback_manager import FallbackManager
 
 logger = get_logger().getChild("ModuleManager")
 
@@ -67,6 +68,10 @@ class JarvisModule(ABC):
         """Attempt to reconnect if the module becomes unhealthy."""
         return None
 
+    async def fallback(self, exc: Exception) -> None:
+        """Execute a fallback routine after repeated errors."""
+        return None
+
     def get_health_metrics(self) -> Dict[str, Any]:
         """Return basic health metrics for diagnostics."""
         return {
@@ -96,6 +101,8 @@ def module_error_handler(func):
                 exc_info=e,
             )
             default_flag_manager.record_error(module_name, e)
+            if default_flag_manager.is_flagged(module_name):
+                await self._activate_fallback(module_name, e)
         return False
 
     return wrapper
@@ -125,6 +132,7 @@ class ModuleManager:
         self.module_states: Dict[str, ModuleState] = {}
         self.module_configs: Dict[str, ModuleConfig] = {}
         self.module_events: Dict[str, List[ModuleEvent]] = {}
+        self.fallback_manager = FallbackManager()
         self.lock = asyncio.Lock()
         self.MIN_MODULE_VERSION = "1.0.0"
 
@@ -203,6 +211,12 @@ class ModuleManager:
     # ------------------------
     # ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ
     # ------------------------
+
+    def register_fallback(
+        self, module_name: str, handler: Callable[[Exception], Awaitable[None]]
+    ) -> None:
+        """Delegate to :class:`FallbackManager`."""
+        self.fallback_manager.register_fallback(module_name, handler)
 
     async def send_event(self, module_name: str, event_name: str, data: Dict) -> bool:
         """Отправка события модулю."""
@@ -288,3 +302,7 @@ class ModuleManager:
                 if callable(func):
                     wrapped = default_profiler.profile(module_name, attr)(func)
                     setattr(module, attr, wrapped)
+
+    async def _activate_fallback(self, module_name: str, exc: Exception) -> None:
+        """Invoke registered fallback handler for *module_name*."""
+        await self.fallback_manager.activate(module_name, exc)
