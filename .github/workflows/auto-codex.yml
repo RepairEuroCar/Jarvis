@@ -85,7 +85,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.event.pull_request.head.sha }}
-          check-name: ${{ env.REQUIRED_CHECKS }}
           timeout-minutes: 30
 
       - name: 🚀 Merge PR
