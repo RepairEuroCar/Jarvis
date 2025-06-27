@@ -1,20 +1,51 @@
 import asyncio
 import itertools
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 
-class EventQueue:
-    """Asynchronous event queue with priority support."""
+@dataclass
+class SecureChannel:
+    """Represents a secured event channel."""
+
+    name: str
+    token: str
+
+
+class SecureEventQueue:
+    """Asynchronous event queue that validates channel tokens."""
 
     def __init__(self) -> None:
         self._queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
         self._counter = itertools.count()
-        self._listeners: Dict[str, List[Callable[..., Any]]] = defaultdict(
-            list
-        )
+        self._channels: Dict[str, str] = {}
+        self._listeners: Dict[str, List[Callable[..., Any]]] = defaultdict(list)
         self._worker: Optional[asyncio.Task] = None
         self._running: bool = False
+
+    def register_channel(self, channel_name: str, token: str) -> None:
+        """Register a new channel with its secret token."""
+        self._channels[channel_name] = token
+
+    def _validate(self, channel_name: str, token: str) -> None:
+        if self._channels.get(channel_name) != token:
+            raise ValueError("Invalid token for channel")
+
+    def subscribe(self, channel_name: str, token: str, listener: Callable[..., Any]) -> None:
+        self._validate(channel_name, token)
+        self._listeners[channel_name].append(listener)
+
+    async def emit(
+        self, channel_name: str, token: str, *args: Any, priority: int = 0, **kwargs: Any
+    ) -> None:
+        self._validate(channel_name, token)
+        await self._queue.put(
+            (priority, next(self._counter), ("event", (channel_name, args, kwargs)))
+        )
+
+    async def add_task(self, coro: Coroutine[Any, Any, Any], priority: int = 0) -> None:
+        await self._queue.put((priority, next(self._counter), ("task", coro)))
 
     async def start(self) -> None:
         if not self._running:
@@ -29,23 +60,6 @@ class EventQueue:
         if self._worker:
             await self._worker
             self._worker = None
-
-    async def emit(
-        self, event_name: str, *args: Any, priority: int = 0, **kwargs: Any
-    ) -> None:
-        """Queue an event for processing."""
-        await self._queue.put(
-            (priority, next(self._counter), ("event", (event_name, args, kwargs)))
-        )
-
-    async def add_task(
-        self, coro: Coroutine[Any, Any, Any], priority: int = 0
-    ) -> None:
-        """Queue an arbitrary coroutine to run in background."""
-        await self._queue.put((priority, next(self._counter), ("task", coro)))
-
-    def subscribe(self, event_name: str, listener: Callable[..., Any]) -> None:
-        self._listeners[event_name].append(listener)
 
     async def _run(self) -> None:
         while True:
