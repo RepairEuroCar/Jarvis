@@ -11,6 +11,29 @@ logger = logging.getLogger(__name__)
 from command_dispatcher import CommandDispatcher, default_dispatcher
 from core.metrics.module_usage import track_usage
 from utils.linter import AstLinter
+from core.fallback import default_fallback_manager
+
+
+async def _run_ruff(project: str) -> list[str]:
+    proc = await asyncio.create_subprocess_exec(
+        "ruff",
+        "check",
+        project,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    out, _ = await proc.communicate()
+    output = out.decode().strip()
+    return output.splitlines() if output else []
+
+
+async def _ast_lint(project: str) -> list[str]:
+    linter = AstLinter()
+    errors = linter.lint_paths([project])
+    return [f"{e.filepath}:{e.lineno}: {e.message}" for e in errors]
+
+
+default_fallback_manager.register("ast_lint", _ast_lint)
 
 
 @track_usage("executor")
@@ -88,25 +111,14 @@ async def run(path: str = ".") -> dict[str, dict[str, list[str] | int]]:
         failed = int(m.group(1))
 
     # -----------------------------
-    # Run ruff or fallback to AstLinter
+    # Run ruff or use fallback
     # -----------------------------
-    lint_messages: list[str] = []
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "ruff",
-            "check",
-            project,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        out, _ = await proc.communicate()
-        ruff_output = out.decode().strip()
-        if ruff_output:
-            lint_messages.extend(ruff_output.splitlines())
-    except FileNotFoundError:
-        linter = AstLinter()
-        errors = linter.lint_paths([project])
-        lint_messages = [f"{e.filepath}:{e.lineno}: {e.message}" for e in errors]
+    lint_messages: list[str] = await default_fallback_manager.execute(
+        _run_ruff,
+        project,
+        fallback_name="ast_lint",
+        exceptions=(FileNotFoundError,),
+    )
 
     return {
         "tests": {"passed": passed, "failed": failed},
