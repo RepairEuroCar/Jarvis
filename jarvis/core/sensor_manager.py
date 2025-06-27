@@ -57,7 +57,10 @@ class SensorManager:
             try:
                 text = await voice.listen()
                 if text:
-                    await self.event_queue.emit("voice_command", text)
+                    token = None
+                    if hasattr(self.event_queue, "get_token"):
+                        token = self.event_queue.get_token("voice_command")
+                    await self.event_queue.emit("voice_command", text, token=token)
             except asyncio.CancelledError:
                 break
             await asyncio.sleep(0.1)
@@ -69,7 +72,12 @@ class SensorManager:
                 now = time.monotonic()
                 for task in list(self.scheduled_tasks):
                     if now >= task.next_run:
-                        await self.event_queue.emit("scheduled_tick", task=task)
+                        token = None
+                        if hasattr(self.event_queue, "get_token"):
+                            token = self.event_queue.get_token("scheduled_tick")
+                        await self.event_queue.emit(
+                            "scheduled_tick", task=task, token=token
+                        )
                         task.next_run = now + task.interval
                 await asyncio.sleep(1)
             except asyncio.CancelledError:

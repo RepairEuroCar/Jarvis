@@ -57,7 +57,10 @@ class AgentLoop:
             context: Dict[str, Any] = {"user_id": user_id, **kwargs}
             context.update(parsed)
             result = await self.jarvis.brain.think(text, context)
-            await self.queue.emit("action_result", result)
+            token = None
+            if hasattr(self.queue, "get_token"):
+                token = self.queue.get_token("action_result")
+            await self.queue.emit("action_result", result, token=token)
         except Exception as e:  # pragma: no cover - logging only
             logger.exception("Failed to process input: %s", e)
 
