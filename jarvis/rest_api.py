@@ -71,6 +71,12 @@ async def uptime() -> dict:
     return {"uptime": _format_iso_duration(delta)}
 
 
+@app.get("/selfcheck")
+async def selfcheck() -> dict:
+    results = await jarvis.module_manager.health_check_all()
+    return {"modules": results}
+
+
 if __name__ == "__main__":
     import uvicorn
 
