@@ -6,6 +6,7 @@ from typing import List, Tuple
 from urllib.parse import urlparse
 
 from jarvis.core.main import Settings
+from utils.experimental import experimental_feature
 
 SAFE_PATTERN = re.compile(r"^[A-Za-z0-9._/=: -]*$")
 
@@ -69,6 +70,7 @@ async def _run_command(command: List[str]) -> Tuple[str, str, int]:
         return "", str(e), 1
 
 
+@experimental_feature("high")
 async def run_nmap(target: str, options: str = "") -> str:
     """Run nmap against the specified target."""
     if not _is_allowed(target) or not _is_safe(options):
@@ -78,6 +80,7 @@ async def run_nmap(target: str, options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_hydra(
     service: str, target: str, userlist: str, passlist: str, options: str = ""
 ) -> str:
@@ -101,6 +104,7 @@ async def run_hydra(
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def bruteforce_ssh(
     ip: str, userlist: str, passlist: str, options: str = ""
 ) -> str:
@@ -108,6 +112,7 @@ async def bruteforce_ssh(
     return await run_hydra("ssh", ip, userlist, passlist, options)
 
 
+@experimental_feature("high")
 async def run_sqlmap(target: str, options: str = "") -> str:
     """Run sqlmap for the given target URL."""
     if not _is_allowed(target) or not _is_safe(target) or not _is_safe(options):
@@ -117,6 +122,7 @@ async def run_sqlmap(target: str, options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_msfconsole(resource_script: str = "") -> str:
     """Launch msfconsole optionally with a resource script."""
     if resource_script and not _is_safe(resource_script):
@@ -128,6 +134,7 @@ async def run_msfconsole(resource_script: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_burpsuite(options: str = "") -> str:
     """Start Burp Suite with optional parameters."""
     if not _is_safe(options):
@@ -137,6 +144,7 @@ async def run_burpsuite(options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_aircrack(capture_file: str, wordlist: str, options: str = "") -> str:
     """Run aircrack-ng on a capture file with the provided wordlist."""
     if not all(_is_safe(v) for v in [capture_file, wordlist, options]):
@@ -146,6 +154,7 @@ async def run_aircrack(capture_file: str, wordlist: str, options: str = "") -> s
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_wireshark(options: str = "") -> str:
     """Launch Wireshark with optional parameters."""
     if not _is_safe(options):
@@ -155,6 +164,7 @@ async def run_wireshark(options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_john(hash_file: str, options: str = "") -> str:
     """Run John the Ripper with a given hash file."""
     if not all(_is_safe(v) for v in [hash_file, options]):
@@ -164,6 +174,7 @@ async def run_john(hash_file: str, options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_hashcat(hash_file: str, wordlist: str, options: str = "") -> str:
     """Run hashcat against the specified hashes and wordlist."""
     if not all(_is_safe(v) for v in [hash_file, wordlist, options]):
@@ -173,6 +184,7 @@ async def run_hashcat(hash_file: str, wordlist: str, options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_crunch(min_len: int, max_len: int, options: str = "") -> str:
     """Run crunch to generate a wordlist."""
     if not _is_safe(options):
@@ -182,6 +194,7 @@ async def run_crunch(min_len: int, max_len: int, options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_yara(rule_file: str, target: str, options: str = "") -> str:
     """Run yara with the given rule file against a target."""
     if not all(_is_safe(v) for v in [rule_file, target, options]):
@@ -191,6 +204,7 @@ async def run_yara(rule_file: str, target: str, options: str = "") -> str:
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_volatility(memory_image: str, plugin: str, options: str = "") -> str:
     """Run Volatility on a memory image using the specified plugin."""
     if not all(_is_safe(v) for v in [memory_image, plugin, options]):
@@ -200,6 +214,7 @@ async def run_volatility(memory_image: str, plugin: str, options: str = "") -> s
     return stdout if rc == 0 else f"Error: {stderr}"
 
 
+@experimental_feature("high")
 async def run_mitmproxy(options: str = "") -> str:
     """Run mitmproxy with optional parameters."""
     if not _is_safe(options):

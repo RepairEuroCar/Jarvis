@@ -77,6 +77,14 @@ from utils.logger import setup_logging
 setup_logging(level=logging.DEBUG)
 ```
 
+### Experimental features
+
+Decorate unstable or risky functions with `experimental_feature(risk)` from
+`utils.experimental`. When such a function runs a warning like
+`⚠ Experimental feature <name> activated (risk=<risk>)` is emitted. The module
+also tracks usage counts in `experimental_usage` so you can monitor how often
+these features are invoked.
+
 ## Security tool wrappers
 
 Jarvis exposes asynchronous helpers for several security utilities through
