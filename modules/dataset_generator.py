@@ -17,6 +17,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import gzip
 import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 import aiofiles
 from faker import Faker
@@ -280,6 +283,15 @@ def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> Non
 
 
 register_commands(default_dispatcher)
+
+async def health_check() -> bool:
+    """Ensure gzip compression is available."""
+    try:
+        _ = gzip.compress(b"test")
+        return True
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("Dataset generator health check failed: %s", exc)
+        return False
 
 __all__ = [
     "generate_dataset",

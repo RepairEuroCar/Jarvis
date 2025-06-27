@@ -2,6 +2,9 @@ import threading
 import time
 
 import psutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.events import emit_event
 from core.metrics import broadcast_metrics
@@ -14,6 +17,15 @@ class ResourceLimiter:
         self.interval = interval
         self.running = False
         self._thread: threading.Thread | None = None
+
+    async def health_check(self) -> bool:
+        """Verify psutil can fetch system metrics."""
+        try:
+            psutil.cpu_percent(interval=None)
+            return True
+        except Exception as exc:  # pragma: no cover - best effort logging
+            logger.warning("ResourceLimiter health check failed: %s", exc)
+            return False
 
     def start(self) -> None:
         if self.running:

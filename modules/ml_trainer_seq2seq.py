@@ -33,6 +33,16 @@ MODULE_METADATA = {
 }
 
 
+async def health_check() -> bool:
+    """Verify torch installation for seq2seq trainer."""
+    try:
+        _ = torch.__version__
+        return True
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("Seq2Seq trainer health check failed: %s", exc)
+        return False
+
+
 # Простой пользовательский Dataset для Seq2Seq задач
 class CustomSeq2SeqDataset(Dataset):
     def __init__(

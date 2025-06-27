@@ -3,6 +3,9 @@ import asyncio
 import datetime
 import json
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 import radon.complexity as radon_complexity  # Для цикломатической сложности
 from radon.metrics import mi_visit  # Для метрик Холстеда и индекса обслуживаемости
@@ -879,3 +882,13 @@ commands = {
     # Старые команды можно либо удалить, либо адаптировать, либо оставить для более простого вывода
     # Например, analyze_py_metrics может использовать get_file_metrics_radon
 }
+
+
+async def health_check() -> bool:
+    """Quickly parse a simple snippet to verify analyzer basics."""
+    try:
+        ast.parse("pass")
+        return True
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("Analyzer health check failed: %s", exc)
+        return False

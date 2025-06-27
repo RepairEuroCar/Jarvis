@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import threading
+import logging
 
 import sounddevice as sd
 
@@ -14,6 +15,8 @@ from voice.stub_vosk import KaldiRecognizer, Model
 from .config import VoiceConfig
 
 # import vosk
+
+logger = logging.getLogger(__name__)
 
 
 class VoiceInterface:
@@ -36,6 +39,15 @@ class VoiceInterface:
         self.is_listening_active = not self.config.enable_wake_word
         self._audio_stream_thread = None
         self._audio_processor_task = None
+
+    async def health_check(self) -> bool:
+        """Check that audio devices can be queried."""
+        try:
+            _ = sd.query_devices()
+            return True
+        except Exception as exc:  # pragma: no cover - best effort logging
+            logger.warning("Voice interface health check failed: %s", exc)
+            return False
 
     def _audio_callback(self, indata, frames, time, status):
         if status:

@@ -1,9 +1,13 @@
 import asyncio
+import sys
 from pathlib import Path
 
 from command_dispatcher import CommandDispatcher, default_dispatcher
 from modules import executor
 from core.metrics.module_usage import track_usage
+import logging
+
+logger = logging.getLogger(__name__)
 
 TEMPLATES = {
     "cli": """#!/usr/bin/env python\nimport argparse\n\n\n def main():\n    parser = argparse.ArgumentParser(description='CLI script')\n    parser.add_argument('--name', default='World')\n    args = parser.parse_args()\n    print(f'Hello, {args.name}!')\n\n\n if __name__ == '__main__':\n    main()\n""",
@@ -43,6 +47,15 @@ def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> Non
 
 
 register_commands(default_dispatcher)
+
+
+async def health_check() -> bool:
+    """Check that Python interpreter is accessible."""
+    try:
+        return Path(sys.executable).exists()
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("Python tools health check failed: %s", exc)
+        return False
 
 __all__ = [
     "create_script",

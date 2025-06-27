@@ -2,6 +2,9 @@ import re
 from pathlib import Path
 
 from command_dispatcher import CommandDispatcher, default_dispatcher
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Pattern for bullet or numbered list items
 BULLET_RE = re.compile(r"^\s*(?:[-*]|\d+[.)])\s+")
@@ -81,5 +84,14 @@ def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> Non
 
 
 register_commands(default_dispatcher)
+
+
+async def health_check() -> bool:
+    """Quick check of regex patterns."""
+    try:
+        return bool(BULLET_RE.match("- test"))
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("Task splitter health check failed: %s", exc)
+        return False
 
 __all__ = ["analyze_spec", "task_split", "register_commands"]
