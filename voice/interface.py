@@ -1,5 +1,7 @@
 import asyncio
+import re
 import threading
+import time
 from functools import partial
 from typing import Any, Optional
 
@@ -9,6 +11,12 @@ import speech_recognition as sr
 from utils.logger import get_logger
 
 logger = get_logger().getChild("Voice")
+
+
+def _parse_status_code(exc: Exception) -> str:
+    """Extract an HTTP status code from the exception message if possible."""
+    match = re.search(r"(\d{3})", str(exc))
+    return match.group(1) if match else "error"
 
 
 class VoiceInterface:
@@ -45,10 +53,10 @@ class VoiceInterface:
         selected = None
         for v in voices:
             langs = [
-                (l.decode() if isinstance(l, bytes) else str(l))
+                (lang_item.decode() if isinstance(lang_item, bytes) else str(lang_item))
                 .lower()
                 .replace("_", "-")
-                for l in getattr(v, "languages", [])
+                for lang_item in getattr(v, "languages", [])
             ]
             if any(lang.startswith(target_lang) for lang in langs):
                 selected = v
@@ -77,12 +85,28 @@ class VoiceInterface:
                 audio = await asyncio.get_event_loop().run_in_executor(
                     None, self.recognizer.listen, source, 5
                 )
+                lang = self.jarvis.settings.recognition_language
                 func = partial(
                     self.recognizer.recognize_google,
                     audio,
-                    language=self.jarvis.settings.recognition_language,
+                    language=lang,
                 )
-                text = await asyncio.get_event_loop().run_in_executor(None, func)
+                start = time.perf_counter()
+                status = 200
+                try:
+                    text = await asyncio.get_event_loop().run_in_executor(None, func)
+                except sr.RequestError as e:
+                    status = _parse_status_code(e)
+                    raise
+                finally:
+                    duration_ms = (time.perf_counter() - start) * 1000
+                    logger.info(
+                        "HTTP POST https://speech.googleapis.com "
+                        "lang=%s status=%s duration=%.2fms",
+                        lang,
+                        status,
+                        duration_ms,
+                    )
                 logger.info(f"Распознано: {text}")
                 return text.lower()
             except sr.WaitTimeoutError:
