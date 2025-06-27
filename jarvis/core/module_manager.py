@@ -1,5 +1,7 @@
 import asyncio
 import importlib
+import importlib.util
+import shutil
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -40,6 +42,7 @@ class ModuleConfig(BaseModel):
     enabled: bool = True
     priority: int = 50
     dependencies: List[str] = []
+    requirements: List[str] = []
     sandboxed: bool = False
     expected_hash: Optional[str] = None
     resource_limits: Dict[str, int] = {"cpu_time": 1, "memory_mb": 256}
@@ -160,6 +163,10 @@ class ModuleManager:
                 self.module_states[module_name] = ModuleState.ERROR
                 return False
 
+            if not await self._check_module_requirements(module_name, module_config):
+                self.module_states[module_name] = ModuleState.ERROR
+                return False
+
             with time_operation(f"Module {module_name} load"):
                 async with default_profiler.profile_block(module_name, "init"):
                     module = await self._initialize_module(module_name, module_config)
@@ -252,6 +259,27 @@ class ModuleManager:
                 if not await self.load_module(dep):
                     logger.error(f"Dependency {dep} for {module_name} failed to load")
                     return False
+        return True
+
+    async def _check_module_requirements(self, module_name: str, config: ModuleConfig) -> bool:
+        """Ensure all Python or executable requirements are present."""
+        requirements = list(config.requirements)
+        try:
+            module = importlib.import_module(f"jarvis.modules.{module_name}")
+            module_requires = getattr(module, "REQUIRES", [])
+            if isinstance(module_requires, list):
+                requirements.extend(r for r in module_requires if r not in requirements)
+        except Exception as e:  # pragma: no cover - module may fail to import
+            logger.debug(f"Failed importing {module_name} for requirement check: {e}")
+
+        missing = []
+        for req in requirements:
+            if importlib.util.find_spec(req) is None and shutil.which(req) is None:
+                missing.append(req)
+
+        if missing:
+            logger.error(f"Missing requirements for {module_name}: {', '.join(missing)}")
+            return False
         return True
 
     async def _initialize_module(

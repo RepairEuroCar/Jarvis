@@ -299,6 +299,14 @@ def register(jarvis):
 
 After restarting Jarvis you can invoke the command by typing `hello`.
 
+### Module configuration
+
+Jarvis modules may define a `REQUIRES` list and can be loaded with a
+configuration dictionary. When calling `ModuleManager.load_module` you may
+provide the optional `requirements` list to declare extra Python packages or
+executables needed at runtime. Missing entries will prevent the module from
+loading.
+
 ### Common pitfalls
 
 - Plugin file not placed inside `plugins/` or missing the `.py` extension.
