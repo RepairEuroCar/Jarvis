@@ -8,6 +8,7 @@ from reasoning.tracer import parse_tracebacks, suggest_fixes
 from command_dispatcher import CommandDispatcher, default_dispatcher
 from core.metrics.module_usage import track_usage
 from utils.linter import AstLinter
+from utils.fallback_manager import default_fallback_manager
 
 
 @track_usage("executor")
@@ -88,22 +89,27 @@ async def run(path: str = ".") -> dict[str, dict[str, list[str] | int]]:
     # Run ruff or fallback to AstLinter
     # -----------------------------
     lint_messages: list[str] = []
-    try:
+
+    async def run_ruff(path: str) -> list[str]:
         proc = await asyncio.create_subprocess_exec(
             "ruff",
             "check",
-            project,
+            path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         out, _ = await proc.communicate()
-        ruff_output = out.decode().strip()
-        if ruff_output:
-            lint_messages.extend(ruff_output.splitlines())
-    except FileNotFoundError:
+        output = out.decode().strip()
+        return output.splitlines() if output else []
+
+    def run_ast(path: str) -> list[str]:
         linter = AstLinter()
-        errors = linter.lint_paths([project])
-        lint_messages = [f"{e.filepath}:{e.lineno}: {e.message}" for e in errors]
+        errors = linter.lint_paths([path])
+        return [f"{e.filepath}:{e.lineno}: {e.message}" for e in errors]
+
+    lint_messages = await default_fallback_manager.execute(
+        run_ruff, project, fallback=run_ast
+    )
 
     return {
         "tests": {"passed": passed, "failed": failed},

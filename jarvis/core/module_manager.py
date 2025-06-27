@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import importlib.util
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -262,6 +263,14 @@ class ModuleManager:
             if not hasattr(module, "setup"):
                 logger.error(f"Module {module_name} has no setup function")
                 return None
+
+            requirements = getattr(module, "REQUIRES", [])
+            for req in requirements:
+                if importlib.util.find_spec(req) is None:
+                    logger.error(
+                        f"Module {module_name} requires missing package {req}"
+                    )
+                    return None
 
             if not await self._check_module_compatibility(module):
                 return None

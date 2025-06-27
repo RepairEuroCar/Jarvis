@@ -5,12 +5,14 @@ import pytest
 from command_dispatcher import default_dispatcher
 from modules import executor
 from utils.linter import AstLinter, LintError
+from utils.fallback_manager import default_fallback_manager
 from jarvis.memory.manager import MemoryManager
 
 
 @pytest.mark.asyncio
 async def test_executor_run(monkeypatch):
     calls = []
+    executed = []
 
     async def fake_exec(*args, **kwargs):
         calls.append(args)
@@ -29,6 +31,12 @@ async def test_executor_run(monkeypatch):
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
 
+    async def fake_execute(func, *args, fallback=None, **kwargs):
+        executed.append(func)
+        return await func(*args, **kwargs)
+
+    monkeypatch.setattr(default_fallback_manager, "execute", fake_execute)
+
     result = await executor.run(".")
     assert result["tests"]["passed"] == 3
     assert result["tests"]["failed"] == 1
@@ -36,6 +44,7 @@ async def test_executor_run(monkeypatch):
     assert "F401" in result["lint"]["warnings"][0]
     assert any("pytest" in c for c in calls)
     assert any("ruff" in c for c in calls)
+    assert executed
 
 
 @pytest.mark.asyncio
@@ -53,6 +62,19 @@ async def test_executor_run_ast_fallback(monkeypatch):
         raise FileNotFoundError
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+    async def fake_execute(func, *args, fallback=None, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except Exception:
+            if fallback:
+                result = fallback(*args, **kwargs)
+                if asyncio.iscoroutine(result):
+                    result = await result
+                return result
+            raise
+
+    monkeypatch.setattr(default_fallback_manager, "execute", fake_execute)
 
     def fake_lint(self, paths):
         return [LintError(filepath="a.py", lineno=1, message="bad")]
