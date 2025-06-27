@@ -43,3 +43,11 @@ fallback_manager.register("git.status", offline_repo_status)
 Calling `fallback_manager.run("git.status")` tries the main handler first and
 runs the fallback on error. Remove the handler with
 `fallback_manager.unregister("git.status")`.
+
+## Resource monitoring
+
+Long-running modules that maintain background threads or spawn subprocesses
+should expose a ``get_pid()`` method returning the operating system process
+ID. :class:`modules.resource_limiter.ResourceLimiter` relies on this method to
+track CPU and memory usage. Modules running entirely in the main process can
+simply ``return os.getpid()``.

@@ -131,3 +131,7 @@ class VoiceInterface:
                 pass
         print("🔇 Голос отключён.")
         return "🔇 Голос отключён."
+
+    def get_pid(self) -> int:
+        """Return the PID of the running process for resource monitoring."""
+        return os.getpid()

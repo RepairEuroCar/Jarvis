@@ -1,9 +1,17 @@
-"""Resource usage monitoring for active Jarvis modules."""
+"""Resource usage monitoring for active Jarvis modules.
+
+Modules that run for extended periods should implement a ``get_pid()`` method
+returning their process ID. The limiter calls this method on every active
+module and uses :mod:`psutil` to collect CPU and memory metrics for that PID.
+If usage exceeds the quota provided by ``get_resource_quota()``, a
+``ResourceLimitWarning`` event is emitted and the module is flagged.
+"""
 
 REQUIRES = ["psutil"]
 
 import threading
 import time
+import os
 
 import psutil
 import logging
@@ -93,3 +101,7 @@ class ResourceLimiter:
         self.running = False
         if self._thread:
             self._thread.join(timeout=0)
+
+    def get_pid(self) -> int:
+        """Return the current process ID for monitoring."""
+        return os.getpid()
