@@ -27,6 +27,7 @@ from jarvis.core.agent_loop import AgentLoop
 from jarvis.core.module_manager import ModuleManager, ModuleConfig
 from jarvis.core.sensor_manager import ScheduledTask, SensorManager
 from jarvis.event_queue import EventQueue
+from jarvis.secure_event_queue import SecureEventQueue
 from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
@@ -41,6 +42,13 @@ from core.module_registry import register_module_supplier
 import core.system_initializer  # noqa: F401 - triggers diagnostics startup
 
 logger = get_logger().getChild("Core")
+
+BUILTIN_EVENTS = [
+    "voice_command",
+    "scheduled_tick",
+    "user_input",
+    "action_result",
+]
 
 
 class UserEvent(BaseModel):
@@ -72,6 +80,7 @@ class Settings(BaseSettings):
     intent_model_path: str = "models/intent"
     clarify_threshold: float = 0.5
     autoload_modules: Dict[str, int] = {}
+    use_secure_channels: bool = False
 
     class Config:
         env_file = ".env"
@@ -133,12 +142,23 @@ class Jarvis:
         self.nlu = NLUProcessor(model_path=self.settings.intent_model_path)
         self.brain = Brain(self)
         self.goals = GoalManager(self)
-        self.event_queue = EventQueue()
+        if self.settings.use_secure_channels:
+            self.event_queue = SecureEventQueue()
+            for name in BUILTIN_EVENTS:
+                self.event_queue.register_token(name, name)
+        else:
+            self.event_queue = EventQueue()
         self.sensor_manager = SensorManager(self, self.event_queue)
         self.module_manager = ModuleManager(self)
         register_module_supplier(lambda: list(self.module_manager.modules.values()))
         register_event_emitter(
-            lambda name, data: asyncio.create_task(self.event_queue.emit(name, data))
+            lambda name, data: asyncio.create_task(
+                self.event_queue.emit(
+                    name,
+                    data,
+                    token=getattr(self.event_queue, "get_token", lambda _: None)(name),
+                )
+            )
         )
         self.agent_loop = None
         self._pending_question: Optional[str] = None
