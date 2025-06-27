@@ -1,4 +1,4 @@
-name: CI
+name: CI Pipeline
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -16,19 +16,44 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt -r dev-requirements.txt
+          pip install ruff black isort mypy pytest pytest-cov
+
+      - name: Generate core tests
+        run: python scripts/generate_core_tests.py
+
+      - name: Lint and type check
+        run: |
+          ruff check .
+          black --check .
+          isort --check-only .
+          mypy --ignore-missing-imports .
 
       - name: Run tests
-        run: pytest --cov=jarvis --cov-report=xml
+        run: |
+          coverage run -m pytest
+          coverage xml -o coverage.xml
+          coverage html -d htmlcov
+          coverage report --fail-under=80
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
 
-  # token: ${{ secrets.CODECOV_TOKEN }} # Раскомментируйте для приватных репозиториев
+      - name: Dependency review
+        uses: actions/dependency-review-action@v3
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
