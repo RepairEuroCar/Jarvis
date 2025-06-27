@@ -179,9 +179,31 @@ validated using small Pydantic models:
 | `load` | `--module=<name>` | Load a Jarvis module |
 | `unload` | `--module=<name>` | Unload a Jarvis module |
 | `reload` | `--module=<name>` | Reload a Jarvis module |
+| `load_graph` | `--path=<file>` | Load a command graph |
+| `reload_graph` | `--path=<file>` | Reload the active graph |
+| `unload_graph` | *(none)* | Unload the current graph |
 
 Use `load`, `unload` and `reload` to manage optional features without
 restarting the assistant.
+
+## Graph router
+
+`GraphRouter` executes declarative command graphs loaded from YAML or JSON.
+Each node defines a `command` and optional `next` nodes. When a graph is
+active, `Jarvis.handle_command` treats the user input as the starting node name.
+
+Example graph (`config/graphs/example.yaml`):
+
+```yaml
+start:
+  command: "help"
+  next: end
+end:
+  command: "list_commands"
+```
+
+Manage graphs at runtime using the CLI commands `load_graph`, `reload_graph`
+and `unload_graph`.
 
 ## REST API
 

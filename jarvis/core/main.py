@@ -38,6 +38,8 @@ from utils.linter import AstLinter
 from utils.logger import get_logger, setup_logging
 from core.events import register_event_emitter
 from core.module_registry import register_module_supplier
+from command_dispatcher import default_dispatcher
+from jarvis.core.graph_router import GraphRouter
 import core.system_initializer  # noqa: F401 - triggers diagnostics startup
 
 logger = get_logger().getChild("Core")
@@ -149,6 +151,8 @@ class Jarvis:
             self.settings.plugin_dir,
             self.settings.extra_plugin_dirs,
         )
+        default_dispatcher.jarvis = self
+        self.graph_router = GraphRouter(default_dispatcher)
 
     def _setup_logging(self):
         level = getattr(logging, str(self.settings.log_level).upper(), logging.INFO)
@@ -195,6 +199,23 @@ class Jarvis:
     async def unload_module(self, name: str) -> bool:
         """Unload a previously loaded Jarvis module."""
         return await self.module_manager.unload_module(name)
+
+    # --------------------------------------------------------------
+    # Graph management helpers
+    # --------------------------------------------------------------
+
+    def load_graph(self, path: str) -> str:
+        self.graph_router.load_graph(path)
+        return f"Graph {path} loaded"
+
+    def reload_graph(self, path: Optional[str] = None) -> str:
+        self.graph_router.reload_graph(path)
+        p = path or self.graph_router.path
+        return f"Graph {p} reloaded"
+
+    def unload_graph(self) -> str:
+        self.graph_router.unload_graph()
+        return "Graph unloaded"
 
     def register_scheduled_task(
         self, callback: Callable[["Jarvis"], Awaitable[Any]], interval: float
@@ -263,6 +284,8 @@ class Jarvis:
 
     async def handle_command(self, command_text: str, is_voice: bool = False):
         """Обработка команд с поддержкой голоса"""
+        if self.graph_router.active:
+            return await self.graph_router.execute(command_text, {"text": command_text, "jarvis": self})
         if "&&" in command_text:
             results = []
             for part in [p.strip() for p in command_text.split("&&") if p.strip()]:

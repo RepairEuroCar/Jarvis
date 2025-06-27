@@ -1,0 +1,5 @@
+start:
+  command: "help"
+  next: end
+end:
+  command: "list_commands"
