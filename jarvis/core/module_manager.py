@@ -170,7 +170,7 @@ class ModuleManager:
             missing = self._check_required_packages(module_config)
             if missing:
                 logger.error(
-                    f"Module {module_name} missing required packages: {', '.join(missing)}"
+                    f"Module {module_name} Missing required packages: {', '.join(missing)}"
                 )
                 default_flag_manager.flag(
                     module_name, f"Missing packages: {', '.join(missing)}"
@@ -180,9 +180,6 @@ class ModuleManager:
 
             if not await self._load_dependencies(module_name, module_config):
                 self.module_states[module_name] = ModuleState.ERROR
-                return False
-
-            if not await self._check_required_packages(module_name, module_config):
                 return False
 
             with time_operation(f"Module {module_name} load"):
@@ -294,17 +291,6 @@ class ModuleManager:
                 if not await self.load_module(dep):
                     logger.error(f"Dependency {dep} for {module_name} failed to load")
                     return False
-        return True
-
-    async def _check_required_packages(self, module_name: str, config: ModuleConfig) -> bool:
-        missing = [p for p in config.required_packages if importlib.util.find_spec(p) is None]
-        if missing:
-            logger.error(
-                f"Missing required packages for {module_name}: {', '.join(missing)}"
-            )
-            default_flag_manager.flag(module_name, "missing_required_packages")
-            self.module_states[module_name] = ModuleState.SAFE_MODE
-            return False
         return True
 
     async def _initialize_module(

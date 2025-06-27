@@ -27,6 +27,7 @@ from jarvis.core.agent_loop import AgentLoop
 from jarvis.core.module_manager import ModuleManager, ModuleConfig
 from jarvis.core.sensor_manager import ScheduledTask, SensorManager
 from jarvis.event_queue import EventQueue
+from jarvis.secure_event_queue import SecureEventQueue
 from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
@@ -72,6 +73,9 @@ class Settings(BaseSettings):
     intent_model_path: str = "models/intent"
     clarify_threshold: float = 0.5
     autoload_modules: Dict[str, int] = {}
+    use_secure_queue: bool = False
+    voice_command_token: str = "voice_token"
+    scheduled_tick_token: str = "tick_token"
 
     class Config:
         env_file = ".env"
@@ -132,13 +136,33 @@ class Jarvis:
         self.nlu = NLUProcessor(model_path=self.settings.intent_model_path)
         self.brain = Brain(self)
         self.goals = GoalManager(self)
-        self.event_queue = EventQueue()
+        if self.settings.use_secure_queue:
+            self.event_queue = SecureEventQueue()
+            self.event_queue.register_channel(
+                "voice_command", self.settings.voice_command_token
+            )
+            self.event_queue.register_channel(
+                "scheduled_tick", self.settings.scheduled_tick_token
+            )
+        else:
+            self.event_queue = EventQueue()
         self.sensor_manager = SensorManager(self, self.event_queue)
         self.module_manager = ModuleManager(self)
         register_module_supplier(lambda: list(self.module_manager.modules.values()))
-        register_event_emitter(
-            lambda name, data: asyncio.create_task(self.event_queue.emit(name, data))
-        )
+        if self.settings.use_secure_queue:
+            register_event_emitter(
+                lambda name, data: asyncio.create_task(
+                    self.event_queue.emit(
+                        name,
+                        self._token_for(name),
+                        data,
+                    )
+                )
+            )
+        else:
+            register_event_emitter(
+                lambda name, data: asyncio.create_task(self.event_queue.emit(name, data))
+            )
         self.agent_loop = None
         self._pending_question: Optional[str] = None
         # Initialize per-instance cache for input parsing
@@ -162,6 +186,13 @@ class Jarvis:
         self.machine.add_transition("sleep", "*", "sleeping")
         self.machine.add_transition("listen", "idle", "listening")
         self.machine.add_transition("process", "listening", "processing")
+
+    def _token_for(self, name: str) -> str:
+        if name == "voice_command":
+            return self.settings.voice_command_token
+        if name == "scheduled_tick":
+            return self.settings.scheduled_tick_token
+        raise ValueError(f"Unknown secure channel: {name}")
 
     @property
     def memory(self) -> MemoryManager:
@@ -280,8 +311,20 @@ class Jarvis:
                     self.INIT_THRESHOLDS.get(name, 1.0),
                 )
                 if name == "event_queue":
-                    self.event_queue.subscribe("voice_command", self._on_voice_command)
-                    self.event_queue.subscribe("scheduled_tick", self._on_scheduled_tick)
+                    if self.settings.use_secure_queue:
+                        self.event_queue.subscribe(
+                            "voice_command",
+                            self.settings.voice_command_token,
+                            self._on_voice_command,
+                        )
+                        self.event_queue.subscribe(
+                            "scheduled_tick",
+                            self.settings.scheduled_tick_token,
+                            self._on_scheduled_tick,
+                        )
+                    else:
+                        self.event_queue.subscribe("voice_command", self._on_voice_command)
+                        self.event_queue.subscribe("scheduled_tick", self._on_scheduled_tick)
                 break
 
         await self.load_configured_modules()

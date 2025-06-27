@@ -21,6 +21,7 @@ from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
 
 from .event_queue import EventQueue
+from .secure_event_queue import SecureEventQueue
 
 # --- Конфигурация логгирования ---
 logging.basicConfig(
@@ -363,7 +364,18 @@ class Jarvis:
         self.max_command_history = 100
         self.commands: Dict[str, Tuple[CommandInfo, Callable]] = {}
         self._register_core_commands()
-        self.event_queue = EventQueue()
+        use_secure = os.getenv("JARVIS_SECURE_QUEUE") == "1"
+        if use_secure:
+            self.event_queue = SecureEventQueue()
+            self._channel_tokens = {
+                "voice_command": os.getenv("JARVIS_VOICE_TOKEN", "voice_token"),
+                "scheduled_tick": os.getenv("JARVIS_TICK_TOKEN", "tick_token"),
+            }
+            for name, token in self._channel_tokens.items():
+                self.event_queue.register_channel(name, token)
+        else:
+            self.event_queue = EventQueue()
+            self._channel_tokens = {}
         self.event_listeners: Dict[str, List[Callable]] = self.event_queue._listeners
         self.user_name = self.memory.query("user_info.name") or "User"
         self.settings = self.memory.query("system.settings") or {
@@ -546,10 +558,22 @@ class Jarvis:
         logger.debug(
             f"Публикация события: {event_name} с {args}, {kwargs}, priority={priority}"
         )
-        await self.event_queue.emit(event_name, *args, priority=priority, **kwargs)
+        if isinstance(self.event_queue, SecureEventQueue):
+            token = self._channel_tokens.get(event_name)
+            if token is None:
+                raise ValueError(f"Unregistered secure channel: {event_name}")
+            await self.event_queue.emit(event_name, token, *args, priority=priority, **kwargs)
+        else:
+            await self.event_queue.emit(event_name, *args, priority=priority, **kwargs)
 
     def subscribe_event(self, event_name: str, listener: Callable):
-        self.event_queue.subscribe(event_name, listener)
+        if isinstance(self.event_queue, SecureEventQueue):
+            token = self._channel_tokens.get(event_name)
+            if token is None:
+                raise ValueError(f"Unregistered secure channel: {event_name}")
+            self.event_queue.subscribe(event_name, token, listener)
+        else:
+            self.event_queue.subscribe(event_name, listener)
         logger.debug(f"Добавлен обработчик {listener.__name__} для {event_name}")
 
     async def add_background_task(self, coro: Coroutine, priority: int = 0) -> None:

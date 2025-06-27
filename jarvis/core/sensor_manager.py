@@ -57,7 +57,11 @@ class SensorManager:
             try:
                 text = await voice.listen()
                 if text:
-                    await self.event_queue.emit("voice_command", text)
+                    if hasattr(self.event_queue, "register_channel"):
+                        token = self.jarvis.settings.voice_command_token
+                        await self.event_queue.emit("voice_command", token, text)
+                    else:
+                        await self.event_queue.emit("voice_command", text)
             except asyncio.CancelledError:
                 break
             await asyncio.sleep(0.1)
@@ -69,7 +73,15 @@ class SensorManager:
                 now = time.monotonic()
                 for task in list(self.scheduled_tasks):
                     if now >= task.next_run:
-                        await self.event_queue.emit("scheduled_tick", task=task)
+                        if hasattr(self.event_queue, "register_channel"):
+                            token = self.jarvis.settings.scheduled_tick_token
+                            await self.event_queue.emit(
+                                "scheduled_tick", token, task=task
+                            )
+                        else:
+                            await self.event_queue.emit(
+                                "scheduled_tick", task=task
+                            )
                         task.next_run = now + task.interval
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
