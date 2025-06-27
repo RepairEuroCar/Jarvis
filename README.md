@@ -63,6 +63,26 @@ to limit network commands to known networks. After modifying the file or
 the `JARVIS_ALLOWED_NETWORKS` environment variable you can reload the
 values at runtime by calling `kali_tools.reload_allowed_networks()`.
 
+### Module priority
+
+The `config.yaml` file supports an optional `autoload_modules` section used to
+load features automatically. Each entry specifies a module name and its
+configuration:
+
+```yaml
+autoload_modules:
+  analyzer:
+    enabled: true
+    priority: 10
+  git_manager:
+    enabled: true
+    priority: 20
+```
+
+Modules with a **lower** `priority` number load before those with higher values.
+The snippet above enables two core modules shipped with Jarvis. Add more entries
+as needed to control startup order.
+
 ### Logging
 
 Logging is initialised by calling `utils.logger.setup_logging()` which is
