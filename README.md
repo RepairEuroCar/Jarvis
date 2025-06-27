@@ -63,6 +63,16 @@ to limit network commands to known networks. After modifying the file or
 the `JARVIS_ALLOWED_NETWORKS` environment variable you can reload the
 values at runtime by calling `kali_tools.reload_allowed_networks()`.
 
+`autoload_modules` in `config.yaml` lets you automatically load modules on startup.
+Define them with integer priorities where lower numbers load first:
+
+```yaml
+autoload_modules:
+  voice_interface: 10
+  sql_interface: 50
+```
+You can reload this configuration at runtime using the `reload_config` CLI command.
+
 ### Logging
 
 Logging is initialised by calling `utils.logger.setup_logging()` which is
@@ -179,6 +189,7 @@ validated using small Pydantic models:
 | `load` | `--module=<name>` | Load a Jarvis module |
 | `unload` | `--module=<name>` | Unload a Jarvis module |
 | `reload` | `--module=<name>` | Reload a Jarvis module |
+| `reload_config` | *(none)* | Reload `config.yaml` and restart modules |
 
 Use `load`, `unload` and `reload` to manage optional features without
 restarting the assistant.

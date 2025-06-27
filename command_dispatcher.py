@@ -31,6 +31,11 @@ class ReloadParams(BaseModel):
         extra = "forbid"
 
 
+class ReloadConfigParams(BaseModel):
+    class Config:
+        extra = "forbid"
+
+
 class LoadParams(BaseModel):
     module: Optional[str] = None
 
@@ -197,13 +202,25 @@ class CommandDispatcher:
         self.register_command_handler("load", None, self._load, LoadParams)
         self.register_command_handler("unload", None, self._unload, UnloadParams)
         self.register_command_handler("reload", None, self._reload, ReloadParams)
+        self.register_command_handler(
+            "reload_config", None, self._reload_config, ReloadConfigParams
+        )
 
     def _list_commands(self, **_: str) -> str:
         lines = []
         for mod, actions in self._handlers.items():
             for act in actions:
                 if (
-                    mod in {"help", "exit", "list_commands", "load", "unload", "reload"}
+                    mod
+                    in {
+                        "help",
+                        "exit",
+                        "list_commands",
+                        "load",
+                        "unload",
+                        "reload",
+                        "reload_config",
+                    }
                     and act is None
                 ):
                     lines.append(mod)
@@ -252,6 +269,12 @@ class CommandDispatcher:
             return "Reload not supported"
         success = await self.jarvis.module_manager.reload_module(module)
         return f"Module {module} reloaded" if success else f"Failed to reload {module}"
+
+    async def _reload_config(self, **_: str) -> str:
+        if not self.jarvis or not hasattr(self.jarvis, "reload_configuration"):
+            return "Reload not supported"
+        await self.jarvis.reload_configuration()
+        return "Configuration reloaded"
 
 
 # Global dispatcher used for modules that register handlers on import

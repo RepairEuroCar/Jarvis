@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     extra_plugin_dirs: List[str] = ["~/.jarvis/plugins"]
     intent_model_path: str = "models/intent"
     clarify_threshold: float = 0.5
+    autoload_modules: Dict[str, int] = {}
 
     class Config:
         env_file = ".env"
@@ -118,6 +119,7 @@ class Jarvis:
         self, settings: Settings = None, config_path: str = "config/config.yaml"
     ):
         # Load settings from YAML and environment unless explicitly provided
+        self.config_path = config_path
         self.settings = settings or Settings.load(config_path)
         self._setup_logging()
         self._setup_state_machine()
@@ -196,6 +198,24 @@ class Jarvis:
         """Unload a previously loaded Jarvis module."""
         return await self.module_manager.unload_module(name)
 
+    async def load_configured_modules(self) -> None:
+        """Load modules listed in ``settings.autoload_modules`` ordered by priority."""
+        modules = sorted(
+            (self.settings.autoload_modules or {}).items(),
+            key=lambda item: item[1],
+        )
+        for name, _ in modules:
+            await self.module_manager.load_module(name)
+
+    async def reload_configuration(self) -> None:
+        """Reload settings from disk and restart modules accordingly."""
+        self.settings = Settings.load(self.config_path)
+        self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
+            self._parse_input_uncached
+        )
+        await self.module_manager.shutdown()
+        await self.load_configured_modules()
+
     def register_scheduled_task(
         self, callback: Callable[["Jarvis"], Awaitable[Any]], interval: float
     ) -> None:
@@ -260,6 +280,8 @@ class Jarvis:
                     self.event_queue.subscribe("voice_command", self._on_voice_command)
                     self.event_queue.subscribe("scheduled_tick", self._on_scheduled_tick)
                 break
+
+        await self.load_configured_modules()
 
     async def handle_command(self, command_text: str, is_voice: bool = False):
         """Обработка команд с поддержкой голоса"""
