@@ -14,3 +14,9 @@ allowed_networks:
   - "10.0.0.0/8"
   - "192.168.0.0/16"
 
+# Modules to load automatically on startup in order of priority.
+# Lower values indicate higher priority.
+autoload_modules:
+  voice_interface: 10
+  sql_interface: 50
+
