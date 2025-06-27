@@ -1,3 +1,7 @@
+"""Utilities for interacting with Git repositories asynchronously."""
+
+REQUIRES = ["aiohttp"]
+
 import asyncio
 import os
 import re

@@ -4,6 +4,8 @@ This optional module sets up the improved `jarvis_users` schema and exposes a
 simple command to list users. It relies on `asyncpg` for connection pooling.
 """
 
+REQUIRES = ["asyncpg"]
+
 from pathlib import Path
 from typing import Any
 import logging

@@ -1,3 +1,7 @@
+"""Resource usage monitoring for active Jarvis modules."""
+
+REQUIRES = ["psutil"]
+
 import threading
 import time
 
