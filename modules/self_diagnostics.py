@@ -2,6 +2,9 @@ import threading
 import time
 import asyncio
 from typing import Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.events import emit_event
 from core.metrics import broadcast_metrics
@@ -17,6 +20,15 @@ class SelfDiagnostics:
         self.backoff_base = backoff_base
         self.backoff_max = backoff_max
         self._retries: dict[str, dict[str, float]] = {}
+
+    async def health_check(self) -> bool:
+        """Ensure diagnostics thread can access module list."""
+        try:
+            _ = get_active_modules()
+            return True
+        except Exception as exc:  # pragma: no cover - best effort logging
+            logger.warning("SelfDiagnostics health check failed: %s", exc)
+            return False
 
     def start(self) -> None:
         if not self.running:

@@ -42,6 +42,24 @@ class GitManager:
             self.session = LoggedClientSession()
         return self.session
 
+    async def health_check(self) -> bool:
+        """Check that the git executable is available."""
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "git",
+                "--version",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await proc.communicate()
+            ok = proc.returncode == 0
+            if not ok:
+                logger.warning("git --version exited with %s", proc.returncode)
+            return ok
+        except Exception as exc:  # pragma: no cover - best effort logging
+            logger.warning("Git health check failed: %s", exc)
+            return False
+
     async def _run_git_command(self, command_args, cwd=None):
         """Run a git command and capture output with error handling."""
         git_executable = "git"  # Or allow configuration

@@ -3,6 +3,9 @@ import json
 
 from command_dispatcher import CommandDispatcher, default_dispatcher
 from core.metrics.module_usage import track_usage
+import logging
+
+logger = logging.getLogger(__name__)
 
 @track_usage("ml_tools")
 async def create_experiment(name: str, config: str | None = None) -> str:
@@ -21,6 +24,18 @@ def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> Non
 
 
 register_commands(default_dispatcher)
+
+
+async def health_check() -> bool:
+    """Check basic file system operations for experiments."""
+    try:
+        tmp = Path(".tmp_ml_tools_check")
+        tmp.mkdir(exist_ok=True)
+        tmp.rmdir()
+        return True
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("ML tools health check failed: %s", exc)
+        return False
 
 __all__ = [
     "create_experiment",

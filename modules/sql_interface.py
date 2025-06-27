@@ -2,6 +2,9 @@ import asyncio
 import datetime  # Added for created_at
 
 import aiosqlite
+import logging
+
+logger = logging.getLogger(__name__)
 
 DATABASE_FILE = "jarvis_data.db"
 
@@ -322,3 +325,14 @@ commands = {
     "delete_note": delete_note_async,
     "sql": sql_query_async,
 }
+
+
+async def health_check() -> bool:
+    """Check ability to open a sqlite database."""
+    try:
+        async with aiosqlite.connect(DATABASE_FILE) as db:
+            await db.execute("CREATE TABLE IF NOT EXISTS hc(id INTEGER)")
+        return True
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("SQL interface health check failed: %s", exc)
+        return False

@@ -6,6 +6,9 @@ simple command to list users. It relies on `asyncpg` for connection pooling.
 
 from pathlib import Path
 from typing import Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 import asyncpg
 
@@ -55,3 +58,13 @@ async def list_users_async(jarvis_instance: Any, _: str = "") -> str:
 
 
 commands = {"list_pg_users": list_users_async}
+
+
+async def health_check() -> bool:
+    """Check that asyncpg is importable and DSN parsable."""
+    try:
+        _ = asyncpg.Connection
+        return True
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("Postgres interface health check failed: %s", exc)
+        return False

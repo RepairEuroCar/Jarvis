@@ -6,6 +6,9 @@ from typing import List, Tuple
 from urllib.parse import urlparse
 
 from jarvis.core.main import Settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 SAFE_PATTERN = re.compile(r"^[A-Za-z0-9._/=: -]*$")
 
@@ -67,6 +70,17 @@ async def _run_command(command: List[str]) -> Tuple[str, str, int]:
         return "", f"{command[0]} not found", 1
     except Exception as e:
         return "", str(e), 1
+
+
+async def health_check() -> bool:
+    """Verify that core penetration tools are installed."""
+    import shutil
+
+    try:
+        return shutil.which("nmap") is not None
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("Kali tools health check failed: %s", exc)
+        return False
 
 
 async def run_nmap(target: str, options: str = "") -> str:

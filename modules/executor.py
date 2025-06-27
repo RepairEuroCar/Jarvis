@@ -4,6 +4,9 @@ import sys
 from pathlib import Path
 
 from reasoning.tracer import parse_tracebacks, suggest_fixes
+import logging
+
+logger = logging.getLogger(__name__)
 
 from command_dispatcher import CommandDispatcher, default_dispatcher
 from core.metrics.module_usage import track_usage
@@ -120,5 +123,24 @@ def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> Non
 
 
 register_commands(default_dispatcher)
+
+
+async def health_check() -> bool:
+    """Ensure Python executable is accessible."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "--version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+        ok = proc.returncode == 0
+        if not ok:
+            logger.error("executor health check exit code %s", proc.returncode)
+        return ok
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("Executor health check failed: %s", exc)
+        return False
 
 __all__ = ["run", "review_failures", "register_commands"]
