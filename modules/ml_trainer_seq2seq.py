@@ -1,4 +1,7 @@
-# modules/ml_trainer_seq2seq.py
+"""Training utilities for sequence-to-sequence models."""
+
+REQUIRES = ["torch"]
+
 import asyncio
 import json
 import os

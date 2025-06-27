@@ -2,6 +2,8 @@
 """
 Основной класс VoiceInterface: инициализация, прослушка, остановка
 """
+REQUIRES = ["sounddevice", "vosk"]
+
 import asyncio
 import json
 import os

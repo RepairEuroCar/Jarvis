@@ -8,6 +8,8 @@ implementation lightweight for the test suite.
 
 from __future__ import annotations
 
+REQUIRES = ["aiofiles", "faker", "loguru", "pydantic"]
+
 import json
 import random
 import re
