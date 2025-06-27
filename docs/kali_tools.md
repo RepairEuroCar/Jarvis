@@ -48,3 +48,28 @@ kali_tools.reload_allowed_networks()
 
 The function reloads the CIDR list from the configuration or the
 `JARVIS_ALLOWED_NETWORKS` environment variable.
+
+### Missing packages and safe mode
+
+Modules that rely on extra Python packages declare them in a `required_packages` list. If a dependency is absent the module enters **safe mode** and its helpers are disabled until the package is installed.
+
+Example snippet from `config.yaml`:
+
+```yaml
+kali_tools:
+  required_packages:
+    - yara
+```
+
+Startup message when `yara` is missing:
+
+```
+WARNING kali_tools: missing package 'yara', starting in safe mode
+```
+
+After installing the package reload the module to exit safe mode:
+
+```bash
+pip install yara
+reload --module=kali_tools
+```

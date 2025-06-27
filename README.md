@@ -63,6 +63,10 @@ to limit network commands to known networks. After modifying the file or
 the `JARVIS_ALLOWED_NETWORKS` environment variable you can reload the
 values at runtime by calling `kali_tools.reload_allowed_networks()`.
 
+### Module configuration
+
+Each optional module can define its own settings. The new `required_packages` list specifies Python packages that must be installed. If any package is missing, the module starts in **safe mode** and its commands become no-ops until dependencies are installed. Install the missing package and run `reload --module=<name>` to leave safe mode.
+
 ### Logging
 
 Logging is initialised by calling `utils.logger.setup_logging()` which is
