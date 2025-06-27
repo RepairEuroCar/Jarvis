@@ -77,6 +77,32 @@ from utils.logger import setup_logging
 setup_logging(level=logging.DEBUG)
 ```
 
+### Configuration hot-reload
+
+Jarvis watches `config/config.yaml` at runtime. When one of the monitored
+sections changes the corresponding subsystem is updated automatically. Use the
+`reload_config` command to trigger a manual reload of a specific section.
+
+Example:
+
+```bash
+reload_config --section=logging
+```
+
+YAML structure:
+
+```yaml
+logging:
+  level: DEBUG
+
+rate_limit:
+  requests_per_minute: 60
+
+module_states:
+  ml_trainer_seq2seq: false
+  sql_interface: true
+```
+
 ## Security tool wrappers
 
 Jarvis exposes asynchronous helpers for several security utilities through

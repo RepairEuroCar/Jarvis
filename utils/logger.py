@@ -16,12 +16,15 @@ _LOGGER: Optional[logging.Logger] = None
 def setup_logging(level: int = logging.INFO) -> logging.Logger:
     """Configure and return the Jarvis logger."""
     global _LOGGER
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        stream=sys.stdout,
-    )
+    if not logging.getLogger().handlers:
+        logging.basicConfig(
+            level=level,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+            stream=sys.stdout,
+        )
+    logging.getLogger().setLevel(level)
     logger = logging.getLogger("jarvis")
+    logger.setLevel(level)
     _LOGGER = logger
     return logger
 

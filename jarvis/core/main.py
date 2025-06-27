@@ -24,7 +24,7 @@ from transitions import Machine
 from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.core.agent_loop import AgentLoop
-from jarvis.core.module_manager import ModuleManager
+from jarvis.core.module_manager import ModuleManager, ModuleState
 from jarvis.core.sensor_manager import ScheduledTask, SensorManager
 from jarvis.event_queue import EventQueue
 from jarvis.goal_manager import GoalManager
@@ -36,6 +36,7 @@ from modules.git_manager import GitManager
 from utils.update_checker import check_for_updates
 from utils.linter import AstLinter
 from utils.logger import get_logger, setup_logging
+from core.config_reloader import ConfigReloader
 from core.events import register_event_emitter
 from core.module_registry import register_module_supplier
 import core.system_initializer  # noqa: F401 - triggers diagnostics startup
@@ -87,7 +88,8 @@ class Settings(BaseSettings):
                     data = yaml.safe_load(f) or {}
             except Exception as e:
                 logger.warning(f"Failed to read {yaml_path}: {e}")
-        return cls(**data)
+        allowed = {k: v for k, v in data.items() if k in cls.__fields__}
+        return cls(**allowed)
 
 
 @dataclass
@@ -139,6 +141,7 @@ class Jarvis:
         )
         self.agent_loop = None
         self._pending_question: Optional[str] = None
+        self.rate_limit: Dict[str, Any] = {}
         # Initialize per-instance cache for input parsing
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
             self._parse_input_uncached
@@ -150,6 +153,12 @@ class Jarvis:
             self.settings.extra_plugin_dirs,
         )
 
+        self.config_reloader = ConfigReloader(config_path)
+        self.config_reloader.subscribe("logging", self._on_logging_update)
+        self.config_reloader.subscribe("rate_limit", self._on_rate_limit_update)
+        self.config_reloader.subscribe("module_states", self._on_module_states_update)
+
+
     def _setup_logging(self):
         level = getattr(logging, str(self.settings.log_level).upper(), logging.INFO)
         setup_logging(level=level)
@@ -160,6 +169,27 @@ class Jarvis:
         self.machine.add_transition("sleep", "*", "sleeping")
         self.machine.add_transition("listen", "idle", "listening")
         self.machine.add_transition("process", "listening", "processing")
+
+    # ------------------------------------------------------------------
+    # Config reload callbacks
+    # ------------------------------------------------------------------
+    def _on_logging_update(self, cfg: Dict) -> None:
+        level = cfg.get("level") or cfg.get("log_level")
+        if level:
+            lvl = getattr(logging, str(level).upper(), logging.INFO)
+            setup_logging(level=lvl)
+
+    def _on_rate_limit_update(self, cfg: Dict) -> None:
+        self.rate_limit = cfg
+
+    def _on_module_states_update(self, cfg: Dict) -> None:
+        for name, enabled in cfg.items():
+            state = self.module_manager.module_states.get(name)
+            loaded = state == ModuleState.LOADED
+            if enabled and not loaded:
+                asyncio.create_task(self.module_manager.load_module(name))
+            elif not enabled and loaded:
+                asyncio.create_task(self.module_manager.unload_module(name))
 
     @property
     def memory(self) -> MemoryManager:
