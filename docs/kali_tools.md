@@ -22,6 +22,8 @@ Available functions:
 - `run_mitmproxy`
 
 `run_yara`, `run_volatility` and `run_mitmproxy` depend on optional utilities.
+List these in a module's `required_packages` so Jarvis can fall back to safe
+mode when they are unavailable.
 
 - **YARA** – signature heuristics scanning.
   ```python

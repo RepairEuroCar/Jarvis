@@ -316,6 +316,8 @@ After restarting Jarvis you can invoke the command by typing `hello`.
 - Plugin file not placed inside `plugins/` or missing the `.py` extension.
 - Forgetting to define `register()` in the module.
 - Import errors caused by missing dependencies.
+- Missing Python libraries can be listed in a module's `required_packages`.
+  If any are absent the module starts in safe mode and skips initialisation.
 
 ### Troubleshooting plugin import errors
 

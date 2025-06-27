@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import importlib.util
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -29,6 +30,7 @@ class ModuleState(Enum):
     LOADED = auto()
     ERROR = auto()
     RELOADING = auto()
+    SAFE_MODE = auto()
 
 
 class ModuleEvent(BaseModel):
@@ -41,6 +43,7 @@ class ModuleConfig(BaseModel):
     enabled: bool = True
     priority: int = 50
     dependencies: List[str] = []
+    required_packages: List[str] = []
     sandboxed: bool = False
     expected_hash: Optional[str] = None
     resource_limits: Dict[str, int] = {"cpu_time": 1, "memory_mb": 256}
@@ -164,6 +167,17 @@ class ModuleManager:
                 self.module_states[module_name] = ModuleState.ERROR
                 return False
 
+            missing = self._check_required_packages(module_config)
+            if missing:
+                logger.error(
+                    f"Module {module_name} missing required packages: {', '.join(missing)}"
+                )
+                default_flag_manager.flag(
+                    module_name, f"Missing packages: {', '.join(missing)}"
+                )
+                self.module_states[module_name] = ModuleState.SAFE_MODE
+                return False
+
             if not await self._load_dependencies(module_name, module_config):
                 self.module_states[module_name] = ModuleState.ERROR
                 return False
@@ -263,6 +277,13 @@ class ModuleManager:
         self, module_name: str, config: ModuleConfig
     ) -> bool:
         return True
+
+    def _check_required_packages(self, config: ModuleConfig) -> List[str]:
+        missing = []
+        for pkg in config.required_packages:
+            if importlib.util.find_spec(pkg) is None:
+                missing.append(pkg)
+        return missing
 
     async def _load_dependencies(self, module_name: str, config: ModuleConfig) -> bool:
         for dep in config.dependencies:
