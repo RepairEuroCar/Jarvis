@@ -332,13 +332,14 @@ required packages are installed. When creating a package directory, include an
 
 Modules receive a small configuration dictionary when loaded. In addition to
 fields like `enabled` and `dependencies` you can now specify a
-`requirements` list. Each item is a pip-style package specifier that must be
-importable before the module starts.
+`required_packages` list. Each item is a pip-style package name that must be
+importable before the module starts. Missing packages place the module in
+**safe mode** and skip initialisation.
 
 ```yaml
 modules:
   postgres_interface:
-    requirements:
+    required_packages:
       - asyncpg>=0.29
 ```
 

@@ -13,13 +13,14 @@ are resumed.
 ## Module configuration
 
 The `ModuleManager` reads configuration from `config/config.yaml`. Each module
-section accepts a `requirements` list containing pip-style package specifiers.
-They must be importable before the module starts.
+section accepts a `required_packages` list containing pip-style package names.
+They must be importable before the module starts. Missing packages put the
+module into **safe mode** and skip setup.
 
 ```yaml
 modules:
   git_manager:
-    requirements:
+    required_packages:
       - gitpython>=3.1
 ```
 
