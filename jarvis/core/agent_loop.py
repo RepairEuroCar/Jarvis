@@ -18,7 +18,7 @@ class AgentLoop:
 
     def __init__(self, jarvis: Any) -> None:
         self.jarvis = jarvis
-        self.queue = EventQueue()
+        self.queue = EventQueue(jarvis.settings.event_channels)
         self._running = False
         self._runner: asyncio.Task | None = None
 

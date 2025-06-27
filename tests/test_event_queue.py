@@ -47,3 +47,27 @@ async def test_event_queue_stop():
     await eq.stop()
     assert eq._running is False
     assert eq._worker is None
+
+
+@pytest.mark.asyncio
+async def test_event_queue_secure_channel():
+    eq = EventQueue({"secret": "tok"})
+    await eq.start()
+
+    received = []
+
+    def listener(value):
+        received.append(value)
+
+    # correct token
+    eq.subscribe("secret", listener, token="tok")
+    await eq.emit("secret", 5, token="tok")
+    await asyncio.sleep(0.05)
+    assert received == [5]
+
+    with pytest.raises(ValueError):
+        eq.subscribe("secret", listener, token="bad")
+    with pytest.raises(ValueError):
+        await eq.emit("secret", 6, token="bad")
+
+    await eq.stop()

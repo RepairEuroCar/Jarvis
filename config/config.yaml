@@ -20,3 +20,8 @@ autoload_modules:
   voice_interface: 10
   sql_interface: 50
 
+# Tokens to secure event channels
+event_channels:
+  system_updates: my-system-token
+  user_notifications: user-token
+
