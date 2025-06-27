@@ -2,6 +2,8 @@ import asyncio
 import threading
 from functools import partial
 from typing import Any, Optional
+import re
+import time
 
 import pyttsx3
 import speech_recognition as sr
@@ -77,14 +79,40 @@ class VoiceInterface:
                 audio = await asyncio.get_event_loop().run_in_executor(
                     None, self.recognizer.listen, source, 5
                 )
+                language = self.jarvis.settings.recognition_language
                 func = partial(
                     self.recognizer.recognize_google,
                     audio,
-                    language=self.jarvis.settings.recognition_language,
+                    language=language,
                 )
-                text = await asyncio.get_event_loop().run_in_executor(None, func)
-                logger.info(f"Распознано: {text}")
-                return text.lower()
+                start = time.perf_counter()
+                status: Any = 200
+                result: Optional[str] = None
+                try:
+                    text = await asyncio.get_event_loop().run_in_executor(
+                        None, func
+                    )
+                    logger.info(f"Распознано: {text}")
+                    result = text.lower()
+                except sr.WaitTimeoutError:
+                    status = "timeout"
+                    logger.warning("Таймаут ожидания речи")
+                except sr.RequestError as e:
+                    match = re.search(r"status *(\d+)", str(e))
+                    status = int(match.group(1)) if match else "error"
+                    logger.error(f"Ошибка распознавания: {e}")
+                except Exception as e:
+                    status = "error"
+                    logger.error(f"Ошибка распознавания: {e}")
+                finally:
+                    duration_ms = (time.perf_counter() - start) * 1000
+                    logger.info(
+                        "HTTP POST https://speech.googleapis.com status=%s duration=%.2fms language=%s",
+                        status,
+                        duration_ms,
+                        language,
+                    )
+                return result
             except sr.WaitTimeoutError:
                 logger.warning("Таймаут ожидания речи")
             except Exception as e:

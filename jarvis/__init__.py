@@ -32,3 +32,16 @@ for alias, target in _module_map.items():
         sys.modules[f"{__name__}.{alias}"] = importlib.import_module(target)
     except Exception:
         pass
+
+# Expose modules as the ``jarvis.modules`` subpackage
+for path in (ROOT / "modules").glob("*.py"):
+    mod_name = path.stem
+    if mod_name == "__init__":
+        continue
+    try:
+        sys.modules[f"jarvis.modules.{mod_name}"] = importlib.import_module(
+            f"modules.{mod_name}"
+        )
+    except Exception:
+        # Skip modules that fail to import due to optional dependencies
+        pass

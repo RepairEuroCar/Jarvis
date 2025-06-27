@@ -1,4 +1,5 @@
 # Jarvis
+[![codecov](https://codecov.io/gh/OWNER/REPO/branch/main/graph/badge.svg)](https://codecov.io/gh/OWNER/REPO)
 
 This project is a simple voice assistant prototype. To start the assistant run:
 
@@ -334,6 +335,33 @@ includes any warnings in the output summary.
 ```bash
 analyze_report src/ --format=json
 ```
+
+## Generating core tests
+
+The `scripts/generate_core_tests.py` helper scans recent commits for new
+functions inside `jarvis/core` and `core`. For each detected function it runs
+the built-in test generator and writes the results under `tests/generated/`.
+
+Run it with the default range to inspect the last commit:
+
+```bash
+python scripts/generate_core_tests.py
+```
+
+Specify a different git diff range if needed:
+
+```bash
+python scripts/generate_core_tests.py HEAD~2
+```
+## Python and ML utilities
+
+Jarvis provides helper commands for development tasks:
+- `python.create_script --name=app --skeleton=cli` creates a basic script.
+- `python.run_tests --target=path` runs tests and lint.
+- `ml.create_experiment --name=exp --config=cfg.json` prepares an experiment folder.
+- `codex.executor.run --path=dir` executes tests and linting via the
+  **CodexExecutor** wrapper located at `codex/executor.py`.
+
 
 ## Python reference
 
