@@ -31,7 +31,7 @@ async def test_microphone_loop_emits(monkeypatch):
 
     await sm._microphone_loop()
 
-    assert ("voice_command", ("hello",), {}) in events
+    assert ("voice_command", ("hello",), {"token": None}) in events
 
 
 @pytest.mark.asyncio
@@ -61,3 +61,4 @@ async def test_scheduled_loop_emits_tick(monkeypatch):
 
     assert events and events[0][0] == "scheduled_tick"
     assert events[0][1]["task"] is task
+    assert events[0][1]["token"] is None
