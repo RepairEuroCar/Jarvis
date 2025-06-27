@@ -3,6 +3,7 @@ import time
 import asyncio
 from typing import Any
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,10 @@ class SelfDiagnostics:
         self.running = False
         if self._thread:
             self._thread.join(timeout=0)
+
+    def get_pid(self) -> int:
+        """Return the current process ID for resource monitoring."""
+        return os.getpid()
 
     def _run(self) -> None:
         while self.running:

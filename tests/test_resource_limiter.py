@@ -47,3 +47,23 @@ def test_resource_limiter_flags_module():
 
     assert default_flag_manager.is_flagged("dummy")
     assert any(e[0] == "ModuleAnomalyFlagged" for e in events)
+
+
+def test_resource_limiter_skips_module_without_pid():
+    events = []
+    register_event_emitter(lambda n, d: events.append((n, d)))
+
+    class NoPid:
+        name = "nopid"
+
+        def get_resource_quota(self) -> dict:
+            return {"memory": 0, "cpu": 0}
+
+    register_module_supplier(lambda: [NoPid()])
+
+    limiter = ResourceLimiter(interval=0.1)
+    limiter.start()
+    time.sleep(0.2)
+    limiter.stop()
+
+    assert events == []

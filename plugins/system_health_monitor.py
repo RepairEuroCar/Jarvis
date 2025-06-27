@@ -2,6 +2,7 @@ import psutil
 import time
 import threading
 from datetime import datetime
+import os
 
 
 class SystemHealthMonitor:
@@ -20,6 +21,10 @@ class SystemHealthMonitor:
         self.running = False
         if self.thread.is_alive():
             self.thread.join()
+
+    def get_pid(self) -> int:
+        """Return the current process ID for monitoring."""
+        return os.getpid()
 
     def _monitor(self) -> None:
         while self.running:
