@@ -2,6 +2,8 @@ import asyncio
 import threading
 from functools import partial
 from typing import Any, Optional
+import time
+import re
 
 import pyttsx3
 import speech_recognition as sr
@@ -77,12 +79,31 @@ class VoiceInterface:
                 audio = await asyncio.get_event_loop().run_in_executor(
                     None, self.recognizer.listen, source, 5
                 )
+                language = self.jarvis.settings.recognition_language
                 func = partial(
                     self.recognizer.recognize_google,
                     audio,
-                    language=self.jarvis.settings.recognition_language,
+                    language=language,
                 )
-                text = await asyncio.get_event_loop().run_in_executor(None, func)
+                status = 200
+                start = time.perf_counter()
+                try:
+                    text = await asyncio.get_event_loop().run_in_executor(None, func)
+                except sr.RequestError as e:
+                    match = re.search(r"(\d{3})", str(e))
+                    status = match.group(1) if match else "error"
+                    raise
+                except Exception:
+                    status = "error"
+                    raise
+                finally:
+                    duration_ms = (time.perf_counter() - start) * 1000
+                    logger.info(
+                        "HTTP POST https://speech.googleapis.com lang=%s status=%s duration=%.2fms",
+                        language,
+                        status,
+                        duration_ms,
+                    )
                 logger.info(f"Распознано: {text}")
                 return text.lower()
             except sr.WaitTimeoutError:
