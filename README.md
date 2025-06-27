@@ -322,7 +322,47 @@ After restarting Jarvis you can invoke the command by typing `hello`.
 If a plugin fails to load you will see warnings such as `Failed loading plugin`
 in the console output. Ensure the plugin has no syntax errors and that all
 required packages are installed. When creating a package directory, include an
-`__init__.py` file so the loader can detect it.
+
+### Module configuration
+
+Modules receive a small configuration dictionary when loaded. In addition to
+fields like `enabled` and `dependencies` you can now specify a
+`requirements` list. Each item is a pip-style package specifier that must be
+importable before the module starts.
+
+```yaml
+modules:
+  postgres_interface:
+    requirements:
+      - asyncpg>=0.29
+```
+
+Within a module you may also declare a `REQUIRES` constant. This works the same
+way as the configuration file and is merged automatically:
+
+```python
+# modules/postgres_interface.py
+REQUIRES = ["asyncpg>=0.29"]
+```
+
+The `ModuleManager` verifies all packages and logs a clear error if something is
+missing.
+
+### Registering fallbacks
+
+`FallbackManager` lets you specify backup callables for fragile commands. When a
+handler fails, the fallback is executed instead:
+
+```python
+from jarvis.core.fallback_manager import fallback_manager
+
+async def offline_status():
+    return "Service unavailable"
+
+fallback_manager.register("git.status", offline_status)
+```
+
+Use `fallback_manager.unregister(name)` to remove the handler.
 
 ## Project generation plugin
 
@@ -378,4 +418,5 @@ Jarvis provides helper commands for development tasks:
 ## Python reference
 
 For a refresher on Python basics see [docs/python_overview.md](docs/python_overview.md).
+Details on module options and fallbacks are documented in [docs/modules.md](docs/modules.md).
 
