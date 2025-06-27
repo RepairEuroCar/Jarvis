@@ -28,6 +28,7 @@ class ModuleState(Enum):
     LOADED = auto()
     ERROR = auto()
     RELOADING = auto()
+    SAFE_MODE = auto()
 
 
 class ModuleEvent(BaseModel):
@@ -40,6 +41,7 @@ class ModuleConfig(BaseModel):
     enabled: bool = True
     priority: int = 50
     dependencies: List[str] = []
+    required_packages: List[str] = []
     sandboxed: bool = False
     expected_hash: Optional[str] = None
     resource_limits: Dict[str, int] = {"cpu_time": 1, "memory_mb": 256}
@@ -160,6 +162,9 @@ class ModuleManager:
                 self.module_states[module_name] = ModuleState.ERROR
                 return False
 
+            if not await self._check_required_packages(module_name, module_config):
+                return False
+
             with time_operation(f"Module {module_name} load"):
                 async with default_profiler.profile_block(module_name, "init"):
                     module = await self._initialize_module(module_name, module_config)
@@ -252,6 +257,17 @@ class ModuleManager:
                 if not await self.load_module(dep):
                     logger.error(f"Dependency {dep} for {module_name} failed to load")
                     return False
+        return True
+
+    async def _check_required_packages(self, module_name: str, config: ModuleConfig) -> bool:
+        missing = [p for p in config.required_packages if importlib.util.find_spec(p) is None]
+        if missing:
+            logger.error(
+                f"Missing required packages for {module_name}: {', '.join(missing)}"
+            )
+            default_flag_manager.flag(module_name, "missing_required_packages")
+            self.module_states[module_name] = ModuleState.SAFE_MODE
+            return False
         return True
 
     async def _initialize_module(
