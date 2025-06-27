@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 import aiohttp
 
+from utils.http_logging import LoggedClientSession
 from utils.logger import get_logger
 
 logger = get_logger().getChild("git_manager")
@@ -38,7 +39,7 @@ class GitManager:
 
     async def _get_session(self):
         if self.session is None or self.session.closed:
-            self.session = aiohttp.ClientSession()
+            self.session = LoggedClientSession()
         return self.session
 
     async def _run_git_command(self, command_args, cwd=None):

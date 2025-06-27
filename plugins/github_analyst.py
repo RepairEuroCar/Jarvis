@@ -1,11 +1,10 @@
 import os
 import tempfile
 
-import aiohttp
-
 from jarvis.commands.registry import CommandCategory, CommandInfo
 from jarvis.core.main import RegisteredCommand
 from modules.analyzer import AdvancedCodeAnalyzer, _format_report
+from utils.http_logging import LoggedClientSession
 
 
 async def _get_github_token(jarvis):
@@ -24,7 +23,7 @@ async def _gh_get_json(url: str, token: str):
         "Authorization": f"token {token}",
         "Accept": "application/vnd.github.v3+json",
     }
-    async with aiohttp.ClientSession() as session:
+    async with LoggedClientSession() as session:
         async with session.get(url, headers=headers) as resp:
             if resp.status != 200:
                 return None, f"GitHub API error {resp.status}: {await resp.text()}"
@@ -72,7 +71,7 @@ def register(jarvis) -> None:
             filename = f.get("filename")
             if not raw or not filename.endswith(".py"):
                 continue
-            async with aiohttp.ClientSession() as session:
+            async with LoggedClientSession() as session:
                 async with session.get(raw) as resp:
                     if resp.status != 200:
                         continue
