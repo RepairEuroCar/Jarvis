@@ -73,6 +73,9 @@ autoload_modules:
 ```
 You can reload this configuration at runtime using the `reload_config` CLI command.
 
+`dynamic_scaler` options in `config.yaml` control when modules are paused based
+on system load. Increase the thresholds if your modules pause too often.
+
 ### Logging
 
 Logging is initialised by calling `utils.logger.setup_logging()` which is

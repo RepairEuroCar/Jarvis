@@ -31,6 +31,7 @@ class ModuleState(Enum):
     ERROR = auto()
     RELOADING = auto()
     SAFE_MODE = auto()
+    PAUSED = auto()
 
 
 class ModuleEvent(BaseModel):
@@ -135,6 +136,7 @@ class ModuleManager:
         self.module_states: Dict[str, ModuleState] = {}
         self.module_configs: Dict[str, ModuleConfig] = {}
         self.module_events: Dict[str, List[ModuleEvent]] = {}
+        self.paused_modules: set[str] = set()
         self.fallback_manager = FallbackManager()
         self.lock = asyncio.Lock()
         self.MIN_MODULE_VERSION = "1.0.0"
@@ -224,6 +226,35 @@ class ModuleManager:
         if not await self.unload_module(module_name):
             return False
         return await self.load_module(module_name, config.dict())
+
+    @module_error_handler
+    async def pause_module(self, module_name: str) -> bool:
+        async with self.lock:
+            if module_name not in self.modules:
+                logger.warning(f"Module {module_name} not loaded")
+                return False
+            module = self.modules.pop(module_name)
+            if hasattr(module, "cleanup"):
+                with time_operation(f"Module {module_name} pause"):
+                    await module.cleanup()
+            module_path = f"jarvis.modules.{module_name}"
+            if module_path in sys.modules:
+                del sys.modules[module_path]
+            self.paused_modules.add(module_name)
+            self.module_states[module_name] = ModuleState.PAUSED
+            logger.info(f"Module {module_name} paused")
+            return True
+
+    @module_error_handler
+    async def resume_module(self, module_name: str) -> bool:
+        if module_name not in self.paused_modules:
+            logger.warning(f"Module {module_name} not paused")
+            return False
+        config = self.module_configs.get(module_name)
+        result = await self.load_module(module_name, config.dict() if config else None)
+        if result:
+            self.paused_modules.discard(module_name)
+        return result
 
     async def load_modules(self, modules: Dict[str, ModuleConfig]) -> None:
         for name, cfg in sorted(modules.items(), key=lambda x: x[1].priority):

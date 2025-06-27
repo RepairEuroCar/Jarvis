@@ -3,6 +3,13 @@
 Jarvis loads optional functionality as separate modules. Each module exposes a
 `setup(jarvis, config)` coroutine and may define other helpers.
 
+## Dynamic Scaler
+
+The `dynamic_scaler` module monitors system CPU and memory usage. When the
+configured thresholds are exceeded it pauses low priority modules using
+`ModuleManager.pause_module`. Once utilization drops, previously paused modules
+are resumed.
+
 ## Module configuration
 
 The `ModuleManager` reads configuration from `config/config.yaml`. Each module
