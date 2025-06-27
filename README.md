@@ -424,6 +424,27 @@ Jarvis provides helper commands for development tasks:
 - `codex.executor.run --path=dir` executes tests and linting via the
   **CodexExecutor** wrapper located at `codex/executor.py`.
 
+## Secure Event Channels
+
+Jarvis can protect events with per-channel tokens. Define them in
+`config/config.yaml` under `event_channels` or register them in code:
+
+```python
+from jarvis.event_queue import EventQueue
+
+queue = EventQueue({"alerts": "token123"})
+# or queue.register_channel("alerts", "token123")
+
+def handler(data):
+    print("got", data)
+
+queue.subscribe("alerts", handler, token="token123")
+await queue.emit("alerts", {"msg": "hi"}, token="token123")
+```
+
+When a token is configured for a channel, subscriptions and emitted events must
+include the matching token or a `ValueError` is raised.
+
 
 ## Python reference
 

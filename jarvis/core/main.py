@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     intent_model_path: str = "models/intent"
     clarify_threshold: float = 0.5
     autoload_modules: Dict[str, int] = {}
+    event_channels: Dict[str, str] = {}
 
     class Config:
         env_file = ".env"
@@ -132,7 +133,7 @@ class Jarvis:
         self.nlu = NLUProcessor(model_path=self.settings.intent_model_path)
         self.brain = Brain(self)
         self.goals = GoalManager(self)
-        self.event_queue = EventQueue()
+        self.event_queue = EventQueue(self.settings.event_channels)
         self.sensor_manager = SensorManager(self, self.event_queue)
         self.module_manager = ModuleManager(self)
         register_module_supplier(lambda: list(self.module_manager.modules.values()))
