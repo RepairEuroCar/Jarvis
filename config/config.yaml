@@ -20,3 +20,8 @@ autoload_modules:
   voice_interface: 10
   sql_interface: 50
 
+dynamic_scaler:
+  check_interval: 5
+  cpu_threshold: 80
+  memory_threshold: 80
+

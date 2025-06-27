@@ -85,6 +85,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_prefix = "JARVIS_"
+        extra = "ignore"
 
     @classmethod
     def load(cls, yaml_path: str = "config.yaml") -> "Settings":
