@@ -38,6 +38,30 @@ mode when they are unavailable.
   await run_mitmproxy("-p 8080")
   ```
 
+## Handling missing dependencies
+
+Declare optional tools in `required_packages` under the module's configuration:
+
+```yaml
+modules:
+  kali_tools:
+    required_packages:
+      - yara
+```
+
+When `yara` is missing the startup log shows:
+
+```
+ERROR - Module kali_tools missing required packages: yara
+WARNING - kali_tools entered SAFE_MODE. Commands disabled.
+```
+
+Install the package and reload the module to exit safe mode:
+
+```
+reload --module=kali_tools
+```
+
 ## Updating allowed networks
 
 Allowed target networks are read from `config/config.yaml` when the module is
