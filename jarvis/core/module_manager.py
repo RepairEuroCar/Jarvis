@@ -200,6 +200,10 @@ class ModuleManager:
             return False
         return await self.load_module(module_name, config.dict())
 
+    async def load_modules(self, modules: Dict[str, ModuleConfig]) -> None:
+        for name, cfg in sorted(modules.items(), key=lambda x: x[1].priority):
+            await self.load_module(name, cfg.dict())
+
     # ------------------------
     # ДОПОЛНИТЕЛЬНЫЕ МЕТОДЫ
     # ------------------------

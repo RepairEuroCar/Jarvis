@@ -24,7 +24,7 @@ from transitions import Machine
 from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.core.agent_loop import AgentLoop
-from jarvis.core.module_manager import ModuleManager
+from jarvis.core.module_manager import ModuleManager, ModuleConfig
 from jarvis.core.sensor_manager import ScheduledTask, SensorManager
 from jarvis.event_queue import EventQueue
 from jarvis.goal_manager import GoalManager
@@ -193,6 +193,9 @@ class Jarvis:
     async def load_module(self, name: str, config: Optional[Dict] = None) -> bool:
         """Load a Jarvis module via :class:`ModuleManager`."""
         return await self.module_manager.load_module(name, config)
+
+    async def load_configured_modules(self, modules: Dict[str, ModuleConfig]) -> None:
+        await self.module_manager.load_modules(modules)
 
     async def unload_module(self, name: str) -> bool:
         """Unload a previously loaded Jarvis module."""
