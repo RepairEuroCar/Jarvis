@@ -209,8 +209,9 @@ curl -X POST -H 'Content-Type: application/json' \
      -d '{"text": "help"}' http://localhost:8001/command
 ```
 
-The service exposes `/command` and `/status` endpoints for issuing commands and
-querying the current state.
+The service exposes `/command`, `/status`, `/uptime` and `/selfcheck` endpoints
+for issuing commands, querying the current state, retrieving uptime and checking
+module health.
 
 ### Code formatting
 
