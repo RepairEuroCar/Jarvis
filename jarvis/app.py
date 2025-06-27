@@ -546,7 +546,12 @@ class Jarvis:
         logger.debug(
             f"Публикация события: {event_name} с {args}, {kwargs}, priority={priority}"
         )
-        await self.event_queue.emit(event_name, *args, priority=priority, **kwargs)
+        token = None
+        if hasattr(self.event_queue, "get_token"):
+            token = self.event_queue.get_token(event_name)
+        await self.event_queue.emit(
+            event_name, *args, priority=priority, token=token, **kwargs
+        )
 
     def subscribe_event(self, event_name: str, listener: Callable):
         self.event_queue.subscribe(event_name, listener)
