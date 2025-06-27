@@ -1,0 +1,75 @@
+name: 🏷️ Авто-добавление метки auto-merge к PR
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+  workflow_dispatch:
+
+jobs:
+  label-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Проверка и добавление метки
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const label = "auto-merge";
+            const pr = context.payload.pull_request;
+
+            // Если запуск вручную, context.payload.pull_request может быть undefined.
+            if (!pr) {
+              const prs = await github.paginate(
+                github.rest.pulls.list,
+                {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: "open",
+                  per_page: 100,
+                }
+              );
+
+              for (const prItem of prs) {
+                const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prItem.number,
+                });
+
+                const hasLabel = currentLabels.some(l => l.name === label);
+
+                if (!hasLabel) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prItem.number,
+                    labels: [label],
+                  });
+                  console.log(`Метка '${label}' добавлена к PR #${prItem.number}`);
+                } else {
+                  console.log(`PR #${prItem.number} уже содержит метку '${label}'`);
+                }
+              }
+            } else {
+              // Обычный запуск на событии PR
+              const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+              });
+
+              const hasLabel = currentLabels.some(l => l.name === label);
+
+              if (!hasLabel) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  labels: [label],
+                });
+                console.log(`Метка '${label}' добавлена к PR #${pr.number}`);
+              } else {
+                console.log(`PR #${pr.number} уже содержит метку '${label}'`);
+              }
+            }
