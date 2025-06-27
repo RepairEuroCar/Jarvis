@@ -36,21 +36,22 @@ jobs:
       - name: Run tests
         run: pytest --maxfail=3 --disable-warnings || echo '::error::Tests failed'
 
+
   codex-agent:
-    name: "🧠 Auto-Fix with Codex"
-    needs: lint-test
-    if: ${{ failure() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      name: "🧠 Auto-Fix with Codex"
+      needs: lint-test
+      if: ${{ failure() }}
+      runs-on: ubuntu-latest
+  env:
+    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    BOT_PUSH_TOKEN: ${{ secrets.BOT_PUSH_TOKEN }}
+    GITHUB_REPOSITORY: ${{ github.repository }}
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Install Codex Agent dependencies
-        run: pip install openai gitpython
+    - name: Install Codex Agent dependencies
+      run: pip install openai gitpython requests
 
-      - name: Run Codex Fix Agent
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          BOT_PUSH_TOKEN: ${{ secrets.BOT_PUSH_TOKEN }}
-        run: |
-          python scripts/codex_fix_and_push.py
+    - name: Run Codex Fix Agent
+      run: python scripts/codex_fix_and_push.py
