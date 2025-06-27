@@ -102,10 +102,10 @@ class VoiceInterface:
                     duration_ms = (time.perf_counter() - start) * 1000
                     logger.info(
                         "HTTP POST https://speech.googleapis.com "
-                        "lang=%s status=%s duration=%.2fms",
-                        lang,
+                        "status=%s duration=%.2fms lang=%s",
                         status,
                         duration_ms,
+                        lang,
                     )
                 logger.info(f"Распознано: {text}")
                 return text.lower()
