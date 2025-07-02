@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from jarvis.core.sensor_manager import SensorManager, ScheduledTask
+from jarvis.core.sensor_manager import SensorManager
 
 
 class DummyJarvis:
@@ -16,8 +16,14 @@ class DummyJarvis:
 @pytest.mark.asyncio
 async def test_microphone_loop_emits(monkeypatch):
     events = []
-    event_queue = SimpleNamespace(emit=AsyncMock(side_effect=lambda name, *args, **kw: events.append((name, args, kw))))
-    voice = SimpleNamespace(listen=AsyncMock(side_effect=["hello", asyncio.CancelledError()]))
+    event_queue = SimpleNamespace(
+        emit=AsyncMock(
+            side_effect=lambda name, *args, **kw: events.append((name, args, kw))
+        )
+    )
+    voice = SimpleNamespace(
+        listen=AsyncMock(side_effect=["hello", asyncio.CancelledError()])
+    )
     jarvis = DummyJarvis(voice)
     sm = SensorManager(jarvis, event_queue)
 
@@ -37,7 +43,9 @@ async def test_microphone_loop_emits(monkeypatch):
 @pytest.mark.asyncio
 async def test_scheduled_loop_emits_tick(monkeypatch):
     events = []
-    event_queue = SimpleNamespace(emit=AsyncMock(side_effect=lambda name, **kw: events.append((name, kw))))
+    event_queue = SimpleNamespace(
+        emit=AsyncMock(side_effect=lambda name, **kw: events.append((name, kw)))
+    )
     jarvis = DummyJarvis(None)
     sm = SensorManager(jarvis, event_queue)
 
@@ -52,6 +60,7 @@ async def test_scheduled_loop_emits_tick(monkeypatch):
 
     async def fast_sleep(_):
         await original_sleep(0)
+
     monkeypatch.setattr(asyncio, "sleep", fast_sleep)
 
     loop_task = asyncio.create_task(sm._scheduled_loop())

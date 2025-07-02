@@ -1,0 +1,55 @@
+# 📄 .pre-commit-config.yaml
+repos:
+  # Базовые хуки для всех проектов
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-byte-order-marker    # Проверка BOM
+      - id: end-of-file-fixer         # Фикс конца файла
+      - id: trailing-whitespace       # Удаление пробелов в конце строк
+      - id: mixed-line-ending         # Единообразие переносов строк
+      - id: check-yaml                # Валидация YAML
+      - id: check-json                # Валидация JSON
+      - id: check-toml                # Валидация TOML
+      - id: check-added-large-files   # Блокировка больших файлов (>500KB)
+      - id: detect-private-key        # Защита от случайного коммита ключей
+
+  # Python-хуки
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=120]
+
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        name: isort (python)
+        args: ["--profile", "black", "--line-length=120"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.1
+    hooks:
+      - id: ruff
+        args: [--fix, --show-fixes]
+
+  # Дополнительные полезные хуки
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.8.3
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.1
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-pyyaml]
+        args: [--ignore-missing-imports]
+ - repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.3.7
+  hooks:
+    - id: ruff
+      args: [--fix, --show-fixes]

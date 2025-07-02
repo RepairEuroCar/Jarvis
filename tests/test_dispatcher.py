@@ -151,8 +151,12 @@ async def test_load_unload_reload_with_manager(monkeypatch):
         return True
 
     monkeypatch.setattr(jarvis.module_manager, "load_module", fake_load, raising=False)
-    monkeypatch.setattr(jarvis.module_manager, "unload_module", fake_unload, raising=False)
-    monkeypatch.setattr(jarvis.module_manager, "reload_module", fake_reload, raising=False)
+    monkeypatch.setattr(
+        jarvis.module_manager, "unload_module", fake_unload, raising=False
+    )
+    monkeypatch.setattr(
+        jarvis.module_manager, "reload_module", fake_reload, raising=False
+    )
 
     result = await dispatcher.dispatch("load --module=demo")
     assert result == "Module demo loaded"

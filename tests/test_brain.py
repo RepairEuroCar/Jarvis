@@ -4,8 +4,8 @@
 
 import pytest
 
-from jarvis.core.main import Jarvis
 from jarvis.app import Jarvis as SimpleJarvis
+from jarvis.core.main import Jarvis
 
 
 @pytest.mark.asyncio
@@ -127,7 +127,11 @@ async def test_explain_solution_command_last_two():
     await jarvis.brain.log_thoughts("task-three", {"status": "c"})
 
     result = await SimpleJarvis.explain_solution_command(jarvis, "2")
-    problem_lines = [line for line in result.splitlines() if line.startswith("\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430:")]
+    problem_lines = [
+        line
+        for line in result.splitlines()
+        if line.startswith("\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430:")
+    ]
     assert len(problem_lines) == 2
     assert "task-two" in result
     assert "task-three" in result

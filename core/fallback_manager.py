@@ -1,15 +1,15 @@
-import asyncio
-from typing import Callable, Awaitable, Dict
+from collections.abc import Awaitable
+from typing import Callable
 
-from utils.logger import get_logger
 from core.events import emit_event
+from utils.logger import get_logger
 
 
 class FallbackManager:
     """Manage fallback handlers for Jarvis modules."""
 
     def __init__(self) -> None:
-        self._handlers: Dict[str, Callable[[Exception], Awaitable[None]]] = {}
+        self._handlers: dict[str, Callable[[Exception], Awaitable[None]]] = {}
         self._logger = get_logger().getChild("FallbackManager")
 
     def register_fallback(

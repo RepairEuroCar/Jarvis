@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import types
+
 import pytest
 
 from modules.git_manager import GitManager
@@ -8,7 +9,7 @@ from modules.git_manager import GitManager
 # stub sounddevice before importing VoiceInterface
 sd_stub = types.SimpleNamespace(query_devices=lambda: [{}])
 sys.modules.setdefault("sounddevice", sd_stub)
-from modules.voice_interface.interface import VoiceInterface, VoiceConfig
+from modules.voice_interface.interface import VoiceConfig, VoiceInterface
 
 
 @pytest.mark.asyncio
@@ -17,6 +18,7 @@ async def test_git_manager_health_check(monkeypatch):
 
     class Proc:
         returncode = 0
+
         async def communicate(self):
             return b"", b""
 

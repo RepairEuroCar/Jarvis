@@ -1,13 +1,19 @@
+"""Module usage statistics tracking and reporting."""
+
+import logging
+from typing import Dict
+
 from command_dispatcher import CommandDispatcher, default_dispatcher
 from core.metrics.module_usage import get_module_stats
-import logging
 
 logger = logging.getLogger(__name__)
 
 
-def _format_stats(stats: dict) -> str:
+def _format_stats(stats: Dict) -> str:
+    """Format module usage statistics for display."""
     if not stats:
         return "No module usage data."
+    
     lines = []
     for name, data in stats.items():
         line = (
@@ -24,7 +30,10 @@ def show_stats() -> str:
     return _format_stats(stats)
 
 
-def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> None:
+def register_commands(
+    dispatcher: CommandDispatcher = default_dispatcher
+) -> None:
+    """Register usage stats command."""
     dispatcher.register_command_handler("usage", "stats", show_stats)
 
 
@@ -36,8 +45,9 @@ async def health_check() -> bool:
     try:
         _ = get_module_stats()
         return True
-    except Exception as exc:  # pragma: no cover - best effort logging
+    except Exception as exc:
         logger.warning("Module usage health check failed: %s", exc)
         return False
+
 
 __all__ = ["show_stats", "register_commands"]

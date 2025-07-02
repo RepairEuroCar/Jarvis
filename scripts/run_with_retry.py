@@ -4,7 +4,7 @@ import sys
 
 def check_syntax(path: str) -> None:
     """Compile a Python file to detect syntax errors."""
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         source = f.read()
     compile(source, path, "exec")
 

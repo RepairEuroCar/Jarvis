@@ -4,7 +4,7 @@ from reasoning.tracer import parse_tracebacks, suggest_fixes
 def test_parse_traceback_extracts_info():
     text = (
         "Traceback (most recent call last):\n"
-        "  File \"a.py\", line 1, in <module>\n"
+        '  File "a.py", line 1, in <module>\n'
         "    foo()\n"
         "NameError: name 'foo' is not defined\n"
     )

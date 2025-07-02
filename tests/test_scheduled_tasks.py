@@ -17,4 +17,3 @@ async def test_scheduled_task_runs():
     await jarvis._on_scheduled_tick(task)
 
     assert called
-

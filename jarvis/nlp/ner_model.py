@@ -1,6 +1,6 @@
 """Named entity recognition utilities."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 try:
     import spacy
@@ -16,7 +16,7 @@ except Exception:  # pragma: no cover - optional dependency
 class NERModel:
     """Wrapper around spaCy or HuggingFace transformers for NER."""
 
-    def __init__(self, model_name: Optional[str] = None) -> None:
+    def __init__(self, model_name : None | [str] = None) -> None:
         self.model_name = model_name or "en_core_web_sm"
         self._model: Any = None
         self._is_spacy = False
@@ -37,7 +37,7 @@ class NERModel:
             except Exception:  # pragma: no cover - loading errors
                 self._model = None
 
-    def extract_entities(self, text: str) -> List[Dict[str, str]]:
+    def extract_entities(self, text: str) -> list[dict[str, str]]:
         """Return a list of entity dicts with ``text`` and ``label`` keys."""
         if self._model is None:
             raise RuntimeError("NERModel requires spaCy or transformers package")

@@ -1,12 +1,13 @@
 import asyncio
-from typing import Any, Callable, Dict, Iterable
+from collections.abc import Iterable
+from typing import Any, Callable
 
 
 class FallbackManager:
     """Manage optional fallbacks for callable execution."""
 
     def __init__(self) -> None:
-        self._fallbacks: Dict[str, Callable[..., Any]] = {}
+        self._fallbacks: dict[str, Callable[..., Any]] = {}
 
     def register(self, name: str, func: Callable[..., Any]) -> None:
         """Register *func* as fallback under *name*."""

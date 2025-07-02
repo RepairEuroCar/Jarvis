@@ -1,10 +1,10 @@
+import asyncio
 import sys
 import types
-import asyncio
 
 import pytest
 
-from jarvis.core.module_manager import ModuleManager, ModuleConfig
+from jarvis.core.module_manager import ModuleConfig, ModuleManager
 
 
 class DummyJarvis:

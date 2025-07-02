@@ -3,8 +3,7 @@ import json
 import os
 import shutil
 import time
-from typing import Any, Dict, Optional
-
+from typing import Any
 
 from utils.logger import get_logger
 
@@ -29,7 +28,7 @@ class MemoryManager:
         # Load memory synchronously to avoid event loop issues during init
         self.memory = self._initialize_memory()
 
-    def _initialize_memory(self) -> Dict[str, Any]:
+    def _initialize_memory(self) -> dict[str, Any]:
         """Инициализация структуры памяти (синхронно)"""
         base_structure = {
             "user_info": {"name": "User"},
@@ -82,7 +81,7 @@ class MemoryManager:
             logger.error(f"Ошибка сохранения: {e}")
             return False
 
-    def query(self, key: str) -> Optional[Any]:
+    def query(self, key: str) -> None | [Any]:
         """Получение данных по ключу"""
         try:
             parts = key.split(".")
@@ -123,7 +122,7 @@ class MemoryManager:
         except Exception:
             return False
 
-    def recall(self, key: str) -> Optional[Any]:
+    def recall(self, key: str) -> None | [Any]:
         """Извлечение данных из памяти"""
         try:
             keys = key.split(".")
@@ -134,10 +133,10 @@ class MemoryManager:
         except KeyError:
             return None
 
-    def search(self, query: str) -> Dict[str, Any]:
+    def search(self, query: str) -> dict[str, Any]:
         """Поиск значений по подстроке ключа."""
 
-        results: Dict[str, Any] = {}
+        results: dict[str, Any] = {}
 
         def _search(obj: Any, path: str) -> None:
             if isinstance(obj, dict):

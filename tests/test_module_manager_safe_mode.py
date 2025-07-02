@@ -1,10 +1,9 @@
 import importlib
-import types
 
 import pytest
 
-from jarvis.core.module_manager import ModuleManager, ModuleState
 from core.flags import default_flag_manager
+from jarvis.core.module_manager import ModuleManager, ModuleState
 
 
 class DummyJarvis:

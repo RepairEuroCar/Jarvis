@@ -3,7 +3,7 @@
 # -----------------------------
 import asyncio
 import re
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 from utils.logger import get_logger
 
@@ -13,7 +13,7 @@ logger = get_logger().getChild("Processor.Analytical")
 
 
 class AnalyticalThoughtProcessor(BaseThoughtProcessor):
-    async def _extract_metrics(self, data: Union[str, Dict]) -> Dict[str, Any]:
+    async def _extract_metrics(self, data: Union[str, dict]) -> dict[str, Any]:
         await asyncio.sleep(0.02)
         numbers = [int(n) for n in re.findall(r"\d+", str(data))]
         return {
@@ -22,7 +22,7 @@ class AnalyticalThoughtProcessor(BaseThoughtProcessor):
             "average": sum(numbers) / len(numbers) if numbers else 0,
         }
 
-    async def _find_patterns(self, data: Union[str, Dict]) -> List[str]:
+    async def _find_patterns(self, data: Union[str, dict]) -> list[str]:
         await asyncio.sleep(0.02)
         patterns = []
         if "повтор" in str(data).lower():
@@ -31,13 +31,13 @@ class AnalyticalThoughtProcessor(BaseThoughtProcessor):
             patterns.append("Обнаружены числовые последовательности (возможно, даты).")
         return patterns or ["Паттернов не найдено."]
 
-    async def _make_comparisons(self, data: Union[str, Dict]) -> Dict[str, str]:
+    async def _make_comparisons(self, data: Union[str, dict]) -> dict[str, str]:
         await asyncio.sleep(0.02)
         if "лучше" in str(data).lower() and "хуже" in str(data).lower():
             return {"comparison_type": "A vs B", "result": "Нужен детальный анализ."}
         return {"status": "Сравнений не произведено."}
 
-    def _generate_recommendation(self, analysis: Dict[str, Any]) -> str:
+    def _generate_recommendation(self, analysis: dict[str, Any]) -> str:
         metrics = analysis.get("metrics", {})
         patterns = analysis.get("patterns", [])
         if metrics.get("sum", 0) > 100 and any(

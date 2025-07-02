@@ -2,10 +2,9 @@ import asyncio
 import time
 from collections import defaultdict
 from functools import wraps
-from typing import Any, Callable, Coroutine, Dict
+from typing import Any, Callable
 
-
-module_stats: Dict[str, Dict[str, Any]] = defaultdict(
+module_stats: dict[str, dict[str, Any]] = defaultdict(
     lambda: {"calls": 0, "errors": 0, "avg_duration": 0.0}
 )
 
@@ -56,6 +55,6 @@ def track_usage(module_name: str) -> Callable[[Callable[..., Any]], Callable[...
     return decorator
 
 
-def get_module_stats() -> Dict[str, Dict[str, Any]]:
+def get_module_stats() -> dict[str, dict[str, Any]]:
     """Return collected module usage statistics."""
     return dict(module_stats)

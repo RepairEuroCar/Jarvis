@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import list
 
 from jarvis.commands.registry import CommandCategory, CommandInfo
 from jarvis.core.main import RegisteredCommand
@@ -7,12 +7,12 @@ from utils.code_generator import write_code
 from utils.python_dsl import parse_technical_description
 
 
-def _generate_files(spec_text: str, out_dir: str) -> List[str]:
+def _generate_files(spec_text: str, out_dir: str) -> list[str]:
     """Create Python files from bullet requirements."""
     parsed = parse_technical_description(spec_text)
     requirements = parsed.get("requirements", [])
     os.makedirs(out_dir, exist_ok=True)
-    paths: List[str] = []
+    paths: list[str] = []
     for idx, req in enumerate(requirements, 1):
         fname = f"module_{idx}.py"
         path = os.path.join(out_dir, fname)
@@ -29,7 +29,7 @@ def register(jarvis) -> None:
         spec_file, out_dir = parts[1], parts[2]
         if not os.path.isfile(spec_file):
             return f"Spec file not found: {spec_file}"
-        with open(spec_file, "r", encoding="utf-8") as f:
+        with open(spec_file, encoding="utf-8") as f:
             text = f.read()
         files = _generate_files(text, out_dir)
         return "Created:\n" + "\n".join(files)

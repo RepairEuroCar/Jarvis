@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass(order=True)
@@ -12,11 +12,11 @@ class Goal:
     priority: int
     goal: str = field(compare=False)
     motivation: str = field(default="", compare=False)
-    deadline: Optional[float] = field(default=None, compare=False)
+    deadline : None | [float] = field(default=None, compare=False)
     source: str = field(default="user", compare=False)
     timestamp: float = field(default_factory=time.time, compare=False)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -25,7 +25,7 @@ class GoalManager:
 
     def __init__(self, jarvis: Any) -> None:
         self.jarvis = jarvis
-        self._active_goals: List[Goal] = []
+        self._active_goals: list[Goal] = []
         stored = self.jarvis.memory.recall("goals.active") or []
         for g in stored:
             self._active_goals.append(Goal(**g))
@@ -41,7 +41,7 @@ class GoalManager:
             "goals.current", self._active_goals[0].to_dict(), category="goals"
         )
 
-    def get_goal(self) -> Optional[Dict[str, Any]]:
+    def get_goal(self) -> None | [dict[str, Any]]:
         """Return the highest priority goal if available."""
         if not self._active_goals:
             return None
@@ -59,7 +59,7 @@ class GoalManager:
         goal: str,
         motivation: str = "",
         priority: int = 1,
-        deadline: Optional[float] = None,
+        deadline : None | [float] = None,
         source: str = "user",
     ) -> Goal:
         """Add a goal to the active list."""
@@ -81,7 +81,7 @@ class GoalManager:
         await self.jarvis.memory.remember("goals.history", history, category="goals")
         return new_goal
 
-    def list_goals(self) -> List[Dict[str, Any]]:
+    def list_goals(self) -> list[dict[str, Any]]:
         """Return active goals ordered by priority."""
 
         return [g.to_dict() for g in self._active_goals]

@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Tuple
 
 from utils.logger import get_logger
 
@@ -11,9 +11,9 @@ logger = get_logger().getChild("Processor.APIBuilder")
 class APIBuilderProcessor(BaseThoughtProcessor):
     """Creates a small API skeleton using FastAPI from a text description."""
 
-    def _parse_endpoints(self, text: str) -> List[Tuple[str, str]]:
+    def _parse_endpoints(self, text: str) -> list[Tuple[str, str]]:
         """Extract (METHOD, path) tuples from a description."""
-        endpoints: List[Tuple[str, str]] = []
+        endpoints: list[Tuple[str, str]] = []
         for line in text.splitlines():
             match = re.search(r"(GET|POST|PUT|DELETE)\s+(/\S+)", line, re.I)
             if match:
@@ -21,8 +21,8 @@ class APIBuilderProcessor(BaseThoughtProcessor):
         return endpoints
 
     async def _process_logic(
-        self, problem: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, problem: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
         description = context.get("api_description") or problem
         endpoints = self._parse_endpoints(description)
         if not endpoints:

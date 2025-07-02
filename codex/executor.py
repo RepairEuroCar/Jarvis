@@ -4,8 +4,8 @@ Provides async wrappers around :mod:`modules.executor` functions so Codex
 tasks can import from :mod:`codex.executor`.
 """
 
-from modules import executor
 from command_dispatcher import CommandDispatcher, default_dispatcher
+from modules import executor
 
 
 async def run(path: str = ".") -> dict[str, dict[str, list[str] | int]]:

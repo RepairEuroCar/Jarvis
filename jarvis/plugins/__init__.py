@@ -1,8 +1,8 @@
 import importlib.util
 import sys
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from types import ModuleType
-from typing import Iterable, Sequence
 
 from utils.logger import get_logger
 
@@ -61,7 +61,9 @@ def _load_directory(jarvis, directory: Path) -> None:
             logger.debug("Plugin %s has no register() function", mod_path)
 
 
-def load_plugins(jarvis, plugin_dir: str, extra_dirs: Sequence[str] | None = None) -> None:
+def load_plugins(
+    jarvis, plugin_dir: str, extra_dirs: Sequence[str] | None = None
+) -> None:
     """Discover and load plugins from *plugin_dir* and *extra_dirs*."""
     _load_directory(jarvis, Path(plugin_dir))
     for d in extra_dirs or []:

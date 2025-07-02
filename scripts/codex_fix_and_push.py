@@ -1,5 +1,6 @@
 import os
 import subprocess
+
 from git import Repo
 
 
@@ -63,4 +64,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

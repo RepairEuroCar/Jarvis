@@ -1,8 +1,11 @@
+"""Task splitting from specification text."""
+
+import logging
 import re
 from pathlib import Path
+from typing import List
 
 from command_dispatcher import CommandDispatcher, default_dispatcher
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -37,61 +40,75 @@ REQUIREMENT_VERBS = {
 }
 
 
-def analyze_spec(text: str) -> list[str]:
-    """Extract individual tasks from requirement *text*.
-
-    The function detects bullet points (``-`` or ``*``), numbered lists
-    like ``1.`` or ``1)`` and sentences containing known requirement verbs.
+def analyze_spec(text: str) -> List[str]:
+    """Extract individual tasks from requirement text.
+    
+    Detects bullet points (``-`` or ``*``), numbered lists like ``1.`` or ``1)``
+    and sentences containing known requirement verbs.
     """
-    tasks: list[str] = []
+    tasks: List[str] = []
 
+    # First check for bullet points
     for line in text.splitlines():
         m = BULLET_RE.match(line)
         if m:
-            item = line[m.end() :].strip()
+            item = line[m.end():].strip()
             if item:
                 tasks.append(item)
+    
     if tasks:
         return tasks
 
+    # Fallback to sentence analysis
     sentences = re.split(r"[.!?\n]+", text)
     for sentence in sentences:
         stripped = sentence.strip()
         if not stripped:
             continue
+            
         lower = stripped.lower()
         if any(v in lower for v in REQUIREMENT_VERBS):
             tasks.append(stripped)
+            
     return tasks
 
 
 async def task_split(file: str) -> str:
-    """Read specification from ``file`` and return numbered subtask list."""
+    """Split specification file into numbered tasks."""
     path = Path(file)
     if not path.exists():
         return f"Spec file not found: {file}"
+        
     text = path.read_text(encoding="utf-8")
     tasks = analyze_spec(text)
+    
     if not tasks:
         return "No tasks detected."
-    lines = [f"{i + 1}. {t}" for i, t in enumerate(tasks)]
-    return "\n".join(lines)
+        
+    return "\n".join(f"{i + 1}. {t}" for i, t in enumerate(tasks))
 
 
-def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> None:
-    """Register ``task_split`` command with the dispatcher."""
-    dispatcher.register_command_handler("task_split", None, task_split)
+def register_commands(
+    dispatcher: CommandDispatcher = default_dispatcher
+) -> None:
+    """Register task_split command."""
+    dispatcher.register_command_handler(
+        "task_split", 
+        None, 
+        task_split
+    )
 
 
 register_commands(default_dispatcher)
 
 
 async def health_check() -> bool:
-    """Quick check of regex patterns."""
+    """Verify regex patterns work."""
     try:
         return bool(BULLET_RE.match("- test"))
-    except Exception as exc:  # pragma: no cover - best effort logging
+    except Exception as exc:
         logger.warning("Task splitter health check failed: %s", exc)
         return False
+
 
 __all__ = ["analyze_spec", "task_split", "register_commands"]

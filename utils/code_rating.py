@@ -1,12 +1,12 @@
 import ast
-from typing import Any, Dict
+from typing import Any
 
 from radon.metrics import mi_visit
 
 from utils.linter import AstLinter
 
 
-def rate_code(source: str) -> Dict[str, Any]:
+def rate_code(source: str) -> dict[str, Any]:
     """Return simple quality metrics for provided Python code.
 
     Parameters
@@ -16,7 +16,7 @@ def rate_code(source: str) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         Dictionary with ``brevity``, ``readability`` and ``safety`` keys.
     """
     if not source:

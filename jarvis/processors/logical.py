@@ -1,14 +1,14 @@
 import asyncio
 import re
-from typing import Any, Dict
+from typing import Any
 
 from .base import BaseThoughtProcessor
 
 
 class LogicalThoughtProcessor(BaseThoughtProcessor):
     async def _process_logic(
-        self, problem: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, problem: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
         conclusion = await self._analyze_logic(problem)
 
         return {

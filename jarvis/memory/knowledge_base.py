@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict
+from typing import Any
 
 
 class KnowledgeBase:
@@ -8,12 +8,12 @@ class KnowledgeBase:
 
     def __init__(self, kb_file: str = "knowledge.json") -> None:
         self.kb_file = kb_file
-        self.data: Dict[str, Any] = self._load()
+        self.data: dict[str, Any] = self._load()
 
-    def _load(self) -> Dict[str, Any]:
+    def _load(self) -> dict[str, Any]:
         if os.path.exists(self.kb_file):
             try:
-                with open(self.kb_file, "r", encoding="utf-8") as f:
+                with open(self.kb_file, encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
                 return {}
@@ -47,5 +47,5 @@ class KnowledgeBase:
             return True
         return False
 
-    def list_facts(self) -> Dict[str, Any]:
+    def list_facts(self) -> dict[str, Any]:
         return dict(self.data)

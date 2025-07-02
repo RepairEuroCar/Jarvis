@@ -1,7 +1,7 @@
 import asyncio
 import tkinter as tk
 from tkinter import filedialog
-from typing import Dict, List
+from typing import dict, list
 
 from jarvis.core.main import Jarvis
 from utils.logger import setup_logging
@@ -12,8 +12,8 @@ async def main() -> None:
     jarvis = Jarvis()
     await jarvis.initialize()
 
-    command_names: List[str] = sorted(set(jarvis.commands.keys()))
-    completion_state: Dict[str, object] = {
+    command_names: list[str] = sorted(set(jarvis.commands.keys()))
+    completion_state: dict[str, object] = {
         "prefix": "",
         "matches": [],
         "index": 0,

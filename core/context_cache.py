@@ -1,13 +1,13 @@
-import time
 import threading
-from typing import Any, Dict, Tuple
+import time
+from typing import Any, Tuple
 
 
 class ContextCache:
     """Thread-safe in-memory cache with TTL support."""
 
     def __init__(self, max_size: int = 1000) -> None:
-        self.store: Dict[str, Tuple[Any, float]] = {}
+        self.store: dict[str, Tuple[Any, float]] = {}
         self.lock = threading.Lock()
         self.max_size = max_size
 

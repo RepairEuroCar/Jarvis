@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -17,7 +16,11 @@ async def test_generate_dataset(tmp_path: Path):
     assert metadata_path.exists()
 
     # verify compressed chunk created
-    compressed_files = list((out_dir / "compressed").glob("chunk_*" + dataset_generator.COMPRESSED_EXTENSION))
+    compressed_files = list(
+        (out_dir / "compressed").glob(
+            "chunk_*" + dataset_generator.COMPRESSED_EXTENSION
+        )
+    )
     assert compressed_files, "compressed chunks not found"
 
     metadata = await dataset_generator.read_metadata(out_dir)

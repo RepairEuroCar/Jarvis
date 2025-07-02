@@ -433,4 +433,3 @@ Jarvis provides helper commands for development tasks:
 
 For a refresher on Python basics see [docs/python_overview.md](docs/python_overview.md).
 Details on module options and fallbacks are documented in [docs/modules.md](docs/modules.md).
-

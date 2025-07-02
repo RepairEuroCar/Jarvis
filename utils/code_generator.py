@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import os
-from typing import Dict
+from typing import dict
 
 from utils.import_inference import infer_imports
 from utils.python_dsl import phrase_to_python
@@ -43,7 +43,7 @@ def generate_large_python_file(path: str, num_lines: int = 1000) -> str:
     return os.path.abspath(path)
 
 
-CATEGORY_TEMPLATES: Dict[str, str] = {
+CATEGORY_TEMPLATES: dict[str, str] = {
     "utility": "{code}\n",
     "web": (
         "from fastapi import FastAPI\n"
@@ -96,12 +96,12 @@ def generate_template(category: str, code: str) -> str:
     return template.replace("{code}", code)
 
 
-def write_code(task: Dict[str, str]) -> str:
+def write_code(task: dict[str, str]) -> str:
     """Generate Python code from a task description and write it to file.
 
     Parameters
     ----------
-    task: Dict[str, str]
+    task: dict[str, str]
         Dictionary with keys ``dsl`` containing DSL text, ``category`` defining
         template category, ``path`` with output file path and optional
         ``description`` used for inferring imports.

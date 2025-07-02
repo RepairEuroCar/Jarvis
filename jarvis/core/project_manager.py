@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Set, Union
 
 try:
     import aioredis
@@ -49,7 +49,7 @@ class ProjectTemplateType(Enum):
 class ProjectIntelligence:
     """AI-аналитика проекта"""
 
-    code_patterns: Dict[str, int] = field(default_factory=dict)
+    code_patterns: dict[str, int] = field(default_factory=dict)
     tech_debt_score: float = 0.0
     auto_tags: Set[str] = field(default_factory=set)
 
@@ -60,8 +60,8 @@ class ProjectMetadata:
     last_accessed: str = field(default_factory=lambda: datetime.now().isoformat())
     version: str = "1.0"
     tags: Set[str] = field(default_factory=set)
-    dependencies: List[str] = field(default_factory=list)
-    environment: Dict[str, str] = field(default_factory=dict)
+    dependencies: list[str] = field(default_factory=list)
+    environment: dict[str, str] = field(default_factory=dict)
 
 
 class _TemplateEditHandler(FileSystemEventHandler):
@@ -88,11 +88,11 @@ class _TemplateEditHandler(FileSystemEventHandler):
 class ProjectManager:
     def __init__(self, jarvis: Any):
         self.jarvis = jarvis
-        self.current_project: Optional[Dict[str, Any]] = None
-        self._project_history: List[Dict[str, Any]] = []
+        self.current_project : None | [dict[str, Any]] = None
+        self._project_history: list[dict[str, Any]] = []
         self._MAX_HISTORY = 10
         self._CONFIG_FILE = ".jarvis_project"
-        self._hooks: Dict[str, List[Callable]] = {
+        self._hooks: dict[str, list[Callable]] = {
             "pre_create": [],
             "post_create": [],
             "pre_close": [],
@@ -103,7 +103,7 @@ class ProjectManager:
             docker.from_env() if docker and self._docker_available() else None
         )
         self._observer = None  # Для наблюдения за файлами
-        self._template_files: Dict[str, str] = {}
+        self._template_files: dict[str, str] = {}
         self._modified_files: Set[str] = set()
 
     def _start_watchdog(self, path: Path) -> None:
@@ -169,7 +169,7 @@ class ProjectManager:
             except Exception as e:
                 logger.error(f"Failed to load module {module}: {e}")
 
-    def _load_project_history(self, path: Path) -> List[Dict[str, Any]]:
+    def _load_project_history(self, path: Path) -> list[dict[str, Any]]:
         """Загружает историю проекта из файла."""
         history_file = path / "project_history.json"
         if history_file.exists():
@@ -196,7 +196,7 @@ class ProjectManager:
         except Exception as e:
             logger.error(f"Failed to write project history: {e}")
 
-    async def _calculate_project_stats(self, path: Path) -> Dict[str, int]:
+    async def _calculate_project_stats(self, path: Path) -> dict[str, int]:
         """Подсчет простых статистик по проекту."""
         stats = {"files": 0, "lines": 0}
         for root, _, files in os.walk(path):
@@ -278,7 +278,7 @@ class ProjectManager:
             await self._cleanup_on_failure()
             return False
 
-    async def _scan_project(self, path: Path) -> Dict[str, Any]:
+    async def _scan_project(self, path: Path) -> dict[str, Any]:
         """Глубокий анализ структуры проекта"""
         return {
             "name": path.name,
@@ -428,7 +428,7 @@ class ProjectManager:
         if not self._template_files:
             return
         project_path = Path(self.current_project["path"])
-        diffs: Dict[str, str] = {}
+        diffs: dict[str, str] = {}
         for rel, original in self._template_files.items():
             file_path = project_path / rel
             if file_path.exists():
@@ -463,7 +463,7 @@ class ProjectManager:
                 "project_templates.history", history, category="project"
             )
 
-    def learn_template_updates(self, project_name: str) -> List[str]:
+    def learn_template_updates(self, project_name: str) -> list[str]:
         """Apply user modifications from history to base templates."""
         history = self.jarvis.memory.query("project_templates.history")
         if isinstance(history, dict):
@@ -471,7 +471,7 @@ class ProjectManager:
         if not history:
             return []
 
-        updated: List[str] = []
+        updated: list[str] = []
         for entry in history:
             if entry.get("template") != project_name:
                 continue

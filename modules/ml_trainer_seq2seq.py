@@ -5,7 +5,7 @@ REQUIRES = ["torch"]
 import asyncio
 import json
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Tuple
 
 import torch
 import torch.nn as nn
@@ -54,15 +54,15 @@ class CustomSeq2SeqDataset(Dataset):
         tokenizer: PreTrainedTokenizerFast,
         max_source_length: int,
         max_target_length: int,
-        source_prefix: Optional[str] = None,
+        source_prefix : None | [str] = None,
     ):
         self.tokenizer = tokenizer
         self.max_source_length = max_source_length
         self.max_target_length = max_target_length
         self.source_prefix = source_prefix if source_prefix else ""
 
-        self.source_texts: List[str] = []
-        self.target_texts: List[str] = []
+        self.source_texts: list[str] = []
+        self.target_texts: list[str] = []
 
         logger.info(f"Загрузка данных из: {data_path}")
         try:
@@ -71,7 +71,7 @@ class CustomSeq2SeqDataset(Dataset):
             if not os.path.exists(data_path):
                 raise FileNotFoundError(f"Файл данных не найден: {data_path}")
 
-            with open(data_path, "r", encoding="utf-8") as f:
+            with open(data_path, encoding="utf-8") as f:
                 for line_num, line in enumerate(f):
                     try:
                         record = json.loads(line.strip())
@@ -110,7 +110,7 @@ class CustomSeq2SeqDataset(Dataset):
     def __len__(self):
         return len(self.source_texts)
 
-    def __getitem__(self, idx) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx) -> dict[str, torch.Tensor]:
         source_text = self.source_texts[idx]
         target_text = self.target_texts[idx]
 
@@ -125,7 +125,9 @@ class CustomSeq2SeqDataset(Dataset):
 
         # Токенизация целевого текста (для labels)
         # Для моделей энкодер-декодер, labels обычно являются target_ids
-        with self.tokenizer.as_target_tokenizer():  # Важно для некоторых токенизаторов (например, mBART)
+        with (
+            self.tokenizer.as_target_tokenizer()
+        ):  # Важно для некоторых токенизаторов (например, mBART)
             target_encoding = self.tokenizer(
                 target_text,
                 max_length=self.max_target_length,
@@ -146,7 +148,7 @@ class CustomSeq2SeqDataset(Dataset):
 
 
 class Seq2SeqTrainer:
-    def __init__(self, jarvis_instance: Any, config: Dict[str, Any]):
+    def __init__(self, jarvis_instance: Any, config: dict[str, Any]):
         self.jarvis = jarvis_instance
         self.config = config
         logger.info(f"Инициализация Seq2SeqTrainer с конфигурацией: {config}")
@@ -209,19 +211,19 @@ class Seq2SeqTrainer:
             padding="longest",  # или True, или 'max_length'
         )
 
-        self.train_loader: Optional[DataLoader] = self._get_dataloader(
+        self.train_loader : None | [DataLoader] = self._get_dataloader(
             config.get("train_data_path"), "train"
         )
-        self.val_loader: Optional[DataLoader] = self._get_dataloader(
+        self.val_loader : None | [DataLoader] = self._get_dataloader(
             config.get("val_data_path"), "val"
         )
-        self.test_loader: Optional[DataLoader] = self._get_dataloader(
+        self.test_loader : None | [DataLoader] = self._get_dataloader(
             config.get("test_data_path"), "test"
         )
 
-        self.optimizer: Optional[optim.Optimizer] = None
-        self.scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
-        self.criterion: Optional[nn.Module] = None
+        self.optimizer : None | [optim.Optimizer] = None
+        self.scheduler : None | [optim.lr_scheduler._LRScheduler] = None
+        self.criterion : None | [nn.Module] = None
 
         self.global_step = 0
         self.current_epoch = 0
@@ -229,8 +231,8 @@ class Seq2SeqTrainer:
         logger.info("Seq2SeqTrainer успешно инициализирован.")
 
     def _get_dataloader(
-        self, data_path: Optional[str], split: str
-    ) -> Optional[DataLoader]:
+        self, data_path : None | [str], split: str
+    ) -> None | [DataLoader]:
         if not data_path:
             logger.warning(
                 f"Путь к данным для '{split}' не указан. DataLoader не создан."
@@ -392,7 +394,7 @@ class Seq2SeqTrainer:
 
     def _calculate_metrics(
         self, logits: torch.Tensor, targets: torch.Tensor
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         if (
             logits is None
             or targets is None
@@ -453,7 +455,7 @@ class Seq2SeqTrainer:
         }
 
     def _log_metrics(
-        self, metrics: dict, prefix: str, epoch: int, step: Optional[int] = None
+        self, metrics: dict, prefix: str, epoch: int, step : None | [int] = None
     ):
         log_step = (
             step
@@ -749,7 +751,7 @@ class Seq2SeqTrainer:
             "epochs_completed": final_epochs_completed,
         }
 
-    async def evaluate_async(self, test_loader: Optional[DataLoader] = None):
+    async def evaluate_async(self, test_loader : None | [DataLoader] = None):
         loader_to_use = test_loader if test_loader else self.test_loader
         if self.model is None or loader_to_use is None:
             msg = "Модель или test_loader не инициализированы. Оценка невозможна."
@@ -801,7 +803,7 @@ class Seq2SeqTrainer:
         await self.jarvis.publish_event("ml_evaluation_end", metrics=metrics)
         return {"status": "completed", "metrics": metrics}
 
-    async def predict_async(self, text: str, max_length: Optional[int] = None) -> str:
+    async def predict_async(self, text: str, max_length : None | [int] = None) -> str:
         if self.model is None or self.tokenizer is None:
             logger.error("Модель или токенизатор не инициализированы для предсказания.")
             return "Ошибка: Модель не готова."
@@ -864,7 +866,7 @@ class Seq2SeqTrainer:
             )
             return f"Ошибка предсказания: {e}"
 
-    def save_model_local(self, path: Optional[str] = None):
+    def save_model_local(self, path : None | [str] = None):
         if self.model is None or self.tokenizer is None:
             logger.error(
                 "Модель или токенизатор не инициализированы. Сохранение невозможно."
@@ -896,8 +898,8 @@ class Seq2SeqTrainer:
     def load_model_from_path(
         cls,
         path: str,
-        config_overrides: Optional[Dict[str, Any]] = None,
-        jarvis_instance: Optional[Any] = None,
+        config_overrides : None | [dict[str, Any]] = None,
+        jarvis_instance : None | [Any] = None,
     ):
         if not os.path.isdir(path):
             logger.error(f"Путь для загрузки модели не является директорией: {path}")
@@ -907,7 +909,7 @@ class Seq2SeqTrainer:
         loaded_config = {}
         if os.path.exists(config_path):
             try:
-                with open(config_path, "r", encoding="utf-8") as f:
+                with open(config_path, encoding="utf-8") as f:
                     loaded_config = json.load(f)
             except Exception as e:
                 logger.warning(
@@ -945,10 +947,10 @@ class Seq2SeqTrainer:
                 logger.warning(f"Ошибка при закрытии TensorBoard SummaryWriter: {e}")
 
 
-active_trainers: Dict[str, Seq2SeqTrainer] = {}
+active_trainers: dict[str, Seq2SeqTrainer] = {}
 
 
-async def init_module(jarvis: Any, module_config: Dict[str, Any]):
+async def init_module(jarvis: Any, module_config: dict[str, Any]):
     logger.info(f"Модуль {MODULE_METADATA['name']} инициализирован.")
     logger.debug(f"Конфигурация модуля при инициализации: {module_config}")
 
@@ -1006,7 +1008,7 @@ async def setup_trainer_command(jarvis: Any, args_str: str) -> str:
             "Использование: setup_seq2seq_trainer <trainer_id_или_путь_к_json_конфигу>"
         )
 
-    config_dict: Optional[Dict[str, Any]] = None
+    config_dict : None | [dict[str, Any]] = None
     trainer_id = config_name_or_path  # По умолчанию ID = имя конфига/путь
 
     # 1. Проверяем, не является ли это ID уже существующего конфига в памяти
@@ -1023,7 +1025,7 @@ async def setup_trainer_command(jarvis: Any, args_str: str) -> str:
         )
     elif os.path.exists(config_name_or_path) and config_name_or_path.endswith(".json"):
         try:
-            with open(config_name_or_path, "r", encoding="utf-8") as f:
+            with open(config_name_or_path, encoding="utf-8") as f:
                 config_dict = json.load(f)
             logger.info(
                 f"Загружена конфигурация тренера из файла: {config_name_or_path}"
@@ -1169,7 +1171,7 @@ async def list_trainers_command(jarvis: Any, args_str: str) -> str:
     return "\n".join(output)
 
 
-commands_to_register: List[CommandInfo] = [
+commands_to_register: list[CommandInfo] = [
     CommandInfo(
         name="setup_seq2seq_trainer",
         description="Настраивает/пересоздает экземпляр Seq2Seq тренера.",

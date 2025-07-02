@@ -1,10 +1,8 @@
 import time
-import types
 
 import psutil
-import pytest
 
-from jarvis.core.module_manager import ModuleManager, ModuleConfig, ModuleState
+from jarvis.core.module_manager import ModuleConfig, ModuleManager, ModuleState
 from modules.dynamic_scaler import DynamicScaler
 
 

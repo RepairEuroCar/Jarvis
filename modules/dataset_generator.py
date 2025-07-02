@@ -10,16 +10,16 @@ from __future__ import annotations
 
 REQUIRES = ["aiofiles", "faker", "loguru", "pydantic"]
 
+import gzip
 import json
+import logging
 import random
 import re
+import shutil
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-import gzip
-import shutil
-import logging
+from typing import Any, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -56,14 +56,14 @@ class DifficultyLevel(str, Enum):
 class CodeExample(BaseModel):
     instruction: str = Field(..., min_length=5, max_length=500)
     code: str = Field(..., min_length=20)
-    tests: Optional[str] = None
-    docs: Optional[str] = None
-    tags: List[str] = Field(default_factory=list)
+    tests : None | [str] = None
+    docs : None | [str] = None
+    tags: list[str] = Field(default_factory=list)
     category: CodeCategory
     difficulty: DifficultyLevel
     language: str = "python"
-    dependencies: Optional[List[str]] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    dependencies : None | [list[str]] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     @validator("language")
     def _validate_language(cls, v: str) -> str:
@@ -125,7 +125,9 @@ class PythonCodeGenerator(BaseCodeGenerator):
             "dict": "    result = {'data': data}",
             "list": "    result = [data]",
         }
-        logic = logic_map.get(return_type, f"    result = {self._mock_value(return_type)}")
+        logic = logic_map.get(
+            return_type, f"    result = {self._mock_value(return_type)}"
+        )
         code = (
             f"def {func_name}(data):\n"
             f'    """Process data and return {return_type}."""\n'
@@ -187,8 +189,8 @@ class DatasetBuilder:
         (self.config.output_dir / "raw").mkdir(exist_ok=True)
         (self.config.output_dir / "compressed").mkdir(exist_ok=True)
 
-    async def _generate_chunk(self, chunk_size: int) -> List[CodeExample]:
-        examples: List[CodeExample] = []
+    async def _generate_chunk(self, chunk_size: int) -> list[CodeExample]:
+        examples: list[CodeExample] = []
         for _ in range(chunk_size):
             example = await self.generator.generate_example()
             if self.config.validate_code:
@@ -197,7 +199,7 @@ class DatasetBuilder:
             examples.append(example)
         return examples
 
-    async def _write_chunk(self, examples: List[CodeExample], chunk_num: int) -> int:
+    async def _write_chunk(self, examples: list[CodeExample], chunk_num: int) -> int:
         chunk_file = self.config.output_dir / "raw" / f"chunk_{chunk_num}.jsonl"
         async with aiofiles.open(chunk_file, "w") as fh:
             for ex in examples:
@@ -210,9 +212,10 @@ class DatasetBuilder:
 
         compressed_dir = self.config.output_dir / "compressed"
         compressed_file = compressed_dir / f"chunk_{chunk_num}{COMPRESSED_EXTENSION}"
-        with open(chunk_file, "rb") as src, gzip.open(
-            compressed_file, "wb", compresslevel=COMPRESSION_LEVEL
-        ) as dst:
+        with (
+            open(chunk_file, "rb") as src,
+            gzip.open(compressed_file, "wb", compresslevel=COMPRESSION_LEVEL) as dst,
+        ):
             shutil.copyfileobj(src, dst)
 
         size = compressed_file.stat().st_size
@@ -262,10 +265,10 @@ async def generate_dataset(
     return f"Dataset generated in {output}"
 
 
-async def read_metadata(output: str | Path) -> Dict[str, Any]:
+async def read_metadata(output: str | Path) -> dict[str, Any]:
     output = Path(output)
     metadata_file = output / "metadata.json"
-    async with aiofiles.open(metadata_file, "r") as fh:
+    async with aiofiles.open(metadata_file) as fh:
         metadata = json.loads(await fh.read())
 
     ext = metadata.get("chunk_extension", COMPRESSED_EXTENSION)
@@ -286,6 +289,7 @@ def register_commands(dispatcher: CommandDispatcher = default_dispatcher) -> Non
 
 register_commands(default_dispatcher)
 
+
 async def health_check() -> bool:
     """Ensure gzip compression is available."""
     try:
@@ -294,6 +298,7 @@ async def health_check() -> bool:
     except Exception as exc:  # pragma: no cover - best effort logging
         logger.warning("Dataset generator health check failed: %s", exc)
         return False
+
 
 __all__ = [
     "generate_dataset",

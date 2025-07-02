@@ -1,242 +1,230 @@
 import asyncio
+import logging
 import re
 import shlex
+from dataclasses import dataclass
 from ipaddress import ip_address, ip_network
-from typing import List, Tuple
+from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
-
-from jarvis.core.main import Settings
-import logging
+import json
+import os
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-SAFE_PATTERN = re.compile(r"^[A-Za-z0-9._/=: -]*$")
+@dataclass
+class ScanResult:
+    target: str
+    output: str
+    success: bool
+    timestamp: float
+    command: str
+    duration: float = 0.0
 
-_settings = Settings.load("config/config.yaml")
-ALLOWED_NETWORKS = [ip_network(n) for n in _settings.allowed_networks]
+class KaliTools:
+    def __init__(self, config_path: str = "config/config.yaml"):
+        self.scan_history: List[ScanResult] = []
+        self.profiles: Dict[str, Dict] = {}
+        self.load_profiles()
+        self.active_scans: Dict[str, asyncio.Task] = {}
 
+    async def _execute_command(self, command: List[str]) -> ScanResult:
+        """Execute command with timing and enhanced output"""
+        start_time = asyncio.get_event_loop().time()
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            
+            stdout, stderr = await process.communicate()
+            duration = asyncio.get_event_loop().time() - start_time
+            
+            output = stdout.decode().strip()
+            if stderr:
+                output += f"\nERRORS:\n{stderr.decode().strip()}"
+            
+            result = ScanResult(
+                target=command[-1],
+                output=output,
+                success=process.returncode == 0,
+                timestamp=start_time,
+                command=" ".join(command),
+                duration=duration
+            )
+            
+            self.scan_history.append(result)
+            self.save_history()
+            return result
+            
+        except Exception as e:
+            logger.error(f"Command execution failed: {e}", exc_info=True)
+            return ScanResult(
+                target=command[-1],
+                output=str(e),
+                success=False,
+                timestamp=start_time,
+                command=" ".join(command),
+                duration=asyncio.get_event_loop().time() - start_time
+            )
 
-def reload_allowed_networks(
-    settings: Settings | None = None, config_path: str = "config/config.yaml"
-) -> None:
-    """Reload ``ALLOWED_NETWORKS`` from Jarvis settings.
+    # Nmap enhanced functionality
+    async def run_nmap(self, target: str, options: str = "", profile: str = None) -> ScanResult:
+        """Run nmap with profile support"""
+        if profile and profile in self.profiles.get('nmap', {}):
+            options = self.profiles['nmap'][profile]
+        
+        cmd = ["nmap"] + shlex.split(options) + [target]
+        return await self._execute_command(cmd)
 
-    If ``settings`` is not provided, the configuration is loaded from
-    ``config_path`` using :class:`jarvis.core.main.Settings`.
-    """
-    global _settings, ALLOWED_NETWORKS
-    _settings = settings or Settings.load(config_path)
-    ALLOWED_NETWORKS = [ip_network(n) for n in _settings.allowed_networks]
+    async def nmap_os_detection(self, target: str) -> ScanResult:
+        """Enhanced OS detection scan"""
+        return await self.run_nmap(target, "-O -sV --fuzzy --osscan-limit")
 
+    async def nmap_full_scan(self, target: str) -> ScanResult:
+        """Comprehensive scan with all checks"""
+        return await self.run_nmap(target, "-sS -sU -T4 -A -v -PE -PP -PS80,443 -PA3389 -PU40125 -PY -g 53")
 
-def _target_ip(value: str):
-    try:
-        return ip_address(value)
-    except ValueError:
-        parsed = urlparse(value)
-        if parsed.hostname:
-            try:
-                return ip_address(parsed.hostname)
-            except ValueError:
-                return None
-        return None
+    # Hydra enhanced functionality
+    async def run_hydra(
+        self,
+        service: str,
+        target: str,
+        userlist: str = None,
+        passlist: str = None,
+        options: str = "",
+        profile: str = None
+    ) -> ScanResult:
+        """Run hydra with various authentication methods"""
+        if profile and profile in self.profiles.get('hydra', {}):
+            options = self.profiles['hydra'][profile]
+        
+        cmd = ["hydra"]
+        if userlist:
+            cmd.extend(["-L", userlist])
+        if passlist:
+            cmd.extend(["-P", passlist])
+        cmd.extend(shlex.split(options))
+        cmd.append(f"{service}://{target}")
+        
+        return await self._execute_command(cmd)
 
+    # Metasploit integration
+    async def run_msf(self, resource_file: str) -> ScanResult:
+        """Execute Metasploit resource script"""
+        cmd = ["msfconsole", "-q", "-r", resource_file]
+        return await self._execute_command(cmd)
 
-def _is_allowed(target: str) -> bool:
-    ip = _target_ip(target)
-    if ip is None:
-        return False
-    return any(ip in net for net in ALLOWED_NETWORKS)
+    # Network scanning tools
+    async def scan_network(self, network: str, concurrent: int = 10) -> List[ScanResult]:
+        """Parallel network scanning"""
+        hosts = [str(host) for host in ip_network(network).hosts()]
+        semaphore = asyncio.Semaphore(concurrent)
+        
+        async def scan_host(host: str):
+            async with semaphore:
+                return await self.run_nmap(host, "-sS -Pn")
+        
+        return await asyncio.gather(*[scan_host(host) for host in hosts])
 
+    # Vulnerability scanning
+    async def run_nikto(self, target: str, options: str = "") -> ScanResult:
+        """Run Nikto web scanner"""
+        cmd = ["nikto", "-h", target] + shlex.split(options)
+        return await self._execute_command(cmd)
 
-def _is_safe(value: str) -> bool:
-    return bool(SAFE_PATTERN.fullmatch(value))
+    async def run_sqlmap(self, url: str, options: str = "") -> ScanResult:
+        """Run SQLMap for SQL injection testing"""
+        cmd = ["sqlmap", "-u", url] + shlex.split(options)
+        return await self._execute_command(cmd)
 
+    # Wireless tools
+    async def run_aircrack(self, pcap_file: str, wordlist: str) -> ScanResult:
+        """Run aircrack-ng for WPA cracking"""
+        cmd = ["aircrack-ng", pcap_file, "-w", wordlist]
+        return await self._execute_command(cmd)
 
-async def _run_command(command: List[str]) -> Tuple[str, str, int]:
-    try:
-        process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate()
-        return (
-            stdout.decode().strip(),
-            stderr.decode().strip(),
-            process.returncode,
-        )
-    except FileNotFoundError:
-        return "", f"{command[0]} not found", 1
-    except Exception as e:
-        return "", str(e), 1
+    # Password cracking
+    async def run_john(self, hash_file: str, options: str = "") -> ScanResult:
+        """Run John the Ripper password cracker"""
+        cmd = ["john", hash_file] + shlex.split(options)
+        return await self._execute_command(cmd)
 
+    # Utility methods
+    def get_scan_history(self, limit: int = 10, filter_success: bool = None) -> List[ScanResult]:
+        """Get scan history with filtering"""
+        results = self.scan_history.copy()
+        if filter_success is not None:
+            results = [r for r in results if r.success == filter_success]
+        return sorted(results, key=lambda x: x.timestamp, reverse=True)[:limit]
 
-async def health_check() -> bool:
-    """Verify that core penetration tools are installed."""
-    import shutil
+    def save_history(self, file_path: str = "scan_history.json"):
+        """Save scan history to JSON file"""
+        with open(file_path, 'w') as f:
+            json.dump([r.__dict__ for r in self.scan_history], f)
 
-    try:
-        return shutil.which("nmap") is not None
-    except Exception as exc:  # pragma: no cover - best effort logging
-        logger.warning("Kali tools health check failed: %s", exc)
-        return False
+    def load_history(self, file_path: str = "scan_history.json"):
+        """Load scan history from JSON file"""
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+                self.scan_history = [ScanResult(**r) for r in data]
 
+    def load_profiles(self, file_path: str = "profiles.json"):
+        """Load tool profiles from JSON file"""
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                self.profiles = json.load(f)
 
-async def run_nmap(target: str, options: str = "") -> str:
-    """Run nmap against the specified target."""
-    if not _is_allowed(target) or not _is_safe(options):
-        return "Target not allowed or unsafe options."
-    cmd = ["nmap"] + shlex.split(options) + [target]
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
+    def save_profiles(self, file_path: str = "profiles.json"):
+        """Save tool profiles to JSON file"""
+        with open(file_path, 'w') as f:
+            json.dump(self.profiles, f)
 
+    def create_profile(self, tool: str, name: str, options: str):
+        """Create new tool profile"""
+        if tool not in self.profiles:
+            self.profiles[tool] = {}
+        self.profiles[tool][name] = options
+        self.save_profiles()
 
-async def run_hydra(
-    service: str, target: str, userlist: str, passlist: str, options: str = ""
-) -> str:
-    """Run hydra against a service with given credential lists."""
-    if not _is_allowed(target) or not all(
-        _is_safe(v) for v in [service, userlist, passlist, options]
-    ):
-        return "Invalid arguments."
-    cmd = (
-        [
-            "hydra",
-            "-L",
-            userlist,
-            "-P",
-            passlist,
-        ]
-        + shlex.split(options)
-        + [f"{service}://{target}"]
-    )
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
+    async def cancel_scan(self, scan_id: str):
+        """Cancel running scan"""
+        if scan_id in self.active_scans:
+            self.active_scans[scan_id].cancel()
+            del self.active_scans[scan_id]
 
+    # Reporting
+    def generate_report(self, format: str = "text") -> Union[str, Dict]:
+        """Generate scan report in specified format"""
+        if format == "json":
+            return [r.__dict__ for r in self.scan_history]
+        else:
+            report = []
+            for result in self.scan_history:
+                report.append(
+                    f"[{datetime.fromtimestamp(result.timestamp)}] "
+                    f"{'SUCCESS' if result.success else 'FAILURE'} "
+                    f"Target: {result.target}\n"
+                    f"Command: {result.command}\n"
+                    f"Duration: {result.duration:.2f}s\n"
+                    f"Output:\n{result.output}\n"
+                    f"{'-'*50}"
+                )
+            return "\n".join(report)
 
-async def bruteforce_ssh(
-    ip: str, userlist: str, passlist: str, options: str = ""
-) -> str:
-    """Run hydra to bruteforce SSH credentials."""
-    return await run_hydra("ssh", ip, userlist, passlist, options)
+    # Background scanning
+    async def start_background_scan(self, scan_type: str, *args, **kwargs):
+        """Start scan in background"""
+        scan_id = f"{scan_type}_{datetime.now().timestamp()}"
+        task = asyncio.create_task(self._run_scan(scan_type, *args, **kwargs))
+        self.active_scans[scan_id] = task
+        return scan_id
 
-
-async def run_sqlmap(target: str, options: str = "") -> str:
-    """Run sqlmap for the given target URL."""
-    if not _is_allowed(target) or not _is_safe(target) or not _is_safe(options):
-        return "Invalid target or options."
-    cmd = ["sqlmap"] + shlex.split(options) + ["-u", target]
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_msfconsole(resource_script: str = "") -> str:
-    """Launch msfconsole optionally with a resource script."""
-    if resource_script and not _is_safe(resource_script):
-        return "Unsafe resource script."
-    cmd = ["msfconsole", "-q"]
-    if resource_script:
-        cmd += ["-r", resource_script]
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_burpsuite(options: str = "") -> str:
-    """Start Burp Suite with optional parameters."""
-    if not _is_safe(options):
-        return "Unsafe options."
-    cmd = ["burpsuite"] + shlex.split(options)
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_aircrack(capture_file: str, wordlist: str, options: str = "") -> str:
-    """Run aircrack-ng on a capture file with the provided wordlist."""
-    if not all(_is_safe(v) for v in [capture_file, wordlist, options]):
-        return "Unsafe arguments."
-    cmd = ["aircrack-ng", "-w", wordlist, capture_file] + shlex.split(options)
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_wireshark(options: str = "") -> str:
-    """Launch Wireshark with optional parameters."""
-    if not _is_safe(options):
-        return "Unsafe options."
-    cmd = ["wireshark"] + shlex.split(options)
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_john(hash_file: str, options: str = "") -> str:
-    """Run John the Ripper with a given hash file."""
-    if not all(_is_safe(v) for v in [hash_file, options]):
-        return "Unsafe arguments."
-    cmd = ["john"] + shlex.split(options) + [hash_file]
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_hashcat(hash_file: str, wordlist: str, options: str = "") -> str:
-    """Run hashcat against the specified hashes and wordlist."""
-    if not all(_is_safe(v) for v in [hash_file, wordlist, options]):
-        return "Unsafe arguments."
-    cmd = ["hashcat"] + shlex.split(options) + [hash_file, wordlist]
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_crunch(min_len: int, max_len: int, options: str = "") -> str:
-    """Run crunch to generate a wordlist."""
-    if not _is_safe(options):
-        return "Unsafe options."
-    cmd = ["crunch", str(min_len), str(max_len)] + shlex.split(options)
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_yara(rule_file: str, target: str, options: str = "") -> str:
-    """Run yara with the given rule file against a target."""
-    if not all(_is_safe(v) for v in [rule_file, target, options]):
-        return "Unsafe arguments."
-    cmd = ["yara"] + shlex.split(options) + [rule_file, target]
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_volatility(memory_image: str, plugin: str, options: str = "") -> str:
-    """Run Volatility on a memory image using the specified plugin."""
-    if not all(_is_safe(v) for v in [memory_image, plugin, options]):
-        return "Unsafe arguments."
-    cmd = ["volatility", "-f", memory_image] + shlex.split(options) + [plugin]
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-async def run_mitmproxy(options: str = "") -> str:
-    """Run mitmproxy with optional parameters."""
-    if not _is_safe(options):
-        return "Unsafe options."
-    cmd = ["mitmproxy"] + shlex.split(options)
-    stdout, stderr, rc = await _run_command(cmd)
-    return stdout if rc == 0 else f"Error: {stderr}"
-
-
-__all__ = [
-    "reload_allowed_networks",
-    "run_nmap",
-    "bruteforce_ssh",
-    "run_hydra",
-    "run_sqlmap",
-    "run_msfconsole",
-    "run_burpsuite",
-    "run_aircrack",
-    "run_wireshark",
-    "run_john",
-    "run_hashcat",
-    "run_crunch",
-    "run_yara",
-    "run_volatility",
-    "run_mitmproxy",
-]
+    async def _run_scan(self, scan_type: str, *args, **kwargs):
+        """Internal method for background scans"""
+        scan_method = getattr(self, f"run_{scan_type}", None)
+        if scan_method:
+            return await scan_method(*args, **kwargs)
+        raise ValueError(f"Unknown scan type: {scan_type}")

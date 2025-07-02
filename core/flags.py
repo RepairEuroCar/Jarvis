@@ -1,7 +1,7 @@
 import logging
 import time
 from collections import defaultdict
-from typing import Dict, List
+from typing import dict, list
 
 from core.events import emit_event
 
@@ -12,8 +12,8 @@ class FlagManager:
     def __init__(self, error_threshold: int = 3, window: float = 60.0) -> None:
         self.error_threshold = error_threshold
         self.window = window
-        self.flags: Dict[str, str] = {}
-        self._errors: Dict[str, List[float]] = defaultdict(list)
+        self.flags: dict[str, str] = {}
+        self._errors: dict[str, list[float]] = defaultdict(list)
 
     def flag(self, module_name: str, reason: str) -> None:
         """Mark *module_name* as flagged for *reason*."""

@@ -1,10 +1,10 @@
 """Design helper for Jarvis projects."""
 
 import re
-from typing import Dict, List
+from typing import dict, list
 
 
-def design_module(task_description: str) -> Dict[str, List[str] | str]:
+def design_module(task_description: str) -> dict[str, list[str] | str]:
     """Parse a natural language description and return a simple project design.
 
     The returned dictionary contains:
@@ -13,7 +13,7 @@ def design_module(task_description: str) -> Dict[str, List[str] | str]:
         - ``classes``: list of class names to implement
     """
     text = task_description.lower()
-    design: Dict[str, List[str] | str] = {
+    design: dict[str, list[str] | str] = {
         "project_type": "general",
         "files": [],
         "classes": [],

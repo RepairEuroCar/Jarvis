@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 try:
     from transformers import pipeline
@@ -20,7 +20,7 @@ class IntentModel:
         else:  # pragma: no cover - transformers missing
             self._clf = None
 
-    def predict(self, text: str, context: Optional[List[str]] = None) -> Dict[str, Any]:
+    def predict(self, text: str, context : None | [list[str]] = None) -> dict[str, Any]:
         if self._clf is None:
             raise RuntimeError("IntentModel requires the transformers package")
 
@@ -61,7 +61,7 @@ class IntentModel:
             def __len__(self) -> int:
                 return 1
 
-            def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:  # type: ignore[name-defined]
+            def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:  # type: ignore[name-defined]
                 item = {k: torch.tensor(v[idx]) for k, v in enc.items()}
                 item["labels"] = torch.tensor(label2id[intent])
                 return item

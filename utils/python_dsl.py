@@ -8,10 +8,10 @@ natural language phrases.
 
 import ast
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 
-def parse_technical_description(text: str) -> Dict[str, List[str]]:
+def parse_technical_description(text: str) -> dict[str, list[str]]:
     """Extract simple bullet requirements from technical docs."""
     requirements = []
     for line in text.splitlines():
@@ -105,7 +105,7 @@ def _spec_to_ast(spec: Any) -> ast.stmt:
     raise ValueError(f"Unknown spec type: {spec_type}")
 
 
-def build_ast_from_schema(schema: Dict[str, Any]) -> ast.Module:
+def build_ast_from_schema(schema: dict[str, Any]) -> ast.Module:
     """Build a Python ``ast.Module`` from a simple schema description."""
     if schema.get("type") == "Module":
         body_specs = schema.get("body", [])
@@ -116,7 +116,7 @@ def build_ast_from_schema(schema: Dict[str, Any]) -> ast.Module:
     return ast.fix_missing_locations(module)
 
 
-def generate_code_from_schema(schema: Dict[str, Any]) -> str:
+def generate_code_from_schema(schema: dict[str, Any]) -> str:
     """Generate Python code from a schema describing constructs."""
     module_ast = build_ast_from_schema(schema)
     try:

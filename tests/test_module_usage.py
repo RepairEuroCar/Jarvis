@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from core.metrics.module_usage import track_usage, get_module_stats
+from core.metrics.module_usage import get_module_stats, track_usage
 from modules.module_usage import _format_stats
 
 

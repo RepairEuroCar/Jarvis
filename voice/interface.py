@@ -3,7 +3,7 @@ import re
 import threading
 import time
 from functools import partial
-from typing import Any, Optional
+from typing import Any
 
 import pyttsx3
 import speech_recognition as sr
@@ -74,7 +74,7 @@ class VoiceInterface:
             self.recognizer.adjust_for_ambient_noise(source, duration=1)
             logger.info("Микрофон откалиброван")
 
-    async def listen(self) -> Optional[str]:
+    async def listen(self) -> None | [str]:
         """Асинхронное распознавание речи"""
         if not self.microphone:
             logger.error("Microphone not available")

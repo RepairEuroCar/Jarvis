@@ -1,17 +1,17 @@
 import asyncio
+import logging
 import re
 import sys
 from pathlib import Path
 
 from reasoning.tracer import parse_tracebacks, suggest_fixes
-import logging
 
 logger = logging.getLogger(__name__)
 
 from command_dispatcher import CommandDispatcher, default_dispatcher
+from core.fallback import default_fallback_manager
 from core.metrics.module_usage import track_usage
 from utils.linter import AstLinter
-from core.fallback import default_fallback_manager
 
 
 async def _run_ruff(project: str) -> list[str]:
@@ -154,5 +154,6 @@ async def health_check() -> bool:
     except Exception as exc:  # pragma: no cover - best effort logging
         logger.warning("Executor health check failed: %s", exc)
         return False
+
 
 __all__ = ["run", "review_failures", "register_commands"]

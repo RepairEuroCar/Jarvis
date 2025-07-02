@@ -8,7 +8,6 @@ import pytest
 import speech_recognition as sr
 
 
-
 class DummyResponse:
     def __init__(self, status=200, json_data=None):
         self.status = status
@@ -72,8 +71,10 @@ from utils.logger import get_logger
 async def test_github_http_logging(monkeypatch, caplog):
     monkeypatch.setattr(aiohttp, "ClientSession", DummySession)
     import utils.http_logging as http_logging
+
     importlib.reload(http_logging)
     from plugins import github_analyst
+
     importlib.reload(github_analyst)
 
     caplog.set_level(logging.INFO)
@@ -137,6 +138,7 @@ async def test_stt_logging_on_error(monkeypatch, caplog):
     monkeypatch.setattr(sr, "Recognizer", lambda: DummyRecognizer())
     monkeypatch.setattr(sr, "Microphone", lambda: DummyMic())
     import pyttsx3
+
     monkeypatch.setattr(pyttsx3, "init", lambda: DummyEngine())
 
     jarvis = Jarvis()

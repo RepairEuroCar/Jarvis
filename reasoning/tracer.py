@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import re
-from typing import List, Dict, Any
+from typing import Any
 
-
-_FRAME_RE = re.compile(r"\s*File \"(?P<file>[^\"]+)\", line (?P<line>\d+)(?:, in (?P<func>.+))?")
+_FRAME_RE = re.compile(
+    r"\s*File \"(?P<file>[^\"]+)\", line (?P<line>\d+)(?:, in (?P<func>.+))?"
+)
 _ERROR_RE = re.compile(r"^(?P<error>[\w.]+Error:.*)$")
 
 
-def parse_tracebacks(text: str) -> List[Dict[str, Any]]:
+def parse_tracebacks(text: str) -> list[dict[str, Any]]:
     """Extract traceback information from ``text``.
 
     Parameters
@@ -23,10 +24,10 @@ def parse_tracebacks(text: str) -> List[Dict[str, Any]]:
     list of dict
         Each dict contains ``frames`` and ``error`` keys describing a traceback.
     """
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     segments = text.split("Traceback (most recent call last):")
     for seg in segments[1:]:
-        frames: List[Dict[str, Any]] = []
+        frames: list[dict[str, Any]] = []
         lines = seg.strip().splitlines()
         for line in lines:
             m = _FRAME_RE.match(line)
@@ -48,9 +49,9 @@ def parse_tracebacks(text: str) -> List[Dict[str, Any]]:
     return results
 
 
-def suggest_fixes(error_message: str) -> List[str]:
+def suggest_fixes(error_message: str) -> list[str]:
     """Return simple heuristic fixes for ``error_message``."""
-    suggestions: List[str] = []
+    suggestions: list[str] = []
     m = re.search(r"NameError: name '([^']+)' is not defined", error_message)
     if m:
         name = m.group(1)

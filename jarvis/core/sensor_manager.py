@@ -1,7 +1,8 @@
 import asyncio
 import time
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, List
+from typing import Any, Callable
 
 from jarvis.event_queue import EventQueue
 
@@ -19,15 +20,19 @@ class SensorManager:
     def __init__(self, jarvis: Any, event_queue: EventQueue) -> None:
         self.jarvis = jarvis
         self.event_queue = event_queue
-        self._tasks: List[asyncio.Task] = []
-        self.scheduled_tasks: List[ScheduledTask] = []
+        self._tasks: list[asyncio.Task] = []
+        self.scheduled_tasks: list[ScheduledTask] = []
 
     def register_scheduled_task(
         self, callback: Callable[[Any], Awaitable[Any]], interval: float
     ) -> None:
         """Register a new scheduled task."""
         self.scheduled_tasks.append(
-            ScheduledTask(callback=callback, interval=interval, next_run=time.monotonic() + interval)
+            ScheduledTask(
+                callback=callback,
+                interval=interval,
+                next_run=time.monotonic() + interval,
+            )
         )
 
     async def start(self) -> None:

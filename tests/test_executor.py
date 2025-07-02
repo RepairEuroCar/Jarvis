@@ -3,9 +3,9 @@ import asyncio
 import pytest
 
 from command_dispatcher import default_dispatcher
+from jarvis.memory.manager import MemoryManager
 from modules import executor
 from utils.linter import AstLinter, LintError
-from jarvis.memory.manager import MemoryManager
 
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ async def test_executor_records_traceback(monkeypatch):
                 async def communicate(self):
                     tb = (
                         "Traceback (most recent call last):\n"
-                        "  File \"t.py\", line 1, in <module>\n"
+                        '  File "t.py", line 1, in <module>\n'
                         "    foo()\n"
                         "NameError: name 'foo' is not defined\n"
                         "1 failed\n"
@@ -119,13 +119,14 @@ async def test_executor_command_registered(monkeypatch):
 async def test_executor_saves_failures_to_memory(monkeypatch, tmp_path):
     async def fake_exec(*args, **kwargs):
         if "pytest" in args:
+
             class Proc:
                 returncode = 1
 
                 async def communicate(self):
                     tb = (
                         "Traceback (most recent call last):\n"
-                        "  File \"t.py\", line 1, in <module>\n"
+                        '  File "t.py", line 1, in <module>\n'
                         "    foo()\n"
                         "NameError: name 'foo' is not defined\n"
                         "1 failed\n"

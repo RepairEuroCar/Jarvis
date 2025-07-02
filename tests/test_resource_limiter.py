@@ -2,8 +2,8 @@ import os
 import time
 
 from core.events import register_event_emitter
-from core.module_registry import register_module_supplier
 from core.flags import default_flag_manager
+from core.module_registry import register_module_supplier
 from modules.resource_limiter import ResourceLimiter
 
 

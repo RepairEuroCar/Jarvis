@@ -9,7 +9,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 
@@ -44,9 +44,9 @@ class TaskSemantics(Enum):
 @dataclass
 class CommandPattern:
     intent: str
-    triggers: List[str]
+    triggers: list[str]
     entity_extraction_mode: EntityExtractionMode
-    entity_names: List[str] = field(default_factory=list)
+    entity_names: list[str] = field(default_factory=list)
     category: CommandCategory = CommandCategory.UTILITY
     description: str = ""
     min_confidence: float = 0.9
@@ -55,12 +55,12 @@ class CommandPattern:
 @dataclass
 class ProcessingResult:
     intent: str
-    entities: Dict[str, Any]
+    entities: dict[str, Any]
     confidence: float
     raw_text: str
     category: CommandCategory
     is_repeated: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     semantics: TaskSemantics = TaskSemantics.UNKNOWN
     semantics_confidence: float = 0.0
 
@@ -68,15 +68,15 @@ class ProcessingResult:
 class NLUProcessor:
     def __init__(
         self,
-        memory_manager: Optional[Any] = None,
+        memory_manager : None | [Any] = None,
         max_history_size: int = 100,
-        model_path: Optional[str] = None,
-        ner_model_name: Optional[str] = None,
-        intent_dataset_path: Optional[str] = None,
+        model_path : None | [str] = None,
+        ner_model_name : None | [str] = None,
+        intent_dataset_path : None | [str] = None,
     ):
         self.memory_manager = memory_manager
-        self.intent_model: Optional[IntentModel] = None
-        self.ner_model: Optional[NERModel] = None
+        self.intent_model : None | [IntentModel] = None
+        self.ner_model : None | [NERModel] = None
         if model_path:
             try:
                 self.intent_model = IntentModel(model_path)
@@ -87,18 +87,18 @@ class NLUProcessor:
                 self.ner_model = NERModel(ner_model_name)
             except Exception as e:  # pragma: no cover - logging only
                 logger.warning(f"Failed to load NER model: {e}")
-        self.command_patterns: List[CommandPattern] = (
+        self.command_patterns: list[CommandPattern] = (
             self._initialize_command_patterns()
         )
-        self.synonyms: Dict[str, str] = self._load_synonyms()
-        self.context: Dict[str, Any] = {}
+        self.synonyms: dict[str, str] = self._load_synonyms()
+        self.context: dict[str, Any] = {}
         self.history: deque[ProcessingResult] = deque(maxlen=max_history_size)
         self.intent_dataset_path = (
             Path(intent_dataset_path)
             if intent_dataset_path
             else Path(__file__).with_name("intent_dataset.jsonl")
         )
-        self.entity_patterns: Dict[str, str] = {
+        self.entity_patterns: dict[str, str] = {
             "path_entity": r"(?:[a-zA-Z]:)?(?:[/\\][^/\\]*)+/?",
             "module_name_entity": r"[a-zA-Z_][a-zA-Z0-9_]*",
             "function_name_entity": r"[a-zA-Z_][a-zA-Z0-9_]*",
@@ -114,20 +114,26 @@ class NLUProcessor:
         }
 
         self.semantics_patterns = {
-            TaskSemantics.GENERATION: [re.compile(r"\b(создай|сгенерируй|generate|напиши)\b")],
-            TaskSemantics.ANALYSIS: [re.compile(r"\b(анализ|проанализируй|analy[sz]e)\b")],
-            TaskSemantics.TRANSLATION: [re.compile(r"\b(переведи|перевести|translate)\b")],
+            TaskSemantics.GENERATION: [
+                re.compile(r"\b(создай|сгенерируй|generate|напиши)\b")
+            ],
+            TaskSemantics.ANALYSIS: [
+                re.compile(r"\b(анализ|проанализируй|analy[sz]e)\b")
+            ],
+            TaskSemantics.TRANSLATION: [
+                re.compile(r"\b(переведи|перевести|translate)\b")
+            ],
             TaskSemantics.DIAGNOSTICS: [re.compile(r"\b(диагност|ошибк|diagnos)\w*")],
         }
 
-        self.learned_corrections: Dict[str, str] = {}
+        self.learned_corrections: dict[str, str] = {}
         if self.memory_manager:
             self._load_custom_patterns()
             self.learned_corrections = (
                 self.memory_manager.recall("nlu.corrections") or {}
             )
 
-    def _load_synonyms(self) -> Dict[str, str]:
+    def _load_synonyms(self) -> dict[str, str]:
         """Load synonyms mapping from a YAML file located next to this module."""
         path = Path(__file__).with_name("synonyms.yaml")
         if not path.exists():
@@ -157,14 +163,16 @@ class NLUProcessor:
                     if score > best_score:
                         best_sem, best_score = sem, score
                 else:
-                    ratio = difflib.SequenceMatcher(None, text_lower, pat.pattern).ratio()
+                    ratio = difflib.SequenceMatcher(
+                        None, text_lower, pat.pattern
+                    ).ratio()
                     if ratio * 0.5 > best_score:
                         best_sem, best_score = sem, ratio * 0.5
         if best_score < 0.3:
             return TaskSemantics.UNKNOWN, best_score
         return best_sem, best_score
 
-    def _initialize_command_patterns(self) -> List[CommandPattern]:
+    def _initialize_command_patterns(self) -> list[CommandPattern]:
         return [
             CommandPattern(
                 intent="reason_about_problem",
@@ -215,7 +223,7 @@ class NLUProcessor:
             ),
         ]
 
-    async def process(self, text: str) -> Dict[str, Any]:
+    async def process(self, text: str) -> dict[str, Any]:
         """Основной метод обработки входящего текста."""
         text_original = text.strip()
         if not text_original:
@@ -274,7 +282,7 @@ class NLUProcessor:
 
     async def _match_pattern(
         self, pattern: CommandPattern, text_original: str, text_lower: str
-    ) -> Optional[ProcessingResult]:
+    ) -> None | [ProcessingResult]:
         """Пытается сопоставить текст с конкретным шаблоном команды."""
         normalized_text = self._normalize_text_with_synonyms(text_lower)
         for trigger in pattern.triggers:
@@ -294,11 +302,11 @@ class NLUProcessor:
 
     async def _auto_detect_intent(
         self, text_original: str, text_lower: str
-    ) -> Optional[ProcessingResult]:
+    ) -> None | [ProcessingResult]:
         """Attempt to guess intent using fuzzy matching."""
         normalized_text = self._normalize_text_with_synonyms(text_lower)
         best_ratio = 0.0
-        best_pattern: Optional[CommandPattern] = None
+        best_pattern : None | [CommandPattern] = None
         for pattern in self.command_patterns:
             for trigger in pattern.triggers:
                 norm_tr = self._normalize_text_with_synonyms(trigger.lower())
@@ -403,7 +411,7 @@ class NLUProcessor:
         self,
         intent: str,
         trigger: str,
-        entity_type: Optional[str] = None,
+        entity_type : None | [str] = None,
         persist: bool = False,
     ) -> None:
         """Добавляет новый шаблон распознавания команд."""

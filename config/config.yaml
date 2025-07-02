@@ -25,3 +25,18 @@ dynamic_scaler:
   cpu_threshold: 80
   memory_threshold: 80
 
+agent:
+  poll_interval: 5.0
+  max_task_timeout: 60.0
+  max_concurrent_tasks: 10
+  enable_metrics: true
+  metrics_port: 8000
+
+rabbitmq:
+  host: "rabbitmq"
+  port: 5672
+  queue: "codex_tasks"
+
+security:
+  sandbox_enabled: true
+  memory_limit_mb: 100

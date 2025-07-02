@@ -14,7 +14,7 @@ from collections import defaultdict
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Tuple, Union
 
 from jarvis.core.module_manager import ModuleManager
 from jarvis.memory.manager import MemoryManager
@@ -52,8 +52,8 @@ class CommandInfo:
     description: str
     category: CommandCategory
     usage: str
-    handler_name: Optional[str] = None
-    aliases: List[str] = field(default_factory=list)
+    handler_name : None | [str] = None
+    aliases: list[str] = field(default_factory=list)
     is_async: bool = True
     requires_confirmation: bool = False
 
@@ -110,8 +110,8 @@ class AnalyticalThoughtProcessor(
     BaseThoughtProcessor
 ):  # Наследуемся от BaseThoughtProcessor
     async def _extract_metrics(
-        self, problem_or_data: Union[str, Dict]
-    ) -> Dict[str, Any]:
+        self, problem_or_data: Union[str, dict]
+    ) -> dict[str, Any]:
         """Заглушка: Извлекает или вычисляет метрики из проблемы/данных."""
         logger.debug(
             "AnalyticalProcessor: Извлечение метрик для '%s...'"
@@ -126,7 +126,7 @@ class AnalyticalThoughtProcessor(
             "average": sum(numbers) / len(numbers) if numbers else 0,
         }
 
-    async def _find_patterns(self, problem_or_data: Union[str, Dict]) -> List[str]:
+    async def _find_patterns(self, problem_or_data: Union[str, dict]) -> list[str]:
         """Заглушка: Ищет закономерности."""
         logger.debug(
             "AnalyticalProcessor: Поиск паттернов для '%s...'"
@@ -149,8 +149,8 @@ class AnalyticalThoughtProcessor(
         )
 
     async def _make_comparisons(
-        self, problem_or_data: Union[str, Dict]
-    ) -> Dict[str, str]:
+        self, problem_or_data: Union[str, dict]
+    ) -> dict[str, str]:
         """Заглушка: Производит сравнения."""
         logger.debug(
             f"AnalyticalProcessor: Сравнение для '{str(problem_or_data)[:50]}...'"
@@ -167,7 +167,7 @@ class AnalyticalThoughtProcessor(
             }
         return {"status": "Сравнений не производилось (заглушка)."}
 
-    def _generate_recommendation(self, analysis_results: Dict[str, Any]) -> str:
+    def _generate_recommendation(self, analysis_results: dict[str, Any]) -> str:
         """Заглушка: Генерирует рекомендацию на основе анализа."""
         logger.debug(
             "AnalyticalProcessor: Генерация рекомендации на основе %s"
@@ -235,8 +235,8 @@ class AnalyticalThoughtProcessor(
 class Brain:
     def __init__(self, jarvis_instance: Any):
         self.jarvis = jarvis_instance
-        self.working_memory: Dict[str, Any] = {}
-        self.thought_processors: Dict[str, BaseThoughtProcessor] = {
+        self.working_memory: dict[str, Any] = {}
+        self.thought_processors: dict[str, BaseThoughtProcessor] = {
             "logical": LogicalThoughtProcessor(),
             "creative": CreativeThoughtProcessor(),
             "analytical": AnalyticalThoughtProcessor(),  # Используем обновленный класс
@@ -340,7 +340,7 @@ class Brain:
 class ProjectManager:
     def __init__(self, jarvis_instance: Any):
         self.jarvis = jarvis_instance
-        self.current_project: Optional[Dict[str, Any]] = None
+        self.current_project : None | [dict[str, Any]] = None
 
     async def set_project(self, path: str) -> bool:
         self.current_project = {"name": os.path.basename(path), "path": path}
@@ -359,12 +359,12 @@ class Jarvis:
 
         self.is_running = False
         self.start_time = time.time()
-        self.command_history: List[Dict[str, Any]] = []
+        self.command_history: list[dict[str, Any]] = []
         self.max_command_history = 100
-        self.commands: Dict[str, Tuple[CommandInfo, Callable]] = {}
+        self.commands: dict[str, Tuple[CommandInfo, Callable]] = {}
         self._register_core_commands()
         self.event_queue = EventQueue()
-        self.event_listeners: Dict[str, List[Callable]] = self.event_queue._listeners
+        self.event_listeners: dict[str, list[Callable]] = self.event_queue._listeners
         self.user_name = self.memory.query("user_info.name") or "User"
         self.settings = self.memory.query("system.settings") or {
             "auto_save_memory": True
@@ -561,7 +561,7 @@ class Jarvis:
         """Schedule a coroutine to run in background with optional priority."""
         await self.event_queue.add_task(coro, priority=priority)
 
-    async def handle_user_input(self, text: str, source: str = "cli") -> Optional[str]:
+    async def handle_user_input(self, text: str, source: str = "cli") -> None | [str]:
         if not text.strip():
             return None
         nlu_result = await self.nlu.process(text)
@@ -605,7 +605,7 @@ class Jarvis:
             await self.publish_event("on_error", str(e))
             return f"Ошибка '{cmd_info.name}': {e}"
 
-    def _log_command_to_history(self, nlu_result: Dict[str, Any]):
+    def _log_command_to_history(self, nlu_result: dict[str, Any]):
         if len(self.command_history) >= self.max_command_history:
             self.command_history.pop(0)
         self.command_history.append({"timestamp": time.time(), **nlu_result})
@@ -622,10 +622,10 @@ class Jarvis:
             cmd_info, _ = lookup
             return f"Команда: {cmd_info.name} (Алиасы: {', '.join(cmd_info.aliases) or 'нет'})\nКатегория: {cmd_info.category.value}\nОписание: {cmd_info.description}\nИспользование: {cmd_info.usage}"
         output = ["Доступные команды ('help <команда>' для деталей):"]
-        categorized_commands: Dict[CommandCategory, List[CommandInfo]] = defaultdict(
+        categorized_commands: dict[CommandCategory, list[CommandInfo]] = defaultdict(
             list
         )
-        unique_commands: Dict[str, CommandInfo] = {}
+        unique_commands: dict[str, CommandInfo] = {}
         for cmd_info_tuple in self.commands.values():
             cmd_info = cmd_info_tuple[0]  # Берем CommandInfo из кортежа
             if cmd_info.name not in unique_commands:
@@ -715,7 +715,7 @@ class Jarvis:
 
     def _parse_arg_string_to_ast(
         self, arg_str: str, arg_name: str
-    ) -> Optional[ast.expr]:
+    ) -> None | [ast.expr]:
         try:
             if not arg_str:
                 return None
@@ -733,18 +733,18 @@ class Jarvis:
             }
             if arg_str in simple_types:
                 return ast.Name(id=arg_str, ctx=ast.Load())
-            match_list = re.fullmatch(r"List\[(.+)\]", arg_str, re.IGNORECASE)
+            match_list = re.fullmatch(r"list\[(.+)\]", arg_str, re.IGNORECASE)
             if match_list:
                 inner_type_ast = self._parse_arg_string_to_ast(
                     match_list.group(1).strip(), "inner_list_type"
                 )
                 if inner_type_ast:
                     return ast.Subscript(
-                        value=ast.Name(id="List", ctx=ast.Load()),
+                        value=ast.Name(id="list", ctx=ast.Load()),
                         slice=inner_type_ast,
                         ctx=ast.Load(),
                     )
-            match_dict = re.fullmatch(r"Dict\[(.+),(.+)\]", arg_str, re.IGNORECASE)
+            match_dict = re.fullmatch(r"dict\[(.+),(.+)\]", arg_str, re.IGNORECASE)
             if match_dict:
                 key_type_ast = self._parse_arg_string_to_ast(
                     match_dict.group(1).strip(), "key_type"
@@ -754,7 +754,7 @@ class Jarvis:
                 )
                 if key_type_ast and value_type_ast:
                     return ast.Subscript(
-                        value=ast.Name(id="Dict", ctx=ast.Load()),
+                        value=ast.Name(id="dict", ctx=ast.Load()),
                         slice=ast.Tuple(
                             elts=[key_type_ast, value_type_ast], ctx=ast.Load()
                         ),
@@ -776,7 +776,7 @@ class Jarvis:
             logger.error(f"Ошибка парсинга типа '{arg_str}'.")
             return ast.Constant(value=arg_str)
 
-    async def create_python_function_command(self, entities: Dict[str, Any]) -> str:
+    async def create_python_function_command(self, entities: dict[str, Any]) -> str:
         raw_signature_str = entities.get("function_signature_raw", "").strip()
         if not raw_signature_str:
             return "Использование: create_python_function <имя_функции>[(аргументы)] [-> возвращаемый_тип]"
@@ -828,12 +828,12 @@ class Jarvis:
                         type_part, arg_name_str
                     )
                     for el in [
-                        "List",
-                        "Dict",
+                        "list",
+                        "dict",
                         "Tuple",
                         "Set",
                         "Any",
-                        "Optional",
+                        "| None",
                         "Union",
                         "Callable",
                     ]:
@@ -861,12 +861,12 @@ class Jarvis:
             return_type_str, "return_type"
         )
         for el in [
-            "List",
-            "Dict",
+            "list",
+            "dict",
             "Tuple",
             "Set",
             "Any",
-            "Optional",
+            "| None",
             "Union",
             "Callable",
         ]:
@@ -1050,7 +1050,7 @@ class Jarvis:
         return "\n".join(report)
 
     async def reason_command(
-        self, entities_or_problem_str: Union[Dict[str, Any], str]
+        self, entities_or_problem_str: Union[dict[str, Any], str]
     ) -> str:
         problem_description: str
         if isinstance(entities_or_problem_str, dict):
@@ -1146,7 +1146,7 @@ class Jarvis:
             history = history.get("value")
         if not history:
             return "История изменений шаблонов пуста."
-        counts: Dict[str, int] = defaultdict(int)
+        counts: dict[str, int] = defaultdict(int)
         for entry in history:
             if entry.get("template") != template_name:
                 continue

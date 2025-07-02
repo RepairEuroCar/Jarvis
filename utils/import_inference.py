@@ -1,6 +1,6 @@
 """Infer required imports from task descriptions."""
 
-from typing import List
+from typing import list
 
 _HEURISTICS = {
     "telegram": ["import aiogram"],
@@ -11,10 +11,10 @@ _HEURISTICS = {
 }
 
 
-def infer_imports(description: str) -> List[str]:
+def infer_imports(description: str) -> list[str]:
     """Return a list of import statements inferred from ``description``."""
     text = description.lower()
-    imports: List[str] = []
+    imports: list[str] = []
     for keyword, stmts in _HEURISTICS.items():
         if keyword in text:
             for stmt in stmts:

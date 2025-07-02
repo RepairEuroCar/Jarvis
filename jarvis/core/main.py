@@ -7,7 +7,7 @@ from collections.abc import Awaitable
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 import yaml
 from pydantic import BaseModel
@@ -21,25 +21,25 @@ except (
 
 from transitions import Machine
 
+import core.system_initializer  # noqa: F401 - triggers diagnostics startup
+from core.events import register_event_emitter
+from core.module_registry import register_module_supplier
 from jarvis.brain import Brain
 from jarvis.commands.registry import ALL_COMMANDS, CommandInfo
 from jarvis.core.agent_loop import AgentLoop
-from jarvis.core.module_manager import ModuleManager, ModuleConfig
+from jarvis.core.module_manager import ModuleConfig, ModuleManager
 from jarvis.core.sensor_manager import ScheduledTask, SensorManager
 from jarvis.event_queue import EventQueue
-from jarvis.secure_event_queue import SecureEventQueue
 from jarvis.goal_manager import GoalManager
 from jarvis.memory.manager import MemoryManager
 from jarvis.nlp.processor import NLUProcessor
 from jarvis.plugins import load_plugins
+from jarvis.secure_event_queue import SecureEventQueue
 from jarvis.voice.interface import VoiceInterface
 from modules.git_manager import GitManager
-from utils.update_checker import check_for_updates
 from utils.linter import AstLinter
 from utils.logger import get_logger, setup_logging
-from core.events import register_event_emitter
-from core.module_registry import register_module_supplier
-import core.system_initializer  # noqa: F401 - triggers diagnostics startup
+from utils.update_checker import check_for_updates
 
 logger = get_logger().getChild("Core")
 
@@ -74,12 +74,12 @@ class Settings(BaseSettings):
     voice_volume: float = 0.9
     recognition_language: str = "ru-RU"
     tts_language: str = "ru"
-    allowed_networks: List[str] = ["0.0.0.0/0"]
+    allowed_networks: list[str] = ["0.0.0.0/0"]
     plugin_dir: str = "plugins"
-    extra_plugin_dirs: List[str] = ["~/.jarvis/plugins"]
+    extra_plugin_dirs: list[str] = ["~/.jarvis/plugins"]
     intent_model_path: str = "models/intent"
     clarify_threshold: float = 0.5
-    autoload_modules: Dict[str, int] = {}
+    autoload_modules: dict[str, int] = {}
     use_secure_channels: bool = False
 
     class Config:
@@ -112,7 +112,7 @@ class Jarvis:
     """Main application orchestrator implemented as a Singleton."""
 
     states = ["idle", "listening", "processing", "sleeping"]
-    _instance: Optional["Jarvis"] = None
+    _instance : None | ["Jarvis"] = None
     INIT_ORDER = ["voice_interface", "event_queue", "sensor_manager"]
     INIT_THRESHOLDS = {
         "voice_interface": 2.0,
@@ -134,7 +134,7 @@ class Jarvis:
         self._setup_logging()
         self._setup_state_machine()
 
-        self.commands: Dict[str, RegisteredCommand] = {}
+        self.commands: dict[str, RegisteredCommand] = {}
         self._memory = None
         self._voice_interface = None
         self._register_commands()
@@ -161,7 +161,7 @@ class Jarvis:
             )
         )
         self.agent_loop = None
-        self._pending_question: Optional[str] = None
+        self._pending_question : None | [str] = None
         # Initialize per-instance cache for input parsing
         self._parse_input_cached = lru_cache(maxsize=self.settings.max_cache_size)(
             self._parse_input_uncached
@@ -203,7 +203,7 @@ class Jarvis:
         return name or self.settings.default_user
 
     @property
-    def pending_question(self) -> Optional[str]:
+    def pending_question(self) -> None | [str]:
         """Return the last question awaiting user clarification."""
         return self._pending_question
 
@@ -211,11 +211,11 @@ class Jarvis:
     # Module management helpers
     # --------------------------------------------------------------
 
-    async def load_module(self, name: str, config: Optional[Dict] = None) -> bool:
+    async def load_module(self, name: str, config : None | [dict] = None) -> bool:
         """Load a Jarvis module via :class:`ModuleManager`."""
         return await self.module_manager.load_module(name, config)
 
-    async def load_configured_modules(self, modules: Dict[str, ModuleConfig]) -> None:
+    async def load_configured_modules(self, modules: dict[str, ModuleConfig]) -> None:
         await self.module_manager.load_modules(modules)
 
     async def unload_module(self, name: str) -> bool:
@@ -302,7 +302,9 @@ class Jarvis:
                 )
                 if name == "event_queue":
                     self.event_queue.subscribe("voice_command", self._on_voice_command)
-                    self.event_queue.subscribe("scheduled_tick", self._on_scheduled_tick)
+                    self.event_queue.subscribe(
+                        "scheduled_tick", self._on_scheduled_tick
+                    )
                 break
 
         await self.load_configured_modules()
@@ -337,8 +339,8 @@ class Jarvis:
             return await self.unknown_command(command_text, is_voice)
 
         event = UserEvent(
-            user_id=0, text=command_text, is_voice=is_voice  # Системный пользователь
-        )
+            user_id=0, text=command_text, is_voice=is_voice
+        )  # Системный пользователь
 
         result = await cmd.handler(event)
 
@@ -349,11 +351,11 @@ class Jarvis:
 
         return result
 
-    def parse_input(self, text: str) -> Dict:
+    def parse_input(self, text: str) -> dict:
         """Упрощенный парсер команд с кэшированием"""
         return self._parse_input_cached(text)
 
-    def _parse_input_uncached(self, text: str) -> Dict:
+    def _parse_input_uncached(self, text: str) -> dict:
         text = text.lower().strip()
         for cmd in self.commands.values():
             if text.startswith(cmd.info.name) or any(
@@ -445,7 +447,7 @@ class Jarvis:
         review = self.brain.self_review()
         if not review:
             return "No recent code to review."
-        lines: List[str] = []
+        lines: list[str] = []
         for problem, info in review.items():
             lines.append(f"{problem}:")
             for w in info["warnings"]:
@@ -455,7 +457,7 @@ class Jarvis:
     async def rate_solutions_command(self, event: UserEvent):
         """Display ratings for stored solutions."""
         thoughts = self.memory.query("brain.thoughts") or {}
-        lines: List[str] = []
+        lines: list[str] = []
         for entry in thoughts.values():
             record = entry.get("value") if isinstance(entry, dict) else entry
             rating = record.get("rating")
@@ -653,7 +655,7 @@ class Jarvis:
         return f"Goal added: {opts.goal}"
 
     async def list_goals_command(self, event: UserEvent):
-        """List active goals ordered by priority."""
+        """list active goals ordered by priority."""
         goals = self.goals.list_goals()
         if not goals:
             return "No active goals."

@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+
 import jarvis.rest_api as rest_api
 
 
@@ -12,7 +13,9 @@ async def dummy_health():
 
 def test_selfcheck_endpoint(monkeypatch):
     monkeypatch.setattr(rest_api.jarvis, "initialize", dummy_init)
-    monkeypatch.setattr(rest_api.jarvis.module_manager, "health_check_all", dummy_health)
+    monkeypatch.setattr(
+        rest_api.jarvis.module_manager, "health_check_all", dummy_health
+    )
 
     with TestClient(rest_api.app) as client:
         response = client.get("/selfcheck")

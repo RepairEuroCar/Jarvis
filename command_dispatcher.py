@@ -1,281 +1,297 @@
 import asyncio
+import inspect
 import shlex
-from typing import Any, Callable, Dict, Optional, Type
+from dataclasses import dataclass
+from typing import Any, Callable, Tuple, Type, Union
 
+from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-from utils.logger import get_logger
+# Custom types
+CommandResult = Union[Any, None]
+CommandHandler = Callable[..., CommandResult]
+ParamModel = Type[BaseModel]
 
 
-class HelpParams(BaseModel):
-    command: Optional[str] = None
+@dataclass
+class CommandContext:
+    """Context object passed to command handlers"""
 
-    class Config:
-        extra = "forbid"
-
-
-class ExitParams(BaseModel):
-    class Config:
-        extra = "forbid"
-
-
-class ListCommandsParams(BaseModel):
-    class Config:
-        extra = "forbid"
-
-
-class ReloadParams(BaseModel):
-    module: Optional[str] = None
-
-    class Config:
-        extra = "forbid"
-
-
-class ReloadConfigParams(BaseModel):
-    class Config:
-        extra = "forbid"
-
-
-class LoadParams(BaseModel):
-    module: Optional[str] = None
-
-    class Config:
-        extra = "forbid"
-
-
-class UnloadParams(BaseModel):
-    module: Optional[str] = None
-
-    class Config:
-        extra = "forbid"
+    user: str
+    timestamp: float
+    raw_input: str
+    is_async: bool
 
 
 class CommandError(Exception):
-    """Base error raised by :class:`CommandDispatcher`."""
+    """Base error for all command-related exceptions"""
+
+    def __init__(self, message: str, command : None | [str] = None):
+        self.message = message
+        self.command = command
+        super().__init__(message)
 
 
 class InvalidCommandError(CommandError):
-    """Raised when the input command cannot be parsed."""
+    """Raised when command parsing fails"""
+
+
+class CommandExecutionError(CommandError):
+    """Raised when command execution fails"""
 
 
 class CommandDispatcher:
-    """Simple command dispatcher parsing ``module action --param=value`` style
-    commands.
+    """Advanced command dispatcher with async support and parameter validation.
 
-    Parameters can be provided as ``--key=value``, ``--flag`` for booleans or
-    short options like ``-k value`` and ``-v``.
+    Features:
+    - Async/sync command handlers
+    - Pydantic parameter validation
+    - Context injection
+    - Comprehensive error handling
+    - Command chaining
+    - Middleware support
     """
 
     EXIT = object()
+    _middlewares: list[Callable] = []
 
-    def __init__(self, jarvis: Optional[Any] = None) -> None:
-        self.jarvis = jarvis
-        self.logger = get_logger().getChild("CommandDispatcher")
-        self._handlers: Dict[str, Dict[Optional[str], Callable[..., Any]]] = {}
-        self._param_models: Dict[str, Dict[Optional[str], Type[BaseModel]]] = {}
-        self._register_builtin_commands()
+    def __init__(self, prefix: str = "", timeout: float = 30.0):
+        self._handlers: dict[str, dict[| None[str], CommandHandler]] = {}
+        self._param_models: dict[str, dict[| None[str], ParamModel]] = {}
+        self.prefix = prefix
+        self.timeout = timeout
+        self._register_builtins()
 
-    # ------------------------------------------------------------------
-    # Registration utilities
-    # ------------------------------------------------------------------
-    def register_command_handler(
-        self,
-        module: str,
-        action: Optional[str],
-        handler: Callable[..., Any],
-        param_model: Type[BaseModel] | None = None,
-    ) -> None:
-        """Register a handler for ``module action``."""
-        self._handlers.setdefault(module, {})[action] = handler
-        if param_model:
-            self._param_models.setdefault(module, {})[action] = param_model
+    def register_middleware(self, middleware: Callable):
+        """Register preprocessing middleware"""
+        self._middlewares.append(middleware)
+        return middleware
 
     def command(
         self,
         module: str,
-        action: Optional[str],
-        param_model: Type[BaseModel] | None = None,
+        action : None | [str] = None,
+        *,
+        param_model : None | [ParamModel] = None,
     ):
         """Decorator for registering command handlers."""
 
-        def decorator(func: Callable[..., Any]):
-            self.register_command_handler(module, action, func, param_model)
+        def decorator(func: CommandHandler):
+            self.register(
+                module=module, action=action, handler=func, param_model=param_model
+            )
             return func
 
         return decorator
 
-    # ------------------------------------------------------------------
-    # Parsing
-    # ------------------------------------------------------------------
-    def parse(self, text: str) -> tuple[str, Optional[str], Dict[str, str]]:
-        """Parse ``text`` into module, action and parameter key/value pairs.
+    def register(
+        self,
+        module: str,
+        handler: CommandHandler,
+        action : None | [str] = None,
+        param_model : None | [ParamModel] = None,
+    ):
+        """Register a command handler."""
+        if module not in self._handlers:
+            self._handlers[module] = {}
+            self._param_models[module] = {}
 
-        Supported parameter syntaxes are::
+        self._handlers[module][action] = handler
 
-            --key=value  # key/value pair
-            --flag       # boolean flag ("true")
-            -k value     # short option with separate value
-            -v           # short boolean flag
+        if param_model:
+            self._param_models[module][action] = param_model
+        elif action in self._param_models.get(module, {}):
+            del self._param_models[module][action]
+
+    async def dispatch(
+        self, text: str, context : None | [dict] = None
+    ) -> CommandResult:
+        """Execute a command with full error handling.
+
+        Args:
+            text: Command string to execute
+            context: Additional execution context
+
+        Returns:
+            Command execution result or None if command not found
+
+        Raises:
+            InvalidCommandError: For parsing/validation errors
+            CommandExecutionError: For execution errors
         """
+        # Apply middleware preprocessing
+        for middleware in self._middlewares:
+            text = await self._run_middleware(middleware, text)
+
         try:
-            tokens = shlex.split(text)
-        except ValueError as exc:  # unmatched quotes etc
-            raise InvalidCommandError(str(exc)) from exc
+            module, action, params = self._parse_command(text)
+            handler = self._get_handler(module, action)
 
-        if not tokens:
-            raise InvalidCommandError("No command provided")
+            if handler is None:
+                logger.debug(f"Command not found: {module} {action or ''}")
+                return None
 
-        module = tokens[0]
-        action: Optional[str] = None
-        idx = 1
-        if idx < len(tokens) and not tokens[idx].startswith("-"):
-            action = tokens[idx]
-            idx += 1
+            ctx = self._create_context(text, handler)
+            validated_params = self._validate_params(module, action, params)
 
-        params: Dict[str, str] = {}
-        while idx < len(tokens):
-            token = tokens[idx]
+            return await self._execute_handler(
+                handler=handler,
+                params=validated_params,
+                context={**(context or {}), **ctx},
+            )
+
+        except InvalidCommandError:
+            raise
+        except Exception as e:
+            logger.error(f"Command failed: {text}", exc_info=True)
+            raise CommandExecutionError(f"Command execution failed: {e}", text) from e
+
+    async def dispatch_chain(self, commands: list[str]) -> list[CommandResult]:
+        """Execute multiple commands sequentially."""
+        results = []
+        for cmd in commands:
+            try:
+                result = await self.dispatch(cmd)
+                results.append(result)
+                if result is self.EXIT:
+                    break
+            except CommandError as e:
+                results.append(e)
+        return results
+
+    def _parse_command(self, text: str) -> Tuple[str, | None[str], dict[str, str]]:
+        """Parse command string into components."""
+        try:
+            tokens = shlex.split(text[len(self.prefix) :] if self.prefix else text)
+            if not tokens:
+                raise InvalidCommandError("Empty command")
+
+            module = tokens[0]
+            action = (
+                tokens[1] if len(tokens) > 1 and not tokens[1].startswith("-") else None
+            )
+            params = self._parse_params(tokens[2:] if action else tokens[1:])
+
+            return module, action, params
+        except ValueError as e:
+            raise InvalidCommandError(f"Invalid command syntax: {e}") from e
+
+    def _parse_params(self, tokens: list[str]) -> dict[str, str]:
+        """Parse command parameters from tokens."""
+        params = {}
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+
             if token.startswith("--"):
+                # Long option (--key=value or --flag)
                 if "=" in token:
                     key, val = token[2:].split("=", 1)
-                    if not key:
-                        raise InvalidCommandError(f"Malformed parameter: {token}")
                     params[key] = val
                 else:
-                    key = token[2:]
-                    if not key:
-                        raise InvalidCommandError(f"Malformed parameter: {token}")
-                    params[key] = "true"
+                    params[token[2:]] = "true"
             elif token.startswith("-") and len(token) > 1:
+                # Short option (-k value or -v)
                 key = token[1:]
-                if not key:
-                    raise InvalidCommandError(f"Malformed parameter: {token}")
-                if idx + 1 < len(tokens) and not tokens[idx + 1].startswith("-"):
-                    idx += 1
-                    params[key] = tokens[idx]
+                if i + 1 < len(tokens) and not tokens[i + 1].startswith("-"):
+                    params[key] = tokens[i + 1]
+                    i += 1
                 else:
                     params[key] = "true"
             else:
-                raise InvalidCommandError(f"Malformed parameter: {token}")
-            idx += 1
+                raise InvalidCommandError(f"Invalid parameter: {token}")
 
-        return module, action, params
+            i += 1
 
-    # ------------------------------------------------------------------
-    # Dispatch
-    # ------------------------------------------------------------------
-    async def dispatch(self, text: str) -> Any:
-        module, action, params = self.parse(text)
-        handler = self._handlers.get(module, {}).get(action)
-        if not handler:
-            return None
+        return params
+
+    def _get_handler(
+        self, module: str, action : None | [str]
+    ) -> None | [CommandHandler]:
+        """Get handler for command if exists."""
+        return self._handlers.get(module, {}).get(action)
+
+    def _validate_params(
+        self, module: str, action : None | [str], params: dict[str, str]
+    ) -> dict[str, Any]:
+        """Validate parameters against model if available."""
         model = self._param_models.get(module, {}).get(action)
-        if model:
-            try:
-                params = model(**params).dict()
-            except ValidationError as exc:
-                raise InvalidCommandError(str(exc)) from exc
-        self.logger.info("Invoking %s %s with %s", module, action, params)
-        if asyncio.iscoroutinefunction(handler):
-            return await handler(**params)
-        return handler(**params)
+        if not model:
+            return params
 
-    async def dispatch_chain(self, texts: list[str]) -> list[Any]:
-        """Sequentially dispatch multiple command strings."""
-        results: list[Any] = []
-        for text in texts:
-            result = await self.dispatch(text)
-            results.append(result)
-            if result is self.EXIT:
-                break
-        return results
+        try:
+            return model(**params).dict()
+        except ValidationError as e:
+            raise InvalidCommandError(f"Invalid parameters: {e}") from e
 
-    # ------------------------------------------------------------------
-    # Built-in commands
-    # ------------------------------------------------------------------
-    def _register_builtin_commands(self) -> None:
-        self.register_command_handler("help", None, self._help, HelpParams)
-        self.register_command_handler("exit", None, self._exit, ExitParams)
-        self.register_command_handler(
-            "list_commands", None, self._list_commands, ListCommandsParams
-        )
-        self.register_command_handler("load", None, self._load, LoadParams)
-        self.register_command_handler("unload", None, self._unload, UnloadParams)
-        self.register_command_handler("reload", None, self._reload, ReloadParams)
-        self.register_command_handler(
-            "reload_config", None, self._reload_config, ReloadConfigParams
-        )
+    def _create_context(self, text: str, handler: CommandHandler) -> dict[str, Any]:
+        """Create execution context."""
+        return {
+            "raw_input": text,
+            "is_async": asyncio.iscoroutinefunction(handler),
+            "timestamp": asyncio.get_event_loop().time(),
+        }
 
-    def _list_commands(self, **_: str) -> str:
-        lines = []
-        for mod, actions in self._handlers.items():
-            for act in actions:
-                if (
-                    mod
-                    in {
-                        "help",
-                        "exit",
-                        "list_commands",
-                        "load",
-                        "unload",
-                        "reload",
-                        "reload_config",
-                    }
-                    and act is None
-                ):
-                    lines.append(mod)
-                else:
-                    lines.append(f"{mod} {act}")
-        return "\n".join(sorted(lines))
+    async def _execute_handler(
+        self, handler: CommandHandler, params: dict[str, Any], context: dict[str, Any]
+    ) -> CommandResult:
+        """Execute handler with timeout and context injection."""
+        # Inject context if handler accepts it
+        if "context" in inspect.signature(handler).parameters:
+            params["context"] = context
 
-    def _help(self, command: str | None = None, **_: str) -> str:
-        if not command:
-            return (
-                "Enter <module> <action> [--param=value|--flag|-k value]..."
-                "\nAvailable commands:\n" + self._list_commands()
+        try:
+            if asyncio.iscoroutinefunction(handler):
+                return await asyncio.wait_for(handler(**params), timeout=self.timeout)
+            return handler(**params)
+        except asyncio.TimeoutError:
+            raise CommandExecutionError("Command timed out")
+        except Exception:
+            logger.opt(exception=True).error("Handler execution failed")
+            raise
+
+    async def _run_middleware(self, middleware: Callable, text: str) -> str:
+        """Run middleware with proper async/sync handling."""
+        if asyncio.iscoroutinefunction(middleware):
+            return await middleware(text)
+        return middleware(text)
+
+    def _register_builtins(self):
+        """Register built-in commands."""
+        self.register("help", self._help)
+        self.register("exit", lambda: self.EXIT)
+        self.register("list", self._list_commands)
+
+    async def _help(self, command : None | [str] = None) -> str:
+        """Show help for commands."""
+        if command:
+            handler = next(
+                (
+                    h
+                    for mod in self._handlers.values()
+                    for act, h in mod.items()
+                    if f"{act if act else ''}" == command
+                ),
+                None,
             )
-        tokens = command.split()
-        module = tokens[0]
-        action = tokens[1] if len(tokens) > 1 else None
-        handler = self._handlers.get(module, {}).get(action)
-        if not handler:
-            return "Command not found"
-        doc = handler.__doc__ or "No description"
-        return doc.strip()
+            if not handler:
+                return f"No help available for: {command}"
+            return inspect.getdoc(handler) or "No documentation available"
 
-    def _exit(self, **_: str) -> Any:
-        return self.EXIT
+        return "\n".join(
+            f"{mod} {act if act else ''}"
+            for mod in self._handlers
+            for act in self._handlers[mod]
+        )
 
-    async def _load(self, module: str | None = None, **_: str) -> str:
-        if not module:
-            return "Usage: load --module=<name>"
-        if not self.jarvis or not hasattr(self.jarvis, "module_manager"):
-            return "Load not supported"
-        success = await self.jarvis.module_manager.load_module(module)
-        return f"Module {module} loaded" if success else f"Failed to load {module}"
-
-    async def _unload(self, module: str | None = None, **_: str) -> str:
-        if not module:
-            return "Usage: unload --module=<name>"
-        if not self.jarvis or not hasattr(self.jarvis, "module_manager"):
-            return "Unload not supported"
-        success = await self.jarvis.module_manager.unload_module(module)
-        return f"Module {module} unloaded" if success else f"Failed to unload {module}"
-
-    async def _reload(self, module: str | None = None, **_: str) -> str:
-        if not module:
-            return "Usage: reload --module=<name>"
-        if not self.jarvis or not hasattr(self.jarvis, "module_manager"):
-            return "Reload not supported"
-        success = await self.jarvis.module_manager.reload_module(module)
-        return f"Module {module} reloaded" if success else f"Failed to reload {module}"
-
-    async def _reload_config(self, **_: str) -> str:
-        if not self.jarvis or not hasattr(self.jarvis, "reload_configuration"):
-            return "Reload not supported"
-        await self.jarvis.reload_configuration()
-        return "Configuration reloaded"
+    def _list_commands(self) -> list[str]:
+        """list all registered commands."""
+        return [
+            f"{self.prefix}{mod} {act if act else ''}"
+            for mod in self._handlers
+            for act in self._handlers[mod]
+        ]
 
 
-# Global dispatcher used for modules that register handlers on import
+# Global dispatcher instance
 default_dispatcher = CommandDispatcher()

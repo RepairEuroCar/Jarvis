@@ -1,5 +1,5 @@
 import time
-from typing import List, Optional
+from typing import list, | None
 
 import aiohttp
 
@@ -10,7 +10,7 @@ class LoggedClientSession(aiohttp.ClientSession):
     """ClientSession with automatic request logging using TraceConfig."""
 
     def __init__(
-        self, *args, trace_configs: Optional[List[aiohttp.TraceConfig]] = None, **kwargs
+        self, *args, trace_configs : None | [list[aiohttp.TraceConfig]] = None, **kwargs
     ):
         logger = get_logger().getChild("http")
         trace_config = aiohttp.TraceConfig()

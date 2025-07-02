@@ -3,8 +3,8 @@ import types
 
 import pytest
 
-from jarvis.core.module_manager import ModuleManager, JarvisModule
 from core.profiler import default_profiler
+from jarvis.core.module_manager import JarvisModule, ModuleManager
 
 
 class DummyJarvis:

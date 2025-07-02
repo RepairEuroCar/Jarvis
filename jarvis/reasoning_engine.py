@@ -1,6 +1,6 @@
 import os
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List
+from typing import Any
 
 from utils.logger import get_logger
 
@@ -19,19 +19,19 @@ class ReasoningEngine:
     def __init__(self) -> None:
         self.logger = logger
 
-    def _generate_hypotheses(self, goal: str) -> List[str]:
+    def _generate_hypotheses(self, goal: str) -> list[str]:
         if "ssh" in goal.lower():
             return ["~/.ssh", "/etc/ssh"]
         return []
 
-    def _build_plan(self, hypotheses: List[str]) -> List[str]:
+    def _build_plan(self, hypotheses: list[str]) -> list[str]:
         if not hypotheses:
             return ["Нет конкретных действий"]
         return ["Проверить доступность указанных путей"]
 
-    def reason(self, goal: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    def reason(self, goal: str, context: dict[str, Any]) -> dict[str, Any]:
         """Run reasoning chain and return structured log."""
-        chain: List[Step] = [Step("goal", goal), Step("context", context)]
+        chain: list[Step] = [Step("goal", goal), Step("context", context)]
 
         if context.get("unknown_host"):
             self.logger.debug(
@@ -44,7 +44,7 @@ class ReasoningEngine:
         plan = self._build_plan(hypotheses)
         chain.append(Step("plan", plan))
 
-        actions: List[str] = []
+        actions: list[str] = []
         result: str = ""
         for path in hypotheses:
             expanded = os.path.expanduser(path)
@@ -63,7 +63,7 @@ class ReasoningEngine:
         return {"chain": [asdict(s) for s in chain], "result": result}
 
     def decision_probability(
-        self, context: Dict[str, Any], risk: float, goal: str, experience: float
+        self, context: dict[str, Any], risk: float, goal: str, experience: float
     ) -> float:
         """Estimate probability of taking an action."""
         risk = max(0.0, min(risk, 1.0))

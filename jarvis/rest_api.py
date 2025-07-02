@@ -1,13 +1,13 @@
 """Minimal REST API for issuing commands to Jarvis."""
 
+import time
+from datetime import datetime, timedelta, timezone
+
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
-from datetime import datetime, timezone, timedelta
-import time
-
-from utils.logger import get_logger
 
 from jarvis.core.main import Jarvis
+from utils.logger import get_logger
 
 logger = get_logger().getChild("REST")
 START_TIME = datetime.now(timezone.utc)
@@ -30,7 +30,9 @@ async def startup() -> None:
 async def log_request_time(request: Request, call_next):
     start_ts = time.time()
     start_iso = datetime.now(timezone.utc).isoformat()
-    logger.info("Start request %s %s at %s", request.method, request.url.path, start_iso)
+    logger.info(
+        "Start request %s %s at %s", request.method, request.url.path, start_iso
+    )
     try:
         response = await call_next(request)
         return response

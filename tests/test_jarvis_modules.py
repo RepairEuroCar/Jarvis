@@ -1,6 +1,5 @@
 import importlib
 
-import jarvis
 import modules.analyzer
 
 

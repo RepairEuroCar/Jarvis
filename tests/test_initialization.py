@@ -45,8 +45,10 @@ async def test_initialize_warns_on_slow_step(monkeypatch, caplog):
         await asyncio.sleep(0.01)
 
     jarvis.sensor_manager.start = slow_start
+
     async def event_start():
         await asyncio.sleep(0)
+
     jarvis.event_queue.start = event_start
     jarvis.event_queue.subscribe = lambda *a, **kw: None
 

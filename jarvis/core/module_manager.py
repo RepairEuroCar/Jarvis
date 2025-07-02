@@ -4,18 +4,18 @@ import importlib.util
 import sys
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable
 from contextlib import contextmanager
 from enum import Enum, auto
 from functools import wraps
-from typing import Any, Dict, List, Optional, Callable, Awaitable
-
-from core.profiler import default_profiler
+from typing import Any, Callable
 
 from pydantic import BaseModel, ValidationError
 
-from utils.logger import get_logger
-from core.flags import default_flag_manager
 from core.fallback_manager import FallbackManager
+from core.flags import default_flag_manager
+from core.profiler import default_profiler
+from utils.logger import get_logger
 
 logger = get_logger().getChild("ModuleManager")
 
@@ -36,28 +36,26 @@ class ModuleState(Enum):
 
 class ModuleEvent(BaseModel):
     name: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
     timestamp: float = time.time()
 
 
 class ModuleConfig(BaseModel):
     enabled: bool = True
     priority: int = 50
-    dependencies: List[str] = []
-    required_packages: List[str] = []
+    dependencies: list[str] = []
+    required_packages: list[str] = []
     sandboxed: bool = False
-    expected_hash: Optional[str] = None
-    resource_limits: Dict[str, int] = {"cpu_time": 1, "memory_mb": 256}
+    expected_hash : None | [str] = None
+    resource_limits: dict[str, int] = {"cpu_time": 1, "memory_mb": 256}
 
 
 class JarvisModule(ABC):
     @abstractmethod
-    async def setup(self, jarvis: Any, config: Dict) -> bool:
-        ...
+    async def setup(self, jarvis: Any, config: dict) -> bool: ...
 
     @abstractmethod
-    async def cleanup(self) -> None:
-        ...
+    async def cleanup(self) -> None: ...
 
     async def health_check(self) -> bool:
         return True
@@ -65,7 +63,7 @@ class JarvisModule(ABC):
     async def handle_event(self, event: ModuleEvent) -> bool:
         return False
 
-    async def run_tests(self) -> Dict[str, Any]:
+    async def run_tests(self) -> dict[str, Any]:
         return {"status": "no_tests"}
 
     async def reconnect(self) -> None:
@@ -76,7 +74,7 @@ class JarvisModule(ABC):
         """Execute a fallback routine after repeated errors."""
         return None
 
-    def get_health_metrics(self) -> Dict[str, Any]:
+    def get_health_metrics(self) -> dict[str, Any]:
         """Return basic health metrics for diagnostics."""
         return {
             "response_time": 0,
@@ -119,7 +117,7 @@ def time_operation(operation_name: str):
     logger.debug(f"{operation_name} took {time.monotonic() - start:.2f}s")
 
 
-def apply_resource_limits(limits: Dict[str, int]):
+def apply_resource_limits(limits: dict[str, int]):
     """No-op after removing sandbox limits."""
     return
 
@@ -132,10 +130,10 @@ def apply_resource_limits(limits: Dict[str, int]):
 class ModuleManager:
     def __init__(self, jarvis: Any):
         self.jarvis = jarvis
-        self.modules: Dict[str, Any] = {}
-        self.module_states: Dict[str, ModuleState] = {}
-        self.module_configs: Dict[str, ModuleConfig] = {}
-        self.module_events: Dict[str, List[ModuleEvent]] = {}
+        self.modules: dict[str, Any] = {}
+        self.module_states: dict[str, ModuleState] = {}
+        self.module_configs: dict[str, ModuleConfig] = {}
+        self.module_events: dict[str, list[ModuleEvent]] = {}
         self.paused_modules: set[str] = set()
         self.fallback_manager = FallbackManager()
         self.lock = asyncio.Lock()
@@ -147,7 +145,7 @@ class ModuleManager:
 
     @module_error_handler
     async def load_module(
-        self, module_name: str, config: Optional[Dict] = None
+        self, module_name: str, config : None | [dict] = None
     ) -> bool:
         async with self.lock:
             if module_name in self.modules:
@@ -256,7 +254,7 @@ class ModuleManager:
             self.paused_modules.discard(module_name)
         return result
 
-    async def load_modules(self, modules: Dict[str, ModuleConfig]) -> None:
+    async def load_modules(self, modules: dict[str, ModuleConfig]) -> None:
         for name, cfg in sorted(modules.items(), key=lambda x: x[1].priority):
             await self.load_module(name, cfg.dict())
 
@@ -270,7 +268,7 @@ class ModuleManager:
         """Delegate to :class:`FallbackManager`."""
         self.fallback_manager.register_fallback(module_name, handler)
 
-    async def send_event(self, module_name: str, event_name: str, data: Dict) -> bool:
+    async def send_event(self, module_name: str, event_name: str, data: dict) -> bool:
         """Отправка события модулю."""
         if module_name not in self.modules:
             return False
@@ -282,7 +280,7 @@ class ModuleManager:
             return await self.modules[module_name].handle_event(event)
         return False
 
-    async def run_module_tests(self, module_name: str) -> Dict[str, Any]:
+    async def run_module_tests(self, module_name: str) -> dict[str, Any]:
         """Запуск тестов модуля."""
         if module_name not in self.modules:
             return {"error": "module_not_loaded"}
@@ -291,7 +289,7 @@ class ModuleManager:
             return await self.modules[module_name].run_tests()
         return {"status": "no_tests"}
 
-    async def health_check_all(self) -> Dict[str, bool]:
+    async def health_check_all(self) -> dict[str, bool]:
         """Проверка здоровья всех модулей."""
         results = {}
         for name, module in self.modules.items():
@@ -312,7 +310,7 @@ class ModuleManager:
     ) -> bool:
         return True
 
-    def _check_required_packages(self, config: ModuleConfig) -> List[str]:
+    def _check_required_packages(self, config: ModuleConfig) -> list[str]:
         missing = []
         for pkg in config.required_packages:
             if importlib.util.find_spec(pkg) is None:
@@ -327,8 +325,12 @@ class ModuleManager:
                     return False
         return True
 
-    async def _check_required_packages(self, module_name: str, config: ModuleConfig) -> bool:
-        missing = [p for p in config.required_packages if importlib.util.find_spec(p) is None]
+    async def _check_required_packages(
+        self, module_name: str, config: ModuleConfig
+    ) -> bool:
+        missing = [
+            p for p in config.required_packages if importlib.util.find_spec(p) is None
+        ]
         if missing:
             logger.error(
                 f"Missing required packages for {module_name}: {', '.join(missing)}"
@@ -340,7 +342,7 @@ class ModuleManager:
 
     async def _initialize_module(
         self, module_name: str, config: ModuleConfig
-    ) -> Optional[JarvisModule]:
+    ) -> None | [JarvisModule]:
         try:
             module = importlib.import_module(f"jarvis.modules.{module_name}")
             if not hasattr(module, "setup"):

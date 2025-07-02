@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Dict
+from typing import Any
 
 from jarvis.event_queue import EventQueue
 from utils.logger import get_logger
@@ -54,7 +54,7 @@ class AgentLoop:
             if parsed.get("intent") == "exit":
                 await self.stop()
                 return
-            context: Dict[str, Any] = {"user_id": user_id, **kwargs}
+            context: dict[str, Any] = {"user_id": user_id, **kwargs}
             context.update(parsed)
             result = await self.jarvis.brain.think(text, context)
             token = None

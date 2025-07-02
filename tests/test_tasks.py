@@ -1,4 +1,4 @@
-from codex.tasks import load_tasks, Task
+from codex.tasks import Task, load_tasks
 
 
 def test_load_default_tasks():

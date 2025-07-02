@@ -1,5 +1,6 @@
 import asyncio
 import json
+
 import pytest
 
 from jarvis.core.main import Jarvis
@@ -52,15 +53,17 @@ async def test_pylint_integration(monkeypatch, tmp_path):
             returncode = 0
 
             async def communicate(self):
-                out = json.dumps([
-                    {
-                        "type": "warning",
-                        "line": 1,
-                        "message": "dummy",
-                        "symbol": "dummy",
-                        "message-id": "W0001",
-                    }
-                ]).encode()
+                out = json.dumps(
+                    [
+                        {
+                            "type": "warning",
+                            "line": 1,
+                            "message": "dummy",
+                            "symbol": "dummy",
+                            "message-id": "W0001",
+                        }
+                    ]
+                ).encode()
                 return out, b""
 
         return Proc()

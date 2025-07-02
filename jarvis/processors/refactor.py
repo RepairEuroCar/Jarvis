@@ -1,6 +1,6 @@
 import ast
 import re
-from typing import Any, Dict
+from typing import Any
 
 from utils.logger import get_logger
 
@@ -18,8 +18,8 @@ class RefactorProcessor(BaseThoughtProcessor):
     """Simplified refactoring processor that renames variables to snake_case."""
 
     async def _process_logic(
-        self, problem: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, problem: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
         source = context.get("source_code", "")
         if not source:
             return {

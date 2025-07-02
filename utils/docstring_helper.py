@@ -2,8 +2,9 @@
 
 import ast
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
+from typing import list
 
 import yaml
 
@@ -42,7 +43,7 @@ def _generate_docstring(node: ast.AST | None, style: str, kind: str) -> str:
     return '"""Auto-generated summary."""'
 
 
-def _indent_lines(text: str, indent: str) -> List[str]:
+def _indent_lines(text: str, indent: str) -> list[str]:
     """Indent each line of ``text`` by ``indent``."""
     return [f"{indent}{line}" if line else indent for line in text.splitlines()]
 
@@ -52,7 +53,7 @@ def _load_style(policy_path: str | os.PathLike[str]) -> str:
     if not path.is_file():
         return "google"
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             cfg = yaml.safe_load(fh) or {}
             return cfg.get("docstring", {}).get("style", "google")
     except Exception:
@@ -67,11 +68,11 @@ def process_file(
     """Insert placeholder docstrings into ``path`` if they are missing."""
     if style is None:
         style = _load_style(policy_path)
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         source = f.read()
     tree = ast.parse(source, filename=path)
     lines = source.splitlines()
-    insertions: List[tuple[int, List[str]]] = []
+    insertions: list[tuple[int, list[str]]] = []
 
     if ast.get_docstring(tree) is None:
         doc = _generate_docstring(None, style, "module")
@@ -116,9 +117,9 @@ def process_paths(
     paths: Iterable[str],
     style: str | None = None,
     policy_path: str | os.PathLike[str] = "train/coding_policy.yaml",
-) -> List[str]:
+) -> list[str]:
     """Process multiple file or directory paths."""
-    changed: List[str] = []
+    changed: list[str] = []
     for p in paths:
         if os.path.isdir(p):
             for root, _, files in os.walk(p):

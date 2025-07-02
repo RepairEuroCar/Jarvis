@@ -3,73 +3,85 @@ name: 🏷️ Авто-добавление метки auto-merge к PR
 on:
   pull_request:
     types: [opened, reopened, synchronize, edited, ready_for_review]
-
   workflow_dispatch:
 
 jobs:
   label-pr:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Проверка и добавление метки
         uses: actions/github-script@v6
+        id: add-label
         with:
           script: |
             const label = "auto-merge";
-            const pr = context.payload.pull_request;
 
-            // Если запуск вручную, context.payload.pull_request может быть undefined.
-            if (!pr) {
-              const prs = await github.paginate(
-                github.rest.pulls.list,
-                {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  state: "open",
-                  per_page: 100,
+            try {
+              // Для workflow_dispatch
+              if (!context.payload.pull_request) {
+                console.log('Ручной запуск - обработка всех открытых PR');
+                const prs = await github.paginate(
+                  github.rest.pulls.list,
+                  {
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    state: "open",
+                    per_page: 100,
+                  }
+                );
+
+                for (const prItem of prs) {
+                  await processPr(prItem.number);
                 }
-              );
+                return;
+              }
 
-              for (const prItem of prs) {
+              // Для событий pull_request
+              await processPr(context.payload.pull_request.number);
+
+              async function processPr(prNumber) {
                 const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  issue_number: prItem.number,
+                  issue_number: prNumber,
                 });
 
-                const hasLabel = currentLabels.some(l => l.name === label);
-
-                if (!hasLabel) {
-                  await github.rest.issues.addLabels({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: prItem.number,
-                    labels: [label],
-                  });
-                  console.log(`Метка '${label}' добавлена к PR #${prItem.number}`);
-                } else {
-                  console.log(`PR #${prItem.number} уже содержит метку '${label}'`);
+                if (currentLabels.some(l => l.name === label)) {
+                  console.log(`PR #${prNumber} уже имеет метку '${label}'`);
+                  return;
                 }
-              }
-            } else {
-              // Обычный запуск на событии PR
-              const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: pr.number,
-              });
 
-              const hasLabel = currentLabels.some(l => l.name === label);
-
-              if (!hasLabel) {
                 await github.rest.issues.addLabels({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  issue_number: pr.number,
+                  issue_number: prNumber,
                   labels: [label],
                 });
-                console.log(`Метка '${label}' добавлена к PR #${pr.number}`);
-              } else {
-                console.log(`PR #${pr.number} уже содержит метку '${label}'`);
+                console.log(`Добавлена метка '${label}' к PR #${prNumber}`);
               }
+            } catch (error) {
+              core.setFailed(`Ошибка: ${error.message}`);
             }
+
+      - name: Проверка BOM в файлах
+        if: always()
+        run: |
+          set -eo pipefail
+          echo "Проверка файлов на наличие BOM..."
+          found_files=$(grep -rl $'\xEF\xBB\xBF' . || true)
+
+          if [ -n "$found_files" ]; then
+            echo "Найдены файлы с BOM:"
+            echo "$found_files"
+            echo "::error::Обнаружены файлы с BOM-маркером!"
+            exit 1
+          else
+            echo "Файлы с BOM не найдены."
+          fi

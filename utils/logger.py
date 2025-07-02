@@ -8,9 +8,9 @@ consistently formatted.
 
 import logging
 import sys
-from typing import Optional
+from typing import | None
 
-_LOGGER: Optional[logging.Logger] = None
+_LOGGER : None | [logging.Logger] = None
 
 
 def setup_logging(level: int = logging.INFO) -> logging.Logger:

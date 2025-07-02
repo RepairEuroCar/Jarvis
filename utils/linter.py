@@ -2,9 +2,10 @@
 
 import ast
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List
+from typing import list
 
 import yaml
 
@@ -53,20 +54,19 @@ class AstLinter:
         if not path.is_file():
             return {}
         try:
-            with open(path, "r", encoding="utf-8") as fh:
+            with open(path, encoding="utf-8") as fh:
                 return yaml.safe_load(fh) or {}
         except Exception:
             return {}
 
-    def _lint_source(self, source: str, path: str) -> List[LintError]:
+    def _lint_source(self, source: str, path: str) -> list[LintError]:
         """Run lint checks on given source code."""
-        errors: List[LintError] = []
+        errors: list[LintError] = []
         tree = ast.parse(source, filename=path)
 
         for node in tree.body:
-            if (
-                self.disallow_globals
-                and isinstance(node, (ast.Assign, ast.AugAssign, ast.AnnAssign))
+            if self.disallow_globals and isinstance(
+                node, (ast.Assign, ast.AugAssign, ast.AnnAssign)
             ):
                 errors.append(
                     LintError(
@@ -128,24 +128,24 @@ class AstLinter:
                     )
         return errors
 
-    def lint_file(self, path: str) -> List[LintError]:
+    def lint_file(self, path: str) -> list[LintError]:
         """Run lint checks on a single Python file.
 
         Args:
             path (str): Path to the file to lint.
 
         Returns:
-            List[LintError]: List of found lint errors.
+            list[LintError]: list of found lint errors.
         """
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             source = f.read()
         return self._lint_source(source, path)
 
-    def lint_text(self, source: str, path: str = "<string>") -> List[LintError]:
+    def lint_text(self, source: str, path: str = "<string>") -> list[LintError]:
         """Lint Python code provided as a string."""
         return self._lint_source(source, path)
 
-    def lint_paths(self, paths: Iterable[str]) -> List[LintError]:
+    def lint_paths(self, paths: Iterable[str]) -> list[LintError]:
         """Lint multiple files or directories.
 
         Args:
@@ -153,9 +153,9 @@ class AstLinter:
                 Collection of file or directory paths to check.
 
         Returns:
-            List[LintError]: Combined lint errors for all provided paths.
+            list[LintError]: Combined lint errors for all provided paths.
         """
-        all_errors: List[LintError] = []
+        all_errors: list[LintError] = []
         for p in paths:
             if os.path.isdir(p):
                 for root, _, files in os.walk(p):

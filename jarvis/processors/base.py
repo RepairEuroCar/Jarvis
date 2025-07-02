@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Dict
+from typing import Any
 
 from utils.logger import get_logger
 
@@ -10,7 +10,7 @@ class BaseThoughtProcessor:
     def __init__(self, jarvis: Any = None):
         self.jarvis = jarvis
 
-    async def process(self, problem: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def process(self, problem: str, context: dict[str, Any]) -> dict[str, Any]:
         logger.info(f"Обработка: {problem[:50]}...")
 
         result = await self._process_logic(problem, context)
@@ -21,8 +21,8 @@ class BaseThoughtProcessor:
         return result
 
     async def _process_logic(
-        self, problem: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, problem: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
         """Основная логика обработки (переопределяется в дочерних классах)"""
         await asyncio.sleep(0.05)
         return {
@@ -31,13 +31,13 @@ class BaseThoughtProcessor:
             "status": "base_placeholder",
         }
 
-    async def _voice_feedback(self, result: Dict[str, Any]):
+    async def _voice_feedback(self, result: dict[str, Any]):
         """Формирование голосового ответа"""
         response = self._extract_voice_response(result)
         if response:
             await self.jarvis.voice_interface.say_async(response)
 
-    def _extract_voice_response(self, result: Dict[str, Any]) -> str:
+    def _extract_voice_response(self, result: dict[str, Any]) -> str:
         """Извлечение текста для голосового ответа"""
         if "conclusion" in result:
             return result["conclusion"][:100]

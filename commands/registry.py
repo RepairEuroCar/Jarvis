@@ -166,7 +166,7 @@ UTILITY_COMMANDS = [
     ),
     CommandInfo(
         name="list_goals",
-        description="List active goals",
+        description="list active goals",
         category=CommandCategory.UTILITY,
         usage="list_goals",
         aliases=[],

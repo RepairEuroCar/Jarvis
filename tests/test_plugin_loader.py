@@ -24,4 +24,3 @@ def test_load_plugins_from_multiple_dirs(tmp_path):
     load_plugins(j, str(dir1), [str(dir2)])
     assert getattr(j, "loaded_a", False)
     assert getattr(j, "loaded_b", False)
-

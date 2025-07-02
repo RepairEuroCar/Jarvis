@@ -1,14 +1,14 @@
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class MemoryCore:
     """Unified short-term memory for events, dialogues and reasoning."""
 
     def __init__(self) -> None:
-        self._events: List[Dict[str, Any]] = []
-        self._dialogues: List[Dict[str, Any]] = []
-        self._reasoning: List[Dict[str, Any]] = []
+        self._events: list[dict[str, Any]] = []
+        self._dialogues: list[dict[str, Any]] = []
+        self._reasoning: list[dict[str, Any]] = []
 
     # Event APIs
     def add_event(self, name: str, payload: Any) -> int:
@@ -16,12 +16,12 @@ class MemoryCore:
         self._events.append(record)
         return len(self._events) - 1
 
-    def get_event(self, index: int) -> Optional[Dict[str, Any]]:
+    def get_event(self, index: int) -> None | [dict[str, Any]]:
         if 0 <= index < len(self._events):
             return self._events[index]
         return None
 
-    def get_events(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_events(self, limit : None | [int] = None) -> list[dict[str, Any]]:
         return self._events[-limit:] if limit else list(self._events)
 
     def update_event(self, index: int, payload: Any) -> bool:
@@ -42,12 +42,12 @@ class MemoryCore:
         self._dialogues.append(record)
         return len(self._dialogues) - 1
 
-    def get_dialogue(self, index: int) -> Optional[Dict[str, Any]]:
+    def get_dialogue(self, index: int) -> None | [dict[str, Any]]:
         if 0 <= index < len(self._dialogues):
             return self._dialogues[index]
         return None
 
-    def get_dialogues(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_dialogues(self, limit : None | [int] = None) -> list[dict[str, Any]]:
         return self._dialogues[-limit:] if limit else list(self._dialogues)
 
     def update_dialogue(self, index: int, text: str) -> bool:
@@ -68,14 +68,14 @@ class MemoryCore:
         self._reasoning.append(record)
         return len(self._reasoning) - 1
 
-    def get_reasoning(self, index: int) -> Optional[Dict[str, Any]]:
+    def get_reasoning(self, index: int) -> None | [dict[str, Any]]:
         if 0 <= index < len(self._reasoning):
             return self._reasoning[index]
         return None
 
     def get_reasoning_history(
-        self, limit: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        self, limit : None | [int] = None
+    ) -> list[dict[str, Any]]:
         return self._reasoning[-limit:] if limit else list(self._reasoning)
 
     def update_reasoning(self, index: int, solution: Any) -> bool:
