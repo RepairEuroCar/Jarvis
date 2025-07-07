@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import py_compile
-from typing import list
+from typing import List
 
 from jarvis.commands.registry import CommandCategory, CommandInfo
 from jarvis.core.main import RegisteredCommand
@@ -10,11 +10,11 @@ from modules.task_splitter import analyze_spec
 from utils.code_generator import write_code
 
 
-def _generate_and_compile(spec_text: str, out_dir: str) -> list[str]:
+def _generate_and_compile(spec_text: str, out_dir: str) -> List[str]:
     """Generate Python modules from *spec_text* and compile them."""
     tasks = analyze_spec(spec_text)
     os.makedirs(out_dir, exist_ok=True)
-    results: list[str] = []
+    results: List[str] = []
     for idx, task in enumerate(tasks, 1):
         path = os.path.join(out_dir, f"task_{idx}.py")
         write_code({"dsl": task, "path": path, "description": task})

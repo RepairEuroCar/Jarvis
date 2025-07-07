@@ -1,10 +1,10 @@
 """Design helper for Jarvis projects."""
 
 import re
-from typing import dict, list
+from typing import List, Dict
 
 
-def design_module(task_description: str) -> dict[str, list[str] | str]:
+def design_module(task_description: str) -> Dict[str, List[str] | str]:
     """Parse a natural language description and return a simple project design.
 
     The returned dictionary contains:

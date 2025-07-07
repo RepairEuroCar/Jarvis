@@ -2,7 +2,7 @@ import ast
 import os
 from collections.abc import Iterable
 from pathlib import Path
-from typing import list
+from typing import List
 
 import yaml
 

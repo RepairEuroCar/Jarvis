@@ -12,7 +12,7 @@ class Goal:
     priority: int
     goal: str = field(compare=False)
     motivation: str = field(default="", compare=False)
-    deadline : None | [float] = field(default=None, compare=False)
+    deadline: float | None = field(default=None, compare=False)
     source: str = field(default="user", compare=False)
     timestamp: float = field(default_factory=time.time, compare=False)
 
@@ -41,7 +41,7 @@ class GoalManager:
             "goals.current", self._active_goals[0].to_dict(), category="goals"
         )
 
-    def get_goal(self) -> None | [dict[str, Any]]:
+    def get_goal(self) -> dict[str, Any] | None:
         """Return the highest priority goal if available."""
         if not self._active_goals:
             return None
@@ -59,7 +59,7 @@ class GoalManager:
         goal: str,
         motivation: str = "",
         priority: int = 1,
-        deadline : None | [float] = None,
+        deadline: float | None = None,
         source: str = "user",
     ) -> Goal:
         """Add a goal to the active list."""

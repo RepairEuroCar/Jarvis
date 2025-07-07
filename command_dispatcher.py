@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Tuple, Type, Union
 
 from loguru import logger
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, ConfigDict
 
 # Custom types
 CommandResult = Union[Any, None]
@@ -24,9 +24,9 @@ class CommandContext:
 
 
 class CommandError(Exception):
-    """Base error for all command-related exceptions"""
+    """Base error for all command-related exceptions."""
 
-    def __init__(self, message: str, command : None | [str] = None):
+    def __init__(self, message: str, command: str | None = None) -> None:
         self.message = message
         self.command = command
         super().__init__(message)
@@ -54,10 +54,19 @@ class CommandDispatcher:
 
     EXIT = object()
     _middlewares: list[Callable] = []
+    class _ModuleModel(BaseModel):
+        module: str
+        model_config = ConfigDict(extra="forbid")
 
-    def __init__(self, prefix: str = "", timeout: float = 30.0):
-        self._handlers: dict[str, dict[| None[str], CommandHandler]] = {}
-        self._param_models: dict[str, dict[| None[str], ParamModel]] = {}
+    class _NoParamsModel(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+
+    def __init__(
+        self, jarvis: Any | None = None, prefix: str = "", timeout: float = 30.0
+    ) -> None:
+        self.jarvis = jarvis
+        self._handlers: dict[str, dict[str | None, CommandHandler]] = {}
+        self._param_models: dict[str, dict[str | None, ParamModel]] = {}
         self.prefix = prefix
         self.timeout = timeout
         self._register_builtins()
@@ -70,9 +79,9 @@ class CommandDispatcher:
     def command(
         self,
         module: str,
-        action : None | [str] = None,
+        action: str | None = None,
         *,
-        param_model : None | [ParamModel] = None,
+        param_model: ParamModel | None = None,
     ):
         """Decorator for registering command handlers."""
 
@@ -88,8 +97,8 @@ class CommandDispatcher:
         self,
         module: str,
         handler: CommandHandler,
-        action : None | [str] = None,
-        param_model : None | [ParamModel] = None,
+        action: str | None = None,
+        param_model: ParamModel | None = None,
     ):
         """Register a command handler."""
         if module not in self._handlers:
@@ -103,8 +112,22 @@ class CommandDispatcher:
         elif action in self._param_models.get(module, {}):
             del self._param_models[module][action]
 
+    # ------------------------------------------------------------------
+    # Compatibility helpers used by tests and modules
+    def register_command_handler(
+        self,
+        module: str,
+        action: str | None,
+        handler: CommandHandler,
+        param_model: ParamModel | None = None,
+    ) -> None:
+        self.register(module=module, action=action, handler=handler, param_model=param_model)
+
+    def parse(self, text: str) -> Tuple[str, str | None, dict[str, str]]:
+        return self._parse_command(text)
+
     async def dispatch(
-        self, text: str, context : None | [dict] = None
+        self, text: str, context: dict | None = None
     ) -> CommandResult:
         """Execute a command with full error handling.
 
@@ -159,7 +182,7 @@ class CommandDispatcher:
                 results.append(e)
         return results
 
-    def _parse_command(self, text: str) -> Tuple[str, | None[str], dict[str, str]]:
+    def _parse_command(self, text: str) -> Tuple[str, str | None, dict[str, str]]:
         """Parse command string into components."""
         try:
             tokens = shlex.split(text[len(self.prefix) :] if self.prefix else text)
@@ -206,13 +229,13 @@ class CommandDispatcher:
         return params
 
     def _get_handler(
-        self, module: str, action : None | [str]
-    ) -> None | [CommandHandler]:
+        self, module: str, action: str | None
+    ) -> CommandHandler | None:
         """Get handler for command if exists."""
         return self._handlers.get(module, {}).get(action)
 
     def _validate_params(
-        self, module: str, action : None | [str], params: dict[str, str]
+        self, module: str, action: str | None, params: dict[str, str]
     ) -> dict[str, Any]:
         """Validate parameters against model if available."""
         model = self._param_models.get(module, {}).get(action)
@@ -258,11 +281,32 @@ class CommandDispatcher:
 
     def _register_builtins(self):
         """Register built-in commands."""
-        self.register("help", self._help)
-        self.register("exit", lambda: self.EXIT)
-        self.register("list", self._list_commands)
+        self.register("help", self._help, param_model=self._NoParamsModel)
+        self.register("exit", lambda: self.EXIT, param_model=self._NoParamsModel)
+        self.register("list_commands", self._list_commands, param_model=self._NoParamsModel)
+        self.register("load", self._load_module, param_model=self._ModuleModel)
+        self.register("unload", self._unload_module, param_model=self._ModuleModel)
+        self.register("reload", self._reload_module, param_model=self._ModuleModel)
 
-    async def _help(self, command : None | [str] = None) -> str:
+    async def _load_module(self, module: str) -> str:
+        if not (self.jarvis and getattr(self.jarvis, "module_manager", None)):
+            return "Load not supported"
+        success = await self.jarvis.module_manager.load_module(module)
+        return f"Module {module} loaded" if success else f"Failed to load module {module}"
+
+    async def _unload_module(self, module: str) -> str:
+        if not (self.jarvis and getattr(self.jarvis, "module_manager", None)):
+            return "Unload not supported"
+        success = await self.jarvis.module_manager.unload_module(module)
+        return f"Module {module} unloaded" if success else f"Failed to unload module {module}"
+
+    async def _reload_module(self, module: str) -> str:
+        if not (self.jarvis and getattr(self.jarvis, "module_manager", None)):
+            return "Reload not supported"
+        success = await self.jarvis.module_manager.reload_module(module)
+        return f"Module {module} reloaded" if success else f"Failed to reload module {module}"
+
+    async def _help(self, command: str | None = None) -> str:
         """Show help for commands."""
         if command:
             handler = next(
@@ -284,13 +328,14 @@ class CommandDispatcher:
             for act in self._handlers[mod]
         )
 
-    def _list_commands(self) -> list[str]:
-        """list all registered commands."""
-        return [
-            f"{self.prefix}{mod} {act if act else ''}"
+    def _list_commands(self) -> str:
+        """List all registered commands."""
+        cmds = [
+            f"{self.prefix}{mod} {act if act else ''}".rstrip()
             for mod in self._handlers
             for act in self._handlers[mod]
         ]
+        return "\n".join(cmds)
 
 
 # Global dispatcher instance

@@ -68,15 +68,15 @@ class ProcessingResult:
 class NLUProcessor:
     def __init__(
         self,
-        memory_manager : None | [Any] = None,
+        memory_manager: Any | None = None,
         max_history_size: int = 100,
-        model_path : None | [str] = None,
-        ner_model_name : None | [str] = None,
-        intent_dataset_path : None | [str] = None,
+        model_path: str | None = None,
+        ner_model_name: str | None = None,
+        intent_dataset_path: str | None = None,
     ):
         self.memory_manager = memory_manager
-        self.intent_model : None | [IntentModel] = None
-        self.ner_model : None | [NERModel] = None
+        self.intent_model: IntentModel | None = None
+        self.ner_model: NERModel | None = None
         if model_path:
             try:
                 self.intent_model = IntentModel(model_path)
@@ -282,7 +282,7 @@ class NLUProcessor:
 
     async def _match_pattern(
         self, pattern: CommandPattern, text_original: str, text_lower: str
-    ) -> None | [ProcessingResult]:
+    ) -> ProcessingResult | None:
         """Пытается сопоставить текст с конкретным шаблоном команды."""
         normalized_text = self._normalize_text_with_synonyms(text_lower)
         for trigger in pattern.triggers:
@@ -302,11 +302,11 @@ class NLUProcessor:
 
     async def _auto_detect_intent(
         self, text_original: str, text_lower: str
-    ) -> None | [ProcessingResult]:
+    ) -> ProcessingResult | None:
         """Attempt to guess intent using fuzzy matching."""
         normalized_text = self._normalize_text_with_synonyms(text_lower)
         best_ratio = 0.0
-        best_pattern : None | [CommandPattern] = None
+        best_pattern: CommandPattern | None = None
         for pattern in self.command_patterns:
             for trigger in pattern.triggers:
                 norm_tr = self._normalize_text_with_synonyms(trigger.lower())
@@ -411,7 +411,7 @@ class NLUProcessor:
         self,
         intent: str,
         trigger: str,
-        entity_type : None | [str] = None,
+        entity_type: str | None = None,
         persist: bool = False,
     ) -> None:
         """Добавляет новый шаблон распознавания команд."""
