@@ -1,7 +1,6 @@
 import logging
 import time
 from collections import defaultdict
-from typing import dict, list
 
 from core.events import emit_event
 

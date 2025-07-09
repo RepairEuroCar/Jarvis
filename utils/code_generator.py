@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import os
-from typing import dict
+from typing import Dict
 
 from utils.import_inference import infer_imports
 from utils.python_dsl import phrase_to_python

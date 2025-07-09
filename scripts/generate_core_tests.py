@@ -2,20 +2,20 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import list
+from typing import List
 
 from codex.autotest_generation import generate_autotests
 
 FUNC_RE = re.compile(r"^\+\s*(?:async\s+def|def)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 
 
-def run(cmd: list[str]) -> str:
+def run(cmd: List[str]) -> str:
     """Return stdout of a subprocess command."""
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     return result.stdout
 
 
-def changed_files(diff_range: str) -> list[str]:
+def changed_files(diff_range: str) -> List[str]:
     """Return modified files under core directories for *diff_range*."""
     output = run(["git", "diff", "--name-only", diff_range])
     return [
@@ -25,7 +25,7 @@ def changed_files(diff_range: str) -> list[str]:
     ]
 
 
-def parse_added_functions(diff_text: str) -> list[str]:
+def parse_added_functions(diff_text: str) -> List[str]:
     """Return function names added in *diff_text*."""
     return [
         m.group(1)
@@ -34,12 +34,12 @@ def parse_added_functions(diff_text: str) -> list[str]:
     ]
 
 
-def added_functions(path: str, diff_range: str) -> list[str]:
+def added_functions(path: str, diff_range: str) -> List[str]:
     diff = run(["git", "diff", diff_range, "--", path])
     return parse_added_functions(diff)
 
 
-def main(diff_range: str = "HEAD~1") -> list[str]:
+def main(diff_range: str = "HEAD~1") -> List[str]:
     """Generate tests for new functions in modified core files."""
     out_dir = Path("tests/generated")
     written: list[str] = []

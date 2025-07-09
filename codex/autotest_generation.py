@@ -1,7 +1,7 @@
 import ast
 import asyncio
 import os
-from typing import list
+from typing import List
 
 from jarvis.processors.test_generator import TestGeneratorProcessor
 
@@ -14,13 +14,13 @@ async def _generate_for_function(source: str, name: str) -> str:
     return result.get("generated_test", "")
 
 
-def generate_autotests(source_path: str, out_dir: str) -> list[str]:
+def generate_autotests(source_path: str, out_dir: str) -> List[str]:
     """Generate basic pytest tests for each function in *source_path*."""
     with open(source_path, encoding="utf-8") as fh:
         source = fh.read()
     tree = ast.parse(source)
     os.makedirs(out_dir, exist_ok=True)
-    written: list[str] = []
+    written: List[str] = []
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
             test_code = asyncio.run(_generate_for_function(source, node.name))
